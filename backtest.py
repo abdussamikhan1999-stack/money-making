@@ -11,6 +11,11 @@ Usage:
     # Real Kite data (needs Connect-tier, not the free Personal tier):
     python backtest.py --source kite --token 256265 --from 2026-08-01 --to 2026-09-01
 
+    # Walk-forward overfitting check (Davey): run the SAME rule on two
+    # independent halves of the sample and compare, instead of trusting one
+    # whole-period number:
+    python backtest.py --source yfinance --symbol INFY.NS --period 60d --walk-forward
+
 CAVEATS:
   - This is an OHLC-order approximation, not a true tick backtest: within
     each intrabar candle, prices are fed to the strategy in the order
@@ -33,10 +38,11 @@ from risk import RiskManager
 def simulate(h1: list[dict], m15: list[dict], intraday: list[dict],
              capital: float = 100_000.0, m15_filter: bool = False,
              breakeven_trigger: float = 5.0, breakeven_offset: float = 1.0,
-             trail_trigger: float = 10.0, trail_offset: float = 5.0) -> PaperBroker:
+             trail_trigger: float = 10.0, trail_offset: float = 5.0) -> tuple[PaperBroker, RiskManager]:
     """Core, source-agnostic backtest loop. `intraday` is the finest-grained
     series available (Kite 'minute' candles, or yfinance 5m/15m bars) used
-    as the intrabar price-path proxy."""
+    as the intrabar price-path proxy. Returns the broker (trades/P&L) and the
+    RiskManager (so callers can see drawdown/halt state, not just P&L)."""
     m15_open_at = {c["date"]: c["open"] for c in m15}
 
     def m15_open_for(ts: datetime) -> float | None:
@@ -78,27 +84,83 @@ def simulate(h1: list[dict], m15: list[dict], intraday: list[dict],
                         broker.enter(signal.side, signal.entry_price, qty, signal.stop_loss,
                                      breakeven_trigger, breakeven_offset, trail_trigger, trail_offset)
 
-    return broker
+    return broker, risk
 
 
-def run_backtest_yfinance(symbol: str, period: str = "30d",
-                           capital: float = 100_000.0, m15_filter: bool = False, **trail_kwargs) -> PaperBroker:
+def split_by_date(candles: list[dict], cutoff_date) -> tuple[list[dict], list[dict]]:
+    """cutoff_date is a plain date (not datetime) — compared against each
+    candle's own date() so this works regardless of whether the source's
+    timestamps are timezone-naive (Kite) or timezone-aware (yfinance)."""
+    before = [c for c in candles if c["date"].date() < cutoff_date]
+    after = [c for c in candles if c["date"].date() >= cutoff_date]
+    return before, after
+
+
+def walk_forward(h1: list[dict], m15: list[dict], intraday: list[dict],
+                  capital: float = 100_000.0, m15_filter: bool = False, split_ratio: float = 0.5,
+                  **trail_kwargs) -> tuple[tuple[PaperBroker, RiskManager], tuple[PaperBroker, RiskManager]]:
+    """Davey-style overfitting check: run the IDENTICAL rule on two
+    independent halves of the sample (each starting with its own fresh
+    capital/risk state) and let the caller compare them. A real edge should
+    look broadly similar on both; profitable on one half and badly losing on
+    the other is the classic signature of noise, not a robust edge — exactly
+    what happened when toggling the M15 filter flipped several of the
+    9-instrument comparison's results. This is a cheap sanity check, not a
+    substitute for real walk-forward parameter optimization."""
+    if not h1:
+        raise ValueError("no data to split")
+    dates = sorted({c["date"].date() for c in h1})
+    cutoff_date = dates[max(1, int(len(dates) * split_ratio))]
+
+    h1_a, h1_b = split_by_date(h1, cutoff_date)
+    m15_a, m15_b = split_by_date(m15, cutoff_date)
+    intraday_a, intraday_b = split_by_date(intraday, cutoff_date)
+
+    in_sample = simulate(h1_a, m15_a, intraday_a, capital, m15_filter, **trail_kwargs)
+    out_of_sample = simulate(h1_b, m15_b, intraday_b, capital, m15_filter, **trail_kwargs)
+    return in_sample, out_of_sample
+
+
+def _fetch_yfinance(symbol: str, period: str) -> tuple[list[dict], list[dict], list[dict]]:
     from data_yfinance import fetch_candles
-    h1 = fetch_candles(symbol, "60m", period)
-    m15 = fetch_candles(symbol, "15m", period)
-    intraday = fetch_candles(symbol, "5m", period)
-    return simulate(h1, m15, intraday, capital, m15_filter, **trail_kwargs)
+    return (fetch_candles(symbol, "60m", period),
+            fetch_candles(symbol, "15m", period),
+            fetch_candles(symbol, "5m", period))
 
 
-def run_backtest_kite(instrument_token: int, from_date: datetime, to_date: datetime,
-                       capital: float = 100_000.0, m15_filter: bool = False, **trail_kwargs) -> PaperBroker:
+def _fetch_kite(instrument_token: int, from_date: datetime, to_date: datetime) -> tuple[list[dict], list[dict], list[dict]]:
     from kite_client import get_kite_client
     from data import fetch_candles
     kite = get_kite_client()
-    h1 = fetch_candles(kite, instrument_token, "60minute", from_date, to_date)
-    m15 = fetch_candles(kite, instrument_token, "15minute", from_date, to_date)
-    intraday = fetch_candles(kite, instrument_token, "minute", from_date, to_date)
-    return simulate(h1, m15, intraday, capital, m15_filter, **trail_kwargs)
+    return (fetch_candles(kite, instrument_token, "60minute", from_date, to_date),
+            fetch_candles(kite, instrument_token, "15minute", from_date, to_date),
+            fetch_candles(kite, instrument_token, "minute", from_date, to_date))
+
+
+def run_backtest_yfinance(symbol: str, period: str = "30d",
+                           capital: float = 100_000.0, m15_filter: bool = False, **trail_kwargs):
+    return simulate(*_fetch_yfinance(symbol, period), capital, m15_filter, **trail_kwargs)
+
+
+def run_backtest_kite(instrument_token: int, from_date: datetime, to_date: datetime,
+                       capital: float = 100_000.0, m15_filter: bool = False, **trail_kwargs):
+    return simulate(*_fetch_kite(instrument_token, from_date, to_date), capital, m15_filter, **trail_kwargs)
+
+
+def walk_forward_yfinance(symbol: str, period: str = "60d", capital: float = 100_000.0,
+                           m15_filter: bool = False, split_ratio: float = 0.5, **trail_kwargs):
+    return walk_forward(*_fetch_yfinance(symbol, period), capital, m15_filter, split_ratio, **trail_kwargs)
+
+
+def walk_forward_kite(instrument_token: int, from_date: datetime, to_date: datetime, capital: float = 100_000.0,
+                       m15_filter: bool = False, split_ratio: float = 0.5, **trail_kwargs):
+    return walk_forward(*_fetch_kite(instrument_token, from_date, to_date), capital, m15_filter, split_ratio, **trail_kwargs)
+
+
+def _report(label: str, broker: PaperBroker, risk: RiskManager) -> None:
+    halted = " [DRAWDOWN HALTED]" if risk.drawdown_halted else ""
+    print(f"{label}: Trades {len(broker.trade_log)}  P&L {broker.cash_pnl:.2f}  "
+          f"Max drawdown {risk.drawdown_from_peak_pct:.1f}%{halted}")
 
 
 if __name__ == "__main__":
@@ -111,12 +173,16 @@ if __name__ == "__main__":
     parser.add_argument("--to", dest="to_date", help="YYYY-MM-DD (source=kite)")
     parser.add_argument("--capital", type=float, default=100_000.0)
     parser.add_argument("--m15-filter", action="store_true")
+    parser.add_argument("--walk-forward", action="store_true",
+                         help="split the sample in half and report both halves separately (overfitting check)")
     parser.add_argument("--breakeven-trigger", type=float, default=5.0,
                          help="profit (price units) to move stop to breakeven+offset")
     parser.add_argument("--breakeven-offset", type=float, default=1.0)
     parser.add_argument("--trail-trigger", type=float, default=10.0,
                          help="profit (price units) to trail stop to entry+trail-offset")
     parser.add_argument("--trail-offset", type=float, default=5.0)
+    parser.add_argument("--max-drawdown-pct", type=float, default=10.0,
+                         help="cumulative drawdown %% of capital that permanently halts trading")
     args = parser.parse_args()
 
     trail_kwargs = dict(
@@ -127,17 +193,31 @@ if __name__ == "__main__":
     if args.source == "yfinance":
         if not args.symbol:
             parser.error("--symbol is required for --source yfinance")
-        result = run_backtest_yfinance(args.symbol, args.period, args.capital, args.m15_filter, **trail_kwargs)
+        if args.walk_forward:
+            (b1, r1), (b2, r2) = walk_forward_yfinance(args.symbol, args.period, args.capital,
+                                                        args.m15_filter, **trail_kwargs)
+        else:
+            broker, risk = run_backtest_yfinance(args.symbol, args.period, args.capital,
+                                                  args.m15_filter, **trail_kwargs)
     else:
         if not (args.token and args.from_date and args.to_date):
             parser.error("--token, --from, and --to are required for --source kite")
-        result = run_backtest_kite(
-            args.token,
-            datetime.strptime(args.from_date, "%Y-%m-%d"),
-            datetime.strptime(args.to_date, "%Y-%m-%d"),
-            args.capital, args.m15_filter, **trail_kwargs,
-        )
+        from_dt = datetime.strptime(args.from_date, "%Y-%m-%d")
+        to_dt = datetime.strptime(args.to_date, "%Y-%m-%d")
+        if args.walk_forward:
+            (b1, r1), (b2, r2) = walk_forward_kite(args.token, from_dt, to_dt, args.capital,
+                                                    args.m15_filter, **trail_kwargs)
+        else:
+            broker, risk = run_backtest_kite(args.token, from_dt, to_dt, args.capital,
+                                              args.m15_filter, **trail_kwargs)
 
-    print(f"Trades: {len(result.trade_log)}  Total P&L: {result.cash_pnl:.2f}")
-    for t in result.trade_log:
-        print(t)
+    if args.walk_forward:
+        _report("In-sample  (first half)", b1, r1)
+        _report("Out-of-sample (2nd half)", b2, r2)
+        consistent = (b1.cash_pnl > 0) == (b2.cash_pnl > 0)
+        print(f"{'CONSISTENT' if consistent else 'INCONSISTENT'} sign across halves"
+              f" — {'plausible edge, keep validating' if consistent else 'looks like noise/overfitting, not a real edge'}")
+    else:
+        _report("Result", broker, risk)
+        for t in broker.trade_log:
+            print(t)

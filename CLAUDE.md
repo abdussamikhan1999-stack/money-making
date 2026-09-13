@@ -99,8 +99,38 @@ in the output.
 
 - `run_live.py` requires **both** `--live` and `MONEYMAKING_LIVE=true` to
   place a real order — two independent opt-ins on purpose.
-- `RiskManager.trading_halted()` is a hard daily-loss circuit breaker,
-  checked before every new entry in both `backtest.py` and `run_live.py`.
+- `RiskManager.trading_halted()` combines TWO breakers: a same-day loss
+  limit (`max_daily_loss_pct`, resets via `reset_day()`) AND a cumulative
+  drawdown-from-peak limit (`max_drawdown_pct`, does **not** reset via
+  `reset_day()` — only `reset_capital()`, which must be called
+  deliberately, never automatically from a runner). Both are checked
+  before every new entry in both `backtest.py` and `run_live.py`.
 - `PaperBroker` is the default broker everywhere; nothing routes to
   `kite_client.place_order()` except the one gated call site in
   `run_live.py`.
+
+## Backtest rigor tools (added after a systematic 9-instrument check)
+
+Testing this strategy across 9 instruments x 60 days x {with, without}
+M15-filter (18 backtests, ~970 trades) found **no consistent edge** —
+aggregate P&L was negative both ways, and every single-period "win" flipped
+sign under either perturbation. Two tools exist specifically to catch this
+kind of false positive before trusting a result:
+
+- **`backtest.py --walk-forward`**: splits the sample into two independent
+  halves (own fresh capital/risk state each) and reports both. A real edge
+  should look broadly similar on both. Every previously "profitable"
+  single-period result checked this way (INFY.NS, HDFCBANK.NS, ITC.NS) came
+  back **inconsistent** across halves — profitable on one, losing on the
+  other. Treat any new single-period result the same way before trusting it.
+- **`RiskManager.drawdown_from_peak_pct` / `.drawdown_halted`**: surfaced
+  directly in `backtest.py`'s per-run report (`_report()`). A backtest can
+  show misleadingly large P&L swings if drawdown isn't checked alongside
+  the raw number — see HDFCBANK.NS's in-sample half: +36,657 P&L *and*
+  drawdown-halted, because it gave back >10% of capital from a much higher
+  peak before the run ended.
+
+Do not report a bare P&L number as "the result" going forward without also
+running `--walk-forward` and checking `drawdown_halted` — a single
+whole-period P&L number has already been shown to be misleading on this
+exact codebase.

@@ -115,6 +115,21 @@ python backtest.py --source yfinance --symbol '^NSEI' --period 60d \
   --breakeven-trigger 30 --breakeven-offset 5 --trail-trigger 60 --trail-offset 30
 ```
 
+**Check for overfitting before trusting any single result** — add
+`--walk-forward` to split the sample into two independent halves and report
+both separately:
+
+```
+python backtest.py --source yfinance --symbol INFY.NS --period 60d --walk-forward
+```
+
+A real edge should look broadly similar on both halves. In practice, every
+"profitable" single-period result found so far (INFY.NS, HDFCBANK.NS,
+ITC.NS) turned out **inconsistent** across the two halves once checked this
+way — profitable on one half, losing on the other — which is the standard
+signature of noise, not a real edge. Don't trust a whole-period number that
+hasn't been walk-forward checked.
+
 ### Backtest against real Kite data (needs the Connect tier)
 
 ```
@@ -143,6 +158,30 @@ python run_live.py --token <token> --symbol <symbol> --exchange <NFO|NSE> --live
 Don't flip this on until you've backtested and paper-traded to your own
 satisfaction. `risk.py`'s `max_daily_loss_pct` circuit breaker is there as a
 backstop, not a substitute for validating the strategy first.
+
+## Risk management
+
+Two independent, layered circuit breakers in `risk.py` (checked before
+every new entry in both `backtest.py` and `run_live.py`):
+
+- **Daily loss limit** (`max_daily_loss_pct`, default 2%) — resets every day.
+- **Cumulative drawdown limit** (`max_drawdown_pct`, default 10%) —
+  tracks equity from its all-time peak and **never resets automatically**.
+  This one was added after a 60-day silver backtest lost 61% of starting
+  capital: nothing was tracking cumulative equity, only same-day P&L, so
+  the backtest kept "trading" long past the point a real account would
+  have been wiped out. `reset_capital()` clears it, but only call that
+  deliberately (a fresh backtest segment, or a real decision to
+  re-fund/restart) — never automatically from a runner.
+
+Also available: `RiskManager.volatility_position_size(atr)` sizes off an
+instrument's own recent volatility (via `indicators.average_true_range`)
+instead of the strategy's own stop distance — useful as a sanity cap
+(`min()` of the two) when the strategy's stop is tighter than the
+instrument actually moves, which is common on a fast-moving instrument.
+Not wired into `backtest.py`/`run_live.py` by default — the strategy's own
+day-high/low stop is still the primary sizing input; ATR sizing is there to
+cross-check it.
 
 ## Known limitations
 
