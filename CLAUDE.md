@@ -197,6 +197,79 @@ the CLI. **Always re-run a promising result with a realistic non-zero value
 before trusting it** — the SI=F case above is the concrete reason this
 exists, not a hypothetical.
 
+## Daily-bar trend-following: a second, genuinely different strategy family
+
+`daily_strategy.py` (`DonchianBreakoutStrategy`) + `backtest_daily.py` are a
+second family, added after the intraday Highest-Open/Lowest-Open family (2
+variants x 18 instruments) was exhaustively falsified. Different mechanism
+(N-day high/low channel breakout — the "Turtle Trading" system's entry
+rule), different timeframe (daily bars, not H1/M15/tick), and critically
+different data constraint: daily data goes back **years** via yfinance, not
+capped at 60 days like intraday — escaping the single-window limitation
+that was the biggest methodological weakness of every earlier test.
+
+**A real bug was found and fixed before any result could be trusted**:
+`simulate_daily()` originally called `PaperBroker.enter()` without
+overriding its default trailing-stop thresholds (breakeven at +5, trail at
++10 — tuned for forex pips). On ETH-USD (price in the hundreds/thousands),
+every position closed for a manufactured, mechanically-exact tiny profit
+within hours of entry, producing a fake **100% win rate** over 102 trades —
+caught only because that number is essentially impossible for a real
+trend system and demanded investigation. Root cause: `strategy.py`'s
+`TrailingStopManager` narrows the stop to a fixed point distance from
+entry regardless of the instrument's actual volatility, which is the
+opposite of what a trend-follower needs (let the winner run). Fix:
+`DonchianBreakoutStrategy` now has its own `check_exit()` using a SHORTER
+second channel (`exit_period`, default `entry_period // 2` — the classic
+Turtle dual-channel shape), and `simulate_daily()` passes
+`breakeven_trigger=trail_trigger=float("inf")` into `PaperBroker.enter()`
+to fully disable `TrailingStopManager`'s early-exit behavior, leaving only
+the original structural stop as a hard backstop. **Any future strategy
+that holds positions for more than a few bars must either pass
+appropriately-scaled trailing thresholds or disable `TrailingStopManager`
+this same way — its defaults are not a safe no-op.**
+
+**Systematic finding, after the fix** (18 instruments x 2 classic Turtle
+periods [20, 55] x walk-forward x realistic ~5bps commission x parameter
+perturbation x quarter-split): the mechanism itself is far more robust than
+the Highest-Open/Lowest-Open family ever was — BTC-USD and ETH-USD show
+**smooth, monotonic-ish, all-positive performance across every tested
+entry_period from 10 to 120 days** (no cliffs, no sign flips — real
+Davey-style robustness, a first for this project). But two things prevent
+calling this a usable edge:
+
+1. **Crypto isn't tradable via Kite at all** (NSE/BSE/MCX only) — BTC/ETH
+   results are scientifically interesting (the mechanism isn't broken) but
+   not actionable through this project's actual broker integration.
+2. **Quarter-splitting BTC/ETH reveals the "edge" is a decaying
+   bull-market artifact, not a repeatable pattern**: BTC's 10-year P&L is
+   concentrated almost entirely in Q1-Q2 (2016-2021, +10.5%/+22.1%
+   returns, the era BTC rose ~100x), decaying to Q3 +3.9% and **Q4
+   (2024-2026, the most recent, most relevant period) essentially flat at
+   -0.05%**. Breaking down by side: profit came almost entirely from LONGS
+   during those two historic bull quarters; SHORTS were flat-to-negative
+   throughout every quarter. This is "a trend-follower captured much of
+   crypto's unprecedented historic rise," not "a validated repeatable
+   edge" — and it shows no meaningful edge in the window closest to now.
+
+The Kite-tradable candidates (`GC=F` gold, `CL=F` oil — both accessible via
+MCX) are considerably weaker: gold's full-10-year perturbation sweep looks
+mostly positive, but quarter-splitting shows 2 of 4 quarters negative with
+tiny magnitudes (fractions of a percent per 2.5-year quarter) — noise, not
+signal, once regime-split. Oil's perturbation sweep is mixed/erratic at
+short entry_periods. Neither survives the same bar BTC/ETH's mechanism
+cleared.
+
+**Net verdict**: the Donchian/trend-following mechanism is real progress —
+first strategy family this session that didn't show cliff-edge parameter
+sensitivity — but nothing tested is both (a) tradable through this
+project's actual Kite integration and (b) showing a current, non-decayed
+edge. Next step if continuing this line: test more Kite-tradable trending
+instruments (index futures, currency pairs, other MCX commodities) with
+the same full rigor (perturbation + quarter-split, not just walk-forward
+halves — halves alone would have called BTC/ETH "done" without surfacing
+the decay).
+
 ## Two strategy variants exist — same data pipeline, opposite premise
 
 - `HighLowOpenStrategy` ("reversal", default): the source thread's rule —

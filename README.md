@@ -11,6 +11,28 @@ accredited financial specialist before risking real capital. Backtest and
 paper-trade thoroughly before ever running this live. You are solely
 responsible for any trades it places.
 
+## Daily-bar trend-following (a second strategy family)
+
+`backtest_daily.py` backtests `DonchianBreakoutStrategy` (the entry rule
+from the "Turtle Trading" system — N-day high/low channel breakout) against
+years of daily data instead of intraday's 60-day cap:
+
+```
+python backtest_daily.py --symbol '^NSEI' --period 10y --walk-forward
+python backtest_daily.py --symbol GC=F --period 10y --entry-period 20
+```
+
+Systematic testing (18 instruments, both classic Turtle periods, realistic
+commission, parameter perturbation, quarter-splits) found this mechanism is
+far more robust than the intraday family below (smooth, all-positive
+performance across every tested parameter on BTC-USD/ETH-USD — no
+cliff-edge overfitting signature). But: crypto isn't tradable via Kite at
+all, and quarter-splitting shows that "edge" is concentrated in crypto's
+2016-2021 bull run and has decayed to roughly flat in the most recent 2.5
+years. The Kite-tradable candidates tested (gold, oil) are considerably
+weaker once regime-split. See `CLAUDE.md` for the full breakdown — including
+a real bug (a fake 100% win rate) that was found and fixed along the way.
+
 ## Two variants
 
 `--variant reversal` (default) is the rule described below. `--variant
