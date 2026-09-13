@@ -28,6 +28,14 @@ python run_live.py --token <instrument_token> --symbol <symbol> --exchange <NSE|
   it's testable without mocking a broker. `tests/` runs against plain
   floats/dataclasses, no fixtures needed, no network ever.
 - `kite_client.py` / `data.py` are the only files that import `kiteconnect`.
+- `data_yfinance.py` is a free alternative data source (Yahoo Finance, no
+  API key) — used by `backtest.py --source yfinance`, the default, since
+  the free Kite "Personal" app tier has no historical-data access at all.
+  It returns the exact same candle shape as `data.py`'s Kite wrapper
+  (`{date, open, high, low, close, volume}` dicts), so `backtest.py`'s
+  `simulate()` function is fully source-agnostic and doesn't know or care
+  which one fed it. `run_backtest_yfinance()` / `run_backtest_kite()` are
+  the only two places that import a specific source.
 - `paper_broker.py` has zero dependency on Kite — it's a pure simulator and
   is the **default** broker in both `backtest.py` and `run_live.py`. Real
   orders only ever come from `kite_client.place_order()`, called from
@@ -59,6 +67,19 @@ trusting backtest results:
   an open position before the trailing-stop logic takes over. Re-read the
   source's "stop loss is the current daily high or current daily low" if
   this diverges from intent — it's arguably ambiguous which moment is meant.
+
+## Verified against real data (not just unit tests)
+
+`python backtest.py --source yfinance --symbol RELIANCE.NS --period 30d` and
+`--symbol '^NSEI' --period 60d` were both actually run against live Yahoo
+Finance data during development (not just imagined to work) — confirmed the
+full pipeline executes end-to-end and produces plausible trade logs. This
+surfaced a real finding, not a hypothetical one: the source thread's +5/+10
+trailing-stop thresholds are forex pips and are essentially noise on the
+Nifty index (24,000+ points) — 146 trades over 60 days with defaults, vs 77
+with `--breakeven-trigger 30 --trail-trigger 60`. Don't assume the defaults
+are reasonable for whatever instrument is used next; check trade frequency
+in the output.
 
 ## Known gaps (see README's "Known limitations" for the user-facing version)
 

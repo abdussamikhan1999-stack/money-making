@@ -41,9 +41,10 @@ strategy.py       Pure state machine: HighLowOpenStrategy + TrailingStopManager.
                   No network code — this is what's unit tested.
 risk.py           Position sizing (% risk per trade) + a daily-loss circuit breaker.
 data.py           Thin Kite historical_data wrapper.
+data_yfinance.py  Free historical data via Yahoo Finance — no Kite subscription needed.
 kite_client.py    Auth (login_url / generate_access_token) + real order placement.
 paper_broker.py   Simulated fills + P&L tracking. The default broker everywhere.
-backtest.py       CLI: run the strategy over a historical date range.
+backtest.py       CLI: run the strategy over historical data (yfinance, free, or Kite).
 run_live.py       CLI: poll Kite in real time, paper-trade by default.
 tests/            pytest, network-free — runs against plain floats, no fixtures needed.
 ```
@@ -54,15 +55,27 @@ tests/            pytest, network-free — runs against plain floats, no fixture
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
 ```
 
-You need a **Kite Connect** developer app (paid, ~₹500/month, billed to your
-Zerodha account) — create one at https://developers.kite.trade/apps and put
-its `api_key` / `api_secret` in `.env`.
+**To backtest for free, no account needed:** you're done — skip straight to
+"Backtest (free, no Kite subscription)" below.
 
-Kite access tokens expire daily (~7:30am IST). Each trading day, before
-running anything:
+**To go further (live quotes, real order placement)** you need a **Kite
+Connect** developer app. Zerodha offers two tiers when you create one at
+https://developers.kite.trade/apps:
+
+- **Personal** (free) — order placement only. **No historical data, no live
+  quotes/WebSockets** — `data.py`/`run_live.py` need the paid tier to work.
+- **Connect** (~₹500/30 days, billed via your Zerodha account) — adds
+  historical data + live quotes. Needed for `backtest.py --source kite` and
+  for `run_live.py` at all.
+
+Also note: as of April 1, 2026, SEBI requires **live orders to come from a
+registered static IP** — register one on your Kite Connect profile page
+before ever using `--live`.
+
+Put the app's `api_key`/`api_secret` in `.env` (`cp .env.example .env`
+first). Kite access tokens expire daily (~7:30am IST); each trading day:
 
 ```
 python -c "from kite_client import login_url; print(login_url())"
@@ -74,16 +87,49 @@ python -c "from kite_client import generate_access_token; print(generate_access_
 ## Run
 
 ```
-pytest -v                     # strategy/risk/broker logic — no network, safe anytime
+pytest -v   # strategy/risk/broker logic — no network, safe anytime
+```
 
-python backtest.py --token 256265 --from 2026-08-01 --to 2026-09-01
+### Backtest (free, no Kite subscription)
 
-python run_live.py --token 256265 --symbol NIFTY --exchange NSE   # paper mode (default)
+```
+python backtest.py --source yfinance --symbol RELIANCE.NS --period 30d
+python backtest.py --source yfinance --symbol '^NSEI' --period 60d --m15-filter
+```
+
+`--symbol` is a Yahoo Finance ticker (`.NS` suffix for NSE stocks, `^NSEI`
+for the Nifty 50 index). `--period` is how far back to pull (Yahoo caps
+intraday history: up to ~60 days for the 15m/5m data this uses). Yahoo's
+NSE data is best-effort, not exchange-of-record — fine for validating
+strategy logic, not a substitute for real broker data before trading real
+money.
+
+**Tune the trailing-stop thresholds to your instrument** — the source
+thread's +5/+10 defaults are forex pips and will misfire wildly on
+something like the Nifty index (confirmed: 146 trades / -5,447 P&L over 60
+days with the untuned defaults, dropping to 77 trades with wider
+thresholds below):
+
+```
+python backtest.py --source yfinance --symbol '^NSEI' --period 60d \
+  --breakeven-trigger 30 --breakeven-offset 5 --trail-trigger 60 --trail-offset 30
+```
+
+### Backtest against real Kite data (needs the Connect tier)
+
+```
+python backtest.py --source kite --token 256265 --from 2026-08-01 --to 2026-09-01
 ```
 
 `--token` is a Kite `instrument_token` — look one up via
 `kite.instruments("NSE")` / `kite.instruments("NFO")`, or Kite's published
 instrument dump.
+
+### Live/paper runner (needs the Connect tier)
+
+```
+python run_live.py --token 256265 --symbol NIFTY --exchange NSE   # paper mode (default)
+```
 
 ## Going live
 
