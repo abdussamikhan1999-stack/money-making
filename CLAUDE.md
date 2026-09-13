@@ -144,6 +144,46 @@ variant on oil: both halves halted at ~10.5% drawdown with nearly identical
 P&L). Check `drawdown_halted` on BOTH halves before trusting a
 "CONSISTENT" verdict — if either tripped, the match is hollow.
 
+## Systematic edge search: 216 configs tested, none survived
+
+Swept 18 instruments x 3 proportional-threshold scales x 2 variants x 2
+M15-filter settings (216 walk-forward runs) looking for a config where both
+halves are profitable with no drawdown-halt. Only 2/216 passed that screen
+(`^NSEI` and `SI=F`, both reversal/no-filter/tight 0.2%-of-price thresholds)
+— already a suspicious hit rate, close to what pure chance produces from
+216 comparisons (classic multiple-comparisons/data-mining bias). Both died
+under further scrutiny:
+
+- **Parameter perturbation** (Davey's robustness check — nudge the
+  threshold slightly, a real edge degrades gradually): SI=F went
+  +22,310 at pct=0.002 to -6,609 (drawdown-halted) at pct=0.003 — a cliff,
+  not a gradient. ^NSEI was worse: +16k, +10k, **-11k (halted)**, +23k
+  across five nearby threshold values with no smooth pattern at all. Both
+  are curve-fit noise, not real patterns.
+- **Transaction costs** (previously unmodeled — see `commission_per_trade`
+  below): SI=F traded 139-384 times per backtest half. Applying a
+  conservative ~$4/round-trip cost estimate turned every single one of its
+  "profitable" configs net-negative, including the best one
+  (+22,310 gross -> -1,269 net). High trade-count results are exactly the
+  ones a zero-cost backtest will most badly overstate.
+
+Conclusion: no edge found in this search, and — importantly — the search
+methodology itself (walk-forward + perturbation + cost modeling) is what
+caught it. A less careful sweep would have reported SI=F as a working
+Highest-Open/Lowest-Open scalping system. Don't skip these three checks
+(walk-forward, perturbation, costs) on any future candidate, and don't
+trust a "found it" from a single 2-way split alone.
+
+## Transaction costs — previously completely unmodeled
+
+`PaperBroker.commission_per_trade` (default 0.0, backward compatible) is a
+flat cost deducted per round-trip trade in `close()`; the trade log now
+carries both `gross_pnl` and `pnl` (net) so the two are always visible
+separately. `backtest.py --commission-per-trade <value>` wires it through
+the CLI. **Always re-run a promising result with a realistic non-zero value
+before trusting it** — the SI=F case above is the concrete reason this
+exists, not a hypothetical.
+
 ## Two strategy variants exist — same data pipeline, opposite premise
 
 - `HighLowOpenStrategy` ("reversal", default): the source thread's rule —

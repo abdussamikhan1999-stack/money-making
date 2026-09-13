@@ -42,7 +42,7 @@ VARIANTS = {
 
 def simulate(h1: list[dict], m15: list[dict], intraday: list[dict],
              capital: float = 100_000.0, m15_filter: bool = False, variant: str = "reversal",
-             max_drawdown_pct: float = 10.0,
+             max_drawdown_pct: float = 10.0, commission_per_trade: float = 0.0,
              breakeven_trigger: float = 5.0, breakeven_offset: float = 1.0,
              trail_trigger: float = 10.0, trail_offset: float = 5.0) -> tuple[PaperBroker, RiskManager]:
     """Core, source-agnostic backtest loop. `intraday` is the finest-grained
@@ -66,7 +66,7 @@ def simulate(h1: list[dict], m15: list[dict], intraday: list[dict],
         hour_bucket = c["date"].replace(minute=0, second=0, microsecond=0)
         intraday_by_hour.setdefault(hour_bucket, []).append(c)
 
-    broker = PaperBroker()
+    broker = PaperBroker(commission_per_trade=commission_per_trade)
     risk = RiskManager(capital=capital, max_drawdown_pct=max_drawdown_pct)
     strat = VARIANTS[variant](m15_filter)
     current_day = None
@@ -200,10 +200,14 @@ if __name__ == "__main__":
     parser.add_argument("--trail-offset", type=float, default=5.0)
     parser.add_argument("--max-drawdown-pct", type=float, default=10.0,
                          help="cumulative drawdown %% of capital that permanently halts trading")
+    parser.add_argument("--commission-per-trade", type=float, default=0.0,
+                         help="flat cost deducted per round-trip trade (commission + estimated slippage) — "
+                              "0 by default, but a high-trade-count result should ALWAYS be re-checked with "
+                              "a realistic value before trusting it")
     args = parser.parse_args()
 
     extra_kwargs = dict(
-        max_drawdown_pct=args.max_drawdown_pct,
+        max_drawdown_pct=args.max_drawdown_pct, commission_per_trade=args.commission_per_trade,
         breakeven_trigger=args.breakeven_trigger, breakeven_offset=args.breakeven_offset,
         trail_trigger=args.trail_trigger, trail_offset=args.trail_offset,
     )

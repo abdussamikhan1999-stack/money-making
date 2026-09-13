@@ -1,6 +1,13 @@
 """Simulated broker: fills instantly at the given price, runs the
 TrailingStopManager, tracks P&L. No real orders are ever placed here — this
-is the safe default for both backtest.py and run_live.py."""
+is the safe default for both backtest.py and run_live.py.
+
+`commission_per_trade` defaults to 0 for backward compatibility, but leaving
+it at 0 is what let an apparent "edge" on high-frequency silver-futures
+trades (139+ trades per backtest half) look profitable when a realistic
+~$4/round-trip cost made every configuration of it net-negative. Set this
+to a real per-trade cost estimate for your instrument/broker before trusting
+any backtest result, especially a high-trade-count one."""
 from dataclasses import dataclass, field
 
 from strategy import Side, TrailingStopManager
@@ -9,6 +16,7 @@ from strategy import Side, TrailingStopManager
 @dataclass
 class PaperBroker:
     cash_pnl: float = 0.0
+    commission_per_trade: float = 0.0
     trade_log: list = field(default_factory=list)
     _position: dict | None = field(default=None, init=False)
     _trail: TrailingStopManager | None = field(default=None, init=False)
@@ -40,9 +48,11 @@ class PaperBroker:
     def close(self, exit_price: float) -> float:
         pos = self._position
         direction = 1 if pos["side"] == Side.LONG else -1
-        pnl = direction * (exit_price - pos["entry"]) * pos["qty"]
+        gross_pnl = direction * (exit_price - pos["entry"]) * pos["qty"]
+        pnl = gross_pnl - self.commission_per_trade
         self.cash_pnl += pnl
-        self.trade_log.append({**pos, "side": pos["side"].value, "exit": exit_price, "pnl": pnl})
+        self.trade_log.append({**pos, "side": pos["side"].value, "exit": exit_price,
+                                "gross_pnl": gross_pnl, "pnl": pnl})
         self._position = None
         self._trail = None
         return pnl

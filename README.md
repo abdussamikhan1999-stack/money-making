@@ -167,6 +167,16 @@ Don't flip this on until you've backtested and paper-traded to your own
 satisfaction. `risk.py`'s `max_daily_loss_pct` circuit breaker is there as a
 backstop, not a substitute for validating the strategy first.
 
+## Transaction costs
+
+`PaperBroker(commission_per_trade=...)` / `backtest.py --commission-per-trade`
+deducts a flat cost per round-trip trade (default 0). **Always set this to a
+realistic estimate before trusting a backtest result** — a systematic search
+found a config that looked like a genuine edge (silver, 60d, +22,310 gross
+across 278 trades) that flipped net-negative once a conservative $4/trade
+cost was applied. A zero-cost backtest overstates high-trade-count results
+the most.
+
 ## Risk management
 
 Two independent, layered circuit breakers in `risk.py` (checked before
