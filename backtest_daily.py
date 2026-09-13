@@ -1,35 +1,44 @@
 """
-Backtest daily-bar trend-following strategies (see daily_strategy.py)
-against yfinance daily data. No 60-day intraday cap here - daily bars go
-back years, so this can be walk-forward validated across multiple market
-regimes instead of one 60-day window.
+Backtest daily-bar strategies (see daily_strategy.py) against yfinance daily
+data. No 60-day intraday cap here - daily bars go back years, so this can
+be walk-forward validated across multiple market regimes instead of one
+60-day window.
 
 Usage:
-    python backtest_daily.py --symbol RELIANCE.NS --period 10y
-    python backtest_daily.py --symbol '^NSEI' --period 10y --walk-forward
-    python backtest_daily.py --symbol CL=F --period 10y --entry-period 55 --commission-per-trade 20
+    python backtest_daily.py --strategy donchian --symbol RELIANCE.NS --period 10y
+    python backtest_daily.py --strategy rsi2 --symbol '^NSEI' --period 10y --walk-forward
+    python backtest_daily.py --strategy donchian --symbol CL=F --period 10y --entry-period 55 --commission-per-trade 20
 """
 import argparse
 
 from paper_broker import PaperBroker
 from risk import RiskManager
-from daily_strategy import DonchianBreakoutStrategy, Side
+from daily_strategy import DonchianBreakoutStrategy, ConnorsRSI2Strategy, Side
 from backtest import split_by_date, _report  # reuse: same date-splitting + reporting used for intraday backtests
 
+STRATEGIES = {
+    "donchian": lambda args: DonchianBreakoutStrategy(entry_period=args.entry_period, exit_period=args.exit_period),
+    "rsi2": lambda args: ConnorsRSI2Strategy(
+        rsi_period=args.rsi_period, trend_period=args.trend_period, exit_sma_period=args.exit_sma_period,
+        rsi_entry_long=args.rsi_entry_long, rsi_entry_short=args.rsi_entry_short,
+        stop_atr_multiple=args.stop_atr_multiple,
+    ),
+}
 
-def simulate_daily(daily: list[dict], capital: float = 100_000.0, entry_period: int = 20, exit_period: int = 0,
+
+def simulate_daily(daily: list[dict], strategy, capital: float = 100_000.0, risk_per_trade_pct: float = 0.5,
                     max_drawdown_pct: float = 10.0, commission_per_trade: float = 0.0) -> tuple[PaperBroker, RiskManager]:
-    """breakeven_trigger/trail_trigger are passed to PaperBroker.enter() as
+    """`strategy` is any daily_strategy.py object implementing push(bar) /
+    check_entry(close) / check_exit(close, side).
+
+    breakeven_trigger/trail_trigger are passed to PaperBroker.enter() as
     +inf, deliberately disabling strategy.py's TrailingStopManager (its
     fixed point thresholds are tuned for forex pips - see daily_strategy.py's
     docstring for the fake-100%-win-rate bug this caused before it was
-    caught). The position is held at its ORIGINAL structural stop until
-    either that stop is hit or DonchianBreakoutStrategy.check_exit() fires
-    on the shorter exit channel - real trend-following exit logic, not a
-    tight trail that caps profit near zero."""
+    caught). Positions are held at their ORIGINAL structural/ATR stop until
+    either that stop is hit or the strategy's own check_exit() fires."""
     broker = PaperBroker(commission_per_trade=commission_per_trade)
-    risk = RiskManager(capital=capital, max_drawdown_pct=max_drawdown_pct)
-    strat = DonchianBreakoutStrategy(entry_period=entry_period, exit_period=exit_period)
+    risk = RiskManager(capital=capital, risk_per_trade_pct=risk_per_trade_pct, max_drawdown_pct=max_drawdown_pct)
     current_side: Side | None = None
 
     for bar in daily:
@@ -44,32 +53,41 @@ def simulate_daily(daily: list[dict], capital: float = 100_000.0, entry_period: 
                 if pnl is not None:
                     risk.record_trade(pnl)
                     current_side = None
-            if broker.in_position and strat.check_exit(bar["close"], current_side):
+            if broker.in_position and strategy.check_exit(bar["close"], current_side):
                 pnl = broker.close(bar["close"])
                 risk.record_trade(pnl)
                 current_side = None
         elif not risk.trading_halted():
-            signal = strat.check_entry(bar["close"])
+            signal = strategy.check_entry(bar["close"])
             if signal:
                 qty = risk.position_size(signal.entry_price, signal.stop_loss)
                 if qty > 0:
                     broker.enter(signal.side, signal.entry_price, qty, signal.stop_loss,
                                  breakeven_trigger=float("inf"), trail_trigger=float("inf"))
                     current_side = signal.side
-        strat.push(bar["high"], bar["low"])
+        strategy.push(bar)
+        risk.reset_day()  # one bar IS one day here; without this, RiskManager's "daily"
+        # loss breaker (default 2% of capital, meant to reset every day) never resets and
+        # silently becomes a permanent cumulative-loss-since-inception halt instead — a real
+        # bug found and fixed after it collapsed every trade above ~2% cumulative realized
+        # loss to zero further trades for the rest of a 10-year run. max_drawdown_pct (which
+        # DOES persist across days by design) remains the real cross-time risk control here.
 
     return broker, risk
 
 
-def walk_forward_daily(daily: list[dict], capital: float = 100_000.0, entry_period: int = 20,
-                        exit_period: int = 0, split_ratio: float = 0.5, **kwargs):
+def walk_forward_daily(daily: list[dict], strategy_factory, capital: float = 100_000.0,
+                        split_ratio: float = 0.5, **kwargs):
+    """`strategy_factory` is a zero-arg callable returning a FRESH strategy
+    instance for each half (so state from one half never leaks into the
+    other)."""
     if not daily:
         raise ValueError("no data to split")
     dates = sorted({c["date"].date() for c in daily})
     cutoff_date = dates[max(1, int(len(dates) * split_ratio))]
     before, after = split_by_date(daily, cutoff_date)
-    in_sample = simulate_daily(before, capital, entry_period, exit_period, **kwargs)
-    out_of_sample = simulate_daily(after, capital, entry_period, exit_period, **kwargs)
+    in_sample = simulate_daily(before, strategy_factory(), capital, **kwargs)
+    out_of_sample = simulate_daily(after, strategy_factory(), capital, **kwargs)
     return in_sample, out_of_sample
 
 
@@ -80,22 +98,33 @@ def fetch_daily_yfinance(symbol: str, period: str) -> list[dict]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--strategy", choices=list(STRATEGIES), default="donchian")
     parser.add_argument("--symbol", required=True, help="yfinance ticker, e.g. RELIANCE.NS, ^NSEI, CL=F")
     parser.add_argument("--period", default="5y", help="yfinance lookback, e.g. 5y, 10y, max")
-    parser.add_argument("--entry-period", type=int, default=20, help="Donchian entry channel lookback in days")
-    parser.add_argument("--exit-period", type=int, default=0,
-                         help="Donchian exit channel lookback in days (0 = entry_period // 2, classic Turtle ratio)")
     parser.add_argument("--capital", type=float, default=100_000.0)
+    parser.add_argument("--risk-per-trade-pct", type=float, default=0.5)
     parser.add_argument("--max-drawdown-pct", type=float, default=10.0)
     parser.add_argument("--commission-per-trade", type=float, default=0.0)
     parser.add_argument("--walk-forward", action="store_true")
+    # donchian params
+    parser.add_argument("--entry-period", type=int, default=20, help="[donchian] entry channel lookback in days")
+    parser.add_argument("--exit-period", type=int, default=0, help="[donchian] exit channel lookback (0 = entry//2)")
+    # rsi2 params
+    parser.add_argument("--rsi-period", type=int, default=2, help="[rsi2] RSI lookback")
+    parser.add_argument("--trend-period", type=int, default=200, help="[rsi2] trend-filter SMA period")
+    parser.add_argument("--exit-sma-period", type=int, default=5, help="[rsi2] exit SMA period")
+    parser.add_argument("--rsi-entry-long", type=float, default=5.0, help="[rsi2] RSI oversold threshold")
+    parser.add_argument("--rsi-entry-short", type=float, default=95.0, help="[rsi2] RSI overbought threshold")
+    parser.add_argument("--stop-atr-multiple", type=float, default=3.0, help="[rsi2] initial stop = N x ATR")
     args = parser.parse_args()
 
     daily = fetch_daily_yfinance(args.symbol, args.period)
-    kwargs = dict(max_drawdown_pct=args.max_drawdown_pct, commission_per_trade=args.commission_per_trade)
+    strategy_factory = lambda: STRATEGIES[args.strategy](args)
+    kwargs = dict(risk_per_trade_pct=args.risk_per_trade_pct,
+                  max_drawdown_pct=args.max_drawdown_pct, commission_per_trade=args.commission_per_trade)
 
     if args.walk_forward:
-        (b1, r1), (b2, r2) = walk_forward_daily(daily, args.capital, args.entry_period, args.exit_period, **kwargs)
+        (b1, r1), (b2, r2) = walk_forward_daily(daily, strategy_factory, args.capital, **kwargs)
         _report("In-sample  (first half)", b1, r1)
         _report("Out-of-sample (2nd half)", b2, r2)
         consistent = (b1.cash_pnl > 0) == (b2.cash_pnl > 0)
@@ -105,7 +134,7 @@ if __name__ == "__main__":
             print("NOTE: at least one half hit the drawdown breaker - a same-sign match can be a hollow "
                   "artifact of both halves hitting the floor rather than real agreement (see CLAUDE.md).")
     else:
-        broker, risk = simulate_daily(daily, args.capital, args.entry_period, args.exit_period, **kwargs)
+        broker, risk = simulate_daily(daily, strategy_factory(), args.capital, **kwargs)
         _report("Result", broker, risk)
         for t in broker.trade_log:
             print(t)

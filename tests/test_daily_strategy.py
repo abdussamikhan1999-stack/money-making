@@ -1,18 +1,24 @@
-from daily_strategy import DonchianBreakoutStrategy
+from daily_strategy import DonchianBreakoutStrategy, ConnorsRSI2Strategy
 from strategy import Side
 
+
+def bar(high, low, close, open_=None):
+    return {"open": open_ if open_ is not None else close, "high": high, "low": low, "close": close, "volume": 0}
+
+
+# --- DonchianBreakoutStrategy ---
 
 def test_no_signal_before_window_fills():
     s = DonchianBreakoutStrategy(entry_period=5)
     for h, l in [(10, 9), (11, 10), (10, 9), (11, 10)]:
-        s.push(h, l)
+        s.push(bar(h, l, l))
     assert s.check_entry(close=12) is None  # only 4 days pushed, needs 5
 
 
 def test_long_breakout_above_prior_window_high():
     s = DonchianBreakoutStrategy(entry_period=3)
     for h, l in [(10, 9), (11, 9), (10, 8)]:
-        s.push(h, l)
+        s.push(bar(h, l, l))
     sig = s.check_entry(close=12)  # above the 3-day high of 11
     assert sig is not None
     assert sig.side is Side.LONG
@@ -23,7 +29,7 @@ def test_long_breakout_above_prior_window_high():
 def test_short_breakdown_below_prior_window_low():
     s = DonchianBreakoutStrategy(entry_period=3)
     for h, l in [(10, 9), (11, 9), (10, 8)]:
-        s.push(h, l)
+        s.push(bar(h, l, l))
     sig = s.check_entry(close=7)  # below the 3-day low of 8
     assert sig is not None
     assert sig.side is Side.SHORT
@@ -34,7 +40,7 @@ def test_short_breakdown_below_prior_window_low():
 def test_no_signal_when_close_stays_inside_channel():
     s = DonchianBreakoutStrategy(entry_period=3)
     for h, l in [(10, 9), (11, 9), (10, 8)]:
-        s.push(h, l)
+        s.push(bar(h, l, l))
     assert s.check_entry(close=9.5) is None
 
 
@@ -43,8 +49,7 @@ def test_todays_own_bar_excluded_from_its_own_check():
     today's push(), not including it."""
     s = DonchianBreakoutStrategy(entry_period=3)
     for h, l in [(10, 9), (11, 9), (10, 8)]:
-        s.push(h, l)
-    # a huge high today would move the channel if included in its own check
+        s.push(bar(h, l, l))
     sig = s.check_entry(close=12)
     assert sig is not None
     assert sig.stop_loss == 8  # still the OLD window's low, not today's
@@ -53,6 +58,61 @@ def test_todays_own_bar_excluded_from_its_own_check():
 def test_reset_clears_window():
     s = DonchianBreakoutStrategy(entry_period=3)
     for h, l in [(10, 9), (11, 9), (10, 8)]:
-        s.push(h, l)
+        s.push(bar(h, l, l))
     s.reset()
     assert s.check_entry(close=100) is None
+
+
+# --- ConnorsRSI2Strategy ---
+
+def _build_uptrend_rsi2(days=210):
+    """A gentle, steady uptrend long enough to fill the 200-day trend SMA."""
+    s = ConnorsRSI2Strategy(trend_period=200, atr_period=14, rsi_period=2)
+    price = 100.0
+    for _ in range(days):
+        price += 0.5
+        s.push(bar(price + 0.3, price - 0.3, price))
+    return s, price
+
+
+def test_no_entry_before_trend_window_fills():
+    s = ConnorsRSI2Strategy(trend_period=200)
+    for _ in range(50):
+        s.push(bar(101, 99, 100))
+    assert s.check_entry(close=100) is None
+
+
+def test_long_entry_needs_oversold_rsi_and_price_above_trend_sma():
+    s, last_price = _build_uptrend_rsi2()
+    # a sharp one-day dip while still above the long-term trend SMA
+    dip = last_price - 10
+    sig = s.check_entry(close=dip)
+    assert sig is not None
+    assert sig.side is Side.LONG
+    assert sig.entry_price == dip
+    assert sig.stop_loss < dip  # ATR-based stop below entry for a long
+
+
+def test_no_long_entry_when_rsi_not_oversold():
+    s, last_price = _build_uptrend_rsi2()
+    # today continues the gentle uptrend -> RSI(2) nowhere near oversold
+    assert s.check_entry(close=last_price + 0.5) is None
+
+
+def test_exit_true_once_price_crosses_back_above_exit_sma_for_a_long():
+    s = ConnorsRSI2Strategy(trend_period=5, exit_sma_period=3)
+    for c in [100, 101, 102, 101, 100]:
+        s.push(bar(c + 1, c - 1, c))
+    # exit_sma (last 3 closes [102,101,100]) = 101; trend_sma (all 5) = 100.8
+    # no-exit zone is trend_sma <= close <= exit_sma
+    assert s.check_exit(close=105, side=Side.LONG) is True  # above exit_sma
+    assert s.check_exit(close=100.9, side=Side.LONG) is False  # inside the no-exit zone
+
+
+def test_exit_true_when_trend_filter_flips_against_a_long():
+    s = ConnorsRSI2Strategy(trend_period=3, exit_sma_period=1)
+    for c in [100, 100, 100]:
+        s.push(bar(c + 1, c - 1, c))
+    # trend SMA = 100; a close well below it should force an exit even if
+    # the exit_sma condition alone wouldn't have fired
+    assert s.check_exit(close=90, side=Side.LONG) is True

@@ -270,6 +270,92 @@ the same full rigor (perturbation + quarter-split, not just walk-forward
 halves — halves alone would have called BTC/ETH "done" without surfacing
 the decay).
 
+## Third strategy: Connors RSI-2 mean reversion (`ConnorsRSI2Strategy`)
+
+Added after Donchian breakout, and genuinely different again: SHORT-TERM
+mean reversion filtered by a LONG-TERM trend, not trend-following extremes
+or crossovers. The standard, widely-published rules (Connors & Alvarez,
+"Short Term Trading Strategies That Work"): 200-day SMA trend filter, enter
+on RSI(2) < 5 (long, above the filter) or > 95 (short, below it), exit on a
+close back through the 5-day SMA or the trend filter flipping. Added
+`indicators.sma()` / `indicators.rsi()` (windowed Wilder smoothing,
+consistent with `average_true_range`'s own windowed style) to support it.
+No natural structural stop exists for this rule (unlike Donchian's own
+channel), so the initial stop is `stop_atr_multiple` x ATR — a deliberate
+addition on top of Connors' original publication, necessary because this
+repo's risk sizing requires a numeric stop on every `Signal`.
+
+**A subtle lookahead trap avoided**: RSI(2) is specifically about very
+recent price action, so `check_entry()` computes it from
+`self._closes + [close]` (including TODAY's close) even though the trend
+SMA and ATR intentionally use only the window BEFORE today (matching
+Donchian's no-lookahead convention). Using `self._closes` alone for RSI
+would make "detect today's oversold dip" actually mean "detect
+yesterday's" — one day stale, and specifically damaging for a 2-period
+window where one day is half the whole lookback.
+
+**A second, more severe bug found and fixed while testing this** (see
+`backtest_daily.py`'s `simulate_daily()`): it never called
+`risk.reset_day()`. `RiskManager`'s "daily" loss breaker (default 2% of
+capital) is designed to reset every day via that call — `backtest.py`'s
+intraday loop does this correctly once per calendar day. But
+`simulate_daily()` runs one bar per day and never called it at all, so
+`_realized_pnl_today` silently accumulated for the ENTIRE multi-year
+backtest instead of resetting daily, turning "2% daily loss limit" into "2%
+cumulative-loss-since-inception limit, ever" — trading permanently stopped
+after roughly 4 losing trades (at the default 0.5% risk-per-trade) and
+stayed stopped for however many years of data remained, with no error or
+warning. Caught only while investigating why raising `risk_per_trade_pct`
+above ~1.5% made trade counts collapse to 2-5 regardless of instrument —
+a symptom that demanded explanation rather than being written off as "the
+strategy just doesn't like bigger size." Fixed with one line:
+`risk.reset_day()` after each bar. A regression test
+(`test_simulate_daily_resets_the_daily_loss_breaker_each_bar`) builds 8
+losing round-trips specifically to prove trading continues past the point
+the bug would have silently killed it. **Re-verified impact**: the
+Donchian BTC-USD/ETH-USD numbers reported earlier were unaffected (their
+few-large-winners profile never crossed the 2% cumulative threshold); the
+8 RSI-2 candidates below were also unaffected; BTC-USD and GC=F's
+(non-candidate, already-negative) Donchian numbers did shift once
+re-verified.
+
+**Systematic finding**: 14 instruments, walk-forward, ~5bps commission,
+proper capital scaling — an 8/14 hit rate (57%), by far the highest of any
+strategy tested this session (Donchian: 32%, intraday reversal: 1%), and
+critically on REAL Kite-tradable instruments this time (`^NSEI`, `^NSEBANK`,
+`RELIANCE.NS`, `TCS.NS`, `INFY.NS`, `HDFCBANK.NS`, `ITC.NS`, `CL=F`), not
+just crypto. Parameter perturbation on `^NSEI` is smooth on `trend_period`
+and `stop_atr_multiple` (all-positive across the tested range, no cliffs),
+and the RSI-threshold perturbation shows a coherent, monotonic story rather
+than noise: extreme thresholds (2/98, 5/95, 10/90) are all positive,
+moderate ones (15/85 and looser) all flip negative — which matches
+Connors' own thesis that only genuinely extreme RSI(2) readings capture
+real capitulation, not ordinary "overbought/oversold." This is the most
+theoretically coherent, sign-robust result of the whole session.
+
+**But the magnitude kills it as a usable strategy, at any reasonable risk
+setting**: at the standard 0.5% risk-per-trade, `^NSEI`'s 10-year return
+is 0.40% total — **0.04%/year**. Every Kite-tradable candidate is between
+0.04%/year (ITC.NS) and 0.25%/year (TCS.NS). Checked directly whether more
+aggressive position sizing fixes this (`--risk-per-trade-pct`, tested 0.5
+through 10%): trade count stays fixed (64) at every level since sizing
+doesn't change WHICH signals fire, and return/drawdown both scale
+proportionally with risk — at 10% risk per trade (reckless for real
+money), `^NSEI` reaches only **0.83%/year with 19% drawdown**. This is not
+a sizing problem to be solved with leverage; the underlying per-trade edge
+is real (statistically) but too thin to be worth the operational risk at
+any sizing.
+
+**Net verdict**: the most credible finding of the entire session in terms
+of methodology (real theoretical grounding, smooth parameter sensitivity,
+high hit rate, actually Kite-tradable) — and still not tradable, because
+the edge is economically negligible after being sized honestly. This is a
+different failure mode than everything before it (which failed on
+robustness/consistency); RSI-2 failed on magnitude despite being robust.
+Worth remembering when evaluating the next candidate: passing every
+rigor check is necessary but not sufficient — always compute annualized
+return on realistic capital before calling anything "found."
+
 ## Two strategy variants exist — same data pipeline, opposite premise
 
 - `HighLowOpenStrategy` ("reversal", default): the source thread's rule —
