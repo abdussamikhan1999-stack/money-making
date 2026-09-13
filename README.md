@@ -11,6 +11,14 @@ accredited financial specialist before risking real capital. Backtest and
 paper-trade thoroughly before ever running this live. You are solely
 responsible for any trades it places.
 
+## Two variants
+
+`--variant reversal` (default) is the rule described below. `--variant
+breakout` is its trend-following inverse (trade WITH a breakout instead of
+fading it) — built to test whether a trending instrument suits it better.
+Tested on oil: it didn't — 0% win rate over 21 trades, 3x worse than the
+reversal variant. See `CLAUDE.md` for the detailed comparison.
+
 ## The rule
 
 1. Track the highest and lowest H1 (hourly) bar **open** price seen so far

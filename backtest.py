@@ -30,19 +30,31 @@ CAVEATS:
 import argparse
 from datetime import datetime
 
-from strategy import HighLowOpenStrategy
+from strategy import HighLowOpenStrategy, HighLowOpenBreakoutStrategy
 from paper_broker import PaperBroker
 from risk import RiskManager
 
+VARIANTS = {
+    "reversal": lambda m15_filter: HighLowOpenStrategy(m15_filter=m15_filter),
+    "breakout": lambda m15_filter: HighLowOpenBreakoutStrategy(),
+}
+
 
 def simulate(h1: list[dict], m15: list[dict], intraday: list[dict],
-             capital: float = 100_000.0, m15_filter: bool = False,
+             capital: float = 100_000.0, m15_filter: bool = False, variant: str = "reversal",
+             max_drawdown_pct: float = 10.0,
              breakeven_trigger: float = 5.0, breakeven_offset: float = 1.0,
              trail_trigger: float = 10.0, trail_offset: float = 5.0) -> tuple[PaperBroker, RiskManager]:
     """Core, source-agnostic backtest loop. `intraday` is the finest-grained
     series available (Kite 'minute' candles, or yfinance 5m/15m bars) used
     as the intrabar price-path proxy. Returns the broker (trades/P&L) and the
-    RiskManager (so callers can see drawdown/halt state, not just P&L)."""
+    RiskManager (so callers can see drawdown/halt state, not just P&L).
+
+    `variant`: "reversal" (the source thread's rule — fade the breakout) or
+    "breakout" (its trend-following inverse — trade WITH the breakout)."""
+    if variant not in VARIANTS:
+        raise ValueError(f"unknown variant {variant!r}, expected one of {list(VARIANTS)}")
+
     m15_open_at = {c["date"]: c["open"] for c in m15}
 
     def m15_open_for(ts: datetime) -> float | None:
@@ -55,8 +67,8 @@ def simulate(h1: list[dict], m15: list[dict], intraday: list[dict],
         intraday_by_hour.setdefault(hour_bucket, []).append(c)
 
     broker = PaperBroker()
-    risk = RiskManager(capital=capital)
-    strat = HighLowOpenStrategy(m15_filter=m15_filter)
+    risk = RiskManager(capital=capital, max_drawdown_pct=max_drawdown_pct)
+    strat = VARIANTS[variant](m15_filter)
     current_day = None
 
     for bar in h1:
@@ -97,7 +109,8 @@ def split_by_date(candles: list[dict], cutoff_date) -> tuple[list[dict], list[di
 
 
 def walk_forward(h1: list[dict], m15: list[dict], intraday: list[dict],
-                  capital: float = 100_000.0, m15_filter: bool = False, split_ratio: float = 0.5,
+                  capital: float = 100_000.0, m15_filter: bool = False, variant: str = "reversal",
+                  split_ratio: float = 0.5,
                   **trail_kwargs) -> tuple[tuple[PaperBroker, RiskManager], tuple[PaperBroker, RiskManager]]:
     """Davey-style overfitting check: run the IDENTICAL rule on two
     independent halves of the sample (each starting with its own fresh
@@ -116,8 +129,8 @@ def walk_forward(h1: list[dict], m15: list[dict], intraday: list[dict],
     m15_a, m15_b = split_by_date(m15, cutoff_date)
     intraday_a, intraday_b = split_by_date(intraday, cutoff_date)
 
-    in_sample = simulate(h1_a, m15_a, intraday_a, capital, m15_filter, **trail_kwargs)
-    out_of_sample = simulate(h1_b, m15_b, intraday_b, capital, m15_filter, **trail_kwargs)
+    in_sample = simulate(h1_a, m15_a, intraday_a, capital, m15_filter, variant, **trail_kwargs)
+    out_of_sample = simulate(h1_b, m15_b, intraday_b, capital, m15_filter, variant, **trail_kwargs)
     return in_sample, out_of_sample
 
 
@@ -137,24 +150,25 @@ def _fetch_kite(instrument_token: int, from_date: datetime, to_date: datetime) -
             fetch_candles(kite, instrument_token, "minute", from_date, to_date))
 
 
-def run_backtest_yfinance(symbol: str, period: str = "30d",
-                           capital: float = 100_000.0, m15_filter: bool = False, **trail_kwargs):
-    return simulate(*_fetch_yfinance(symbol, period), capital, m15_filter, **trail_kwargs)
+def run_backtest_yfinance(symbol: str, period: str = "30d", capital: float = 100_000.0,
+                           m15_filter: bool = False, variant: str = "reversal", **trail_kwargs):
+    return simulate(*_fetch_yfinance(symbol, period), capital, m15_filter, variant, **trail_kwargs)
 
 
-def run_backtest_kite(instrument_token: int, from_date: datetime, to_date: datetime,
-                       capital: float = 100_000.0, m15_filter: bool = False, **trail_kwargs):
-    return simulate(*_fetch_kite(instrument_token, from_date, to_date), capital, m15_filter, **trail_kwargs)
+def run_backtest_kite(instrument_token: int, from_date: datetime, to_date: datetime, capital: float = 100_000.0,
+                       m15_filter: bool = False, variant: str = "reversal", **trail_kwargs):
+    return simulate(*_fetch_kite(instrument_token, from_date, to_date), capital, m15_filter, variant, **trail_kwargs)
 
 
-def walk_forward_yfinance(symbol: str, period: str = "60d", capital: float = 100_000.0,
-                           m15_filter: bool = False, split_ratio: float = 0.5, **trail_kwargs):
-    return walk_forward(*_fetch_yfinance(symbol, period), capital, m15_filter, split_ratio, **trail_kwargs)
+def walk_forward_yfinance(symbol: str, period: str = "60d", capital: float = 100_000.0, m15_filter: bool = False,
+                           variant: str = "reversal", split_ratio: float = 0.5, **trail_kwargs):
+    return walk_forward(*_fetch_yfinance(symbol, period), capital, m15_filter, variant, split_ratio, **trail_kwargs)
 
 
 def walk_forward_kite(instrument_token: int, from_date: datetime, to_date: datetime, capital: float = 100_000.0,
-                       m15_filter: bool = False, split_ratio: float = 0.5, **trail_kwargs):
-    return walk_forward(*_fetch_kite(instrument_token, from_date, to_date), capital, m15_filter, split_ratio, **trail_kwargs)
+                       m15_filter: bool = False, variant: str = "reversal", split_ratio: float = 0.5, **trail_kwargs):
+    return walk_forward(*_fetch_kite(instrument_token, from_date, to_date), capital, m15_filter, variant,
+                         split_ratio, **trail_kwargs)
 
 
 def _report(label: str, broker: PaperBroker, risk: RiskManager) -> None:
@@ -166,6 +180,9 @@ def _report(label: str, broker: PaperBroker, risk: RiskManager) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", choices=["yfinance", "kite"], default="yfinance")
+    parser.add_argument("--variant", choices=["reversal", "breakout"], default="reversal",
+                         help="reversal = source thread's rule (fade the breakout); "
+                              "breakout = trend-following inverse (trade WITH the breakout)")
     parser.add_argument("--symbol", help="yfinance ticker, e.g. RELIANCE.NS or ^NSEI (source=yfinance)")
     parser.add_argument("--period", default="30d", help="yfinance lookback, e.g. 30d, 60d (source=yfinance)")
     parser.add_argument("--token", type=int, help="Kite instrument_token (source=kite)")
@@ -185,7 +202,8 @@ if __name__ == "__main__":
                          help="cumulative drawdown %% of capital that permanently halts trading")
     args = parser.parse_args()
 
-    trail_kwargs = dict(
+    extra_kwargs = dict(
+        max_drawdown_pct=args.max_drawdown_pct,
         breakeven_trigger=args.breakeven_trigger, breakeven_offset=args.breakeven_offset,
         trail_trigger=args.trail_trigger, trail_offset=args.trail_offset,
     )
@@ -195,10 +213,10 @@ if __name__ == "__main__":
             parser.error("--symbol is required for --source yfinance")
         if args.walk_forward:
             (b1, r1), (b2, r2) = walk_forward_yfinance(args.symbol, args.period, args.capital,
-                                                        args.m15_filter, **trail_kwargs)
+                                                        args.m15_filter, args.variant, **extra_kwargs)
         else:
             broker, risk = run_backtest_yfinance(args.symbol, args.period, args.capital,
-                                                  args.m15_filter, **trail_kwargs)
+                                                  args.m15_filter, args.variant, **extra_kwargs)
     else:
         if not (args.token and args.from_date and args.to_date):
             parser.error("--token, --from, and --to are required for --source kite")
@@ -206,10 +224,10 @@ if __name__ == "__main__":
         to_dt = datetime.strptime(args.to_date, "%Y-%m-%d")
         if args.walk_forward:
             (b1, r1), (b2, r2) = walk_forward_kite(args.token, from_dt, to_dt, args.capital,
-                                                    args.m15_filter, **trail_kwargs)
+                                                    args.m15_filter, args.variant, **extra_kwargs)
         else:
             broker, risk = run_backtest_kite(args.token, from_dt, to_dt, args.capital,
-                                              args.m15_filter, **trail_kwargs)
+                                              args.m15_filter, args.variant, **extra_kwargs)
 
     if args.walk_forward:
         _report("In-sample  (first half)", b1, r1)

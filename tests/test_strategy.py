@@ -1,4 +1,4 @@
-from strategy import HighLowOpenStrategy, TrailingStopManager, Side
+from strategy import HighLowOpenStrategy, HighLowOpenBreakoutStrategy, TrailingStopManager, Side
 
 
 def test_no_signal_before_any_bar_open():
@@ -100,6 +100,46 @@ def test_trailing_stop_hit_long():
     t.update(105)  # stop now 101
     assert t.hit(100) is True
     assert t.hit(102) is False
+
+
+def test_breakout_strategy_buys_immediately_on_breakout_no_wait_for_return():
+    s = HighLowOpenBreakoutStrategy()
+    s.on_bar_open(100)
+    sig = s.on_price(105)  # fires on the FIRST touch above the line, unlike the reversal variant
+    assert sig is not None
+    assert sig.side is Side.LONG
+    assert sig.entry_price == 105
+    assert sig.stop_loss == 100  # the line itself, not day-high/low
+
+
+def test_breakout_strategy_sells_immediately_on_breakdown():
+    s = HighLowOpenBreakoutStrategy()
+    s.on_bar_open(100)
+    sig = s.on_price(95)
+    assert sig is not None
+    assert sig.side is Side.SHORT
+    assert sig.entry_price == 95
+    assert sig.stop_loss == 100
+
+
+def test_breakout_strategy_one_shot_per_level():
+    s = HighLowOpenBreakoutStrategy()
+    s.on_bar_open(100)
+    first = s.on_price(105)
+    assert first is not None
+    second = s.on_price(106)  # still above the same line — should not re-fire
+    assert second is None
+
+
+def test_breakout_strategy_rearms_on_new_level():
+    s = HighLowOpenBreakoutStrategy()
+    s.on_bar_open(100)
+    s.on_price(105)
+    s.on_bar_open(110)  # a later H1 bar pushes the line higher
+    sig = s.on_price(112)
+    assert sig is not None
+    assert sig.entry_price == 112
+    assert sig.stop_loss == 110
 
 
 def test_trailing_stop_short_mirrors_long():

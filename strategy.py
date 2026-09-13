@@ -117,6 +117,63 @@ class HighLowOpenStrategy:
 
 
 @dataclass
+class HighLowOpenBreakoutStrategy:
+    """Trend-following INVERSE of HighLowOpenStrategy: instead of fading a
+    breakout back through the line, this trades WITH it — buy the instant
+    price breaks above the highest-open line, sell the instant it breaks
+    below the lowest-open line. Stop-loss is the line itself (if the
+    breakout fails and price falls back through, the premise was wrong —
+    get out), not the reversal rule's day-high/low stop.
+
+    Not from the source thread — built to test a hypothesis the reversal
+    rule's own backtest results raised: a strongly trending instrument
+    (oil, currently) looks like a bad fit for a mean-reversion rule and a
+    plausible fit for a trend-following one. Compare the two on the same
+    instrument via backtest.py's --variant flag before drawing conclusions
+    from either alone.
+    """
+    one_shot_per_level: bool = True
+
+    highest_open: float | None = field(default=None, init=False)
+    lowest_open: float | None = field(default=None, init=False)
+
+    _long_fired_at: float | None = field(default=None, init=False)
+    _short_fired_at: float | None = field(default=None, init=False)
+
+    def reset_session(self) -> None:
+        self.highest_open = None
+        self.lowest_open = None
+        self._long_fired_at = None
+        self._short_fired_at = None
+
+    def on_bar_open(self, open_price: float) -> None:
+        if self.highest_open is None or open_price > self.highest_open:
+            self.highest_open = open_price
+            self._long_fired_at = None
+        if self.lowest_open is None or open_price < self.lowest_open:
+            self.lowest_open = open_price
+            self._short_fired_at = None
+
+    def on_price(self, ltp: float, m15_open: float | None = None) -> Signal | None:
+        """m15_open is accepted but ignored — kept only so this is
+        interchangeable with HighLowOpenStrategy in backtest.py's loop."""
+        if self.highest_open is not None and ltp > self.highest_open:
+            already_fired = self.one_shot_per_level and self._long_fired_at == self.highest_open
+            if not already_fired:
+                self._long_fired_at = self.highest_open
+                return Signal(Side.LONG, ltp, self.highest_open,
+                              "price broke above the highest-open line — trading WITH the breakout")
+
+        if self.lowest_open is not None and ltp < self.lowest_open:
+            already_fired = self.one_shot_per_level and self._short_fired_at == self.lowest_open
+            if not already_fired:
+                self._short_fired_at = self.lowest_open
+                return Signal(Side.SHORT, ltp, self.lowest_open,
+                              "price broke below the lowest-open line — trading WITH the breakdown")
+        return None
+
+
+@dataclass
 class TrailingStopManager:
     """Stop-management: move to breakeven+offset after `breakeven_trigger`
     units of profit, then trail to entry+trail_offset after `trail_trigger`.

@@ -134,3 +134,29 @@ Do not report a bare P&L number as "the result" going forward without also
 running `--walk-forward` and checking `drawdown_halted` — a single
 whole-period P&L number has already been shown to be misleading on this
 exact codebase.
+
+**Walk-forward blind spot found**: a same-sign match across the two halves
+is not automatically reassuring — if BOTH halves independently hit the
+drawdown breaker, they'll show near-identical, near-floor P&L and register
+as "CONSISTENT" even though that's an artifact of the cap truncating both
+runs, not two runs agreeing on a real edge (seen testing the breakout
+variant on oil: both halves halted at ~10.5% drawdown with nearly identical
+P&L). Check `drawdown_halted` on BOTH halves before trusting a
+"CONSISTENT" verdict — if either tripped, the match is hollow.
+
+## Two strategy variants exist — same data pipeline, opposite premise
+
+- `HighLowOpenStrategy` ("reversal", default): the source thread's rule —
+  fade a breakout back through the line.
+- `HighLowOpenBreakoutStrategy` ("breakout"): trend-following inverse —
+  trade WITH the breakout, stop-loss at the line itself. Built to test
+  whether a trending instrument (oil) would suit a trend-follower better
+  than the reversal rule. It didn't: on oil, 60d, the breakout variant
+  went 0-for-21 (0% win rate) and lost 3x more than the reversal variant
+  (-$10,499 vs -$3,500) before its own drawdown breaker halted it. Read as:
+  removing the reversal rule's "wait for price to return through the line"
+  step removes the one thing filtering out breakout fakeouts/whipsaws —
+  don't assume "trend-following variant" is an automatic improvement on a
+  trending instrument without testing it, as this one didn't hold up.
+- Select via `backtest.py --variant {reversal,breakout}`; both share
+  `simulate()`, `walk_forward()`, and the same CLI flags.
