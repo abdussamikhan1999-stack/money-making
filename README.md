@@ -151,8 +151,18 @@ instrument dump.
 ### Live/paper runner (needs the Connect tier)
 
 ```
-python run_live.py --token 256265 --symbol NIFTY --exchange NSE   # paper mode (default)
+python run_live.py --token 256265 --symbol NIFTY --exchange NSE              # paper mode, 15s polling (default)
+python run_live.py --token 256265 --symbol NIFTY --exchange NSE --stream     # paper mode, real-time WebSocket price
 ```
+
+`--stream` uses Kite's own WebSocket (`KiteTicker`, in `kite_ticker.py`)
+instead of polling for price — matters because entries fire on every price
+update, not bar close, so streaming catches the exact first touch of a line
+instead of lagging by up to one poll interval. H1/M15 candles still refresh
+periodically either way (they don't change every second). Written against
+KiteTicker's documented API but, like the rest of this repo's Kite
+integration, untested against a live connection — the polling path is the
+better-exercised default.
 
 ## Going live
 
@@ -207,9 +217,7 @@ cross-check it.
   open → high → low → close, since Kite's historical API gives OHLC, not
   ticks. This can misorder which of a minute's high/low actually came
   first — a real limitation, not a bug to silently trust past.
-- `run_live.py` polls (every 15s) rather than streaming ticks via
-  `KiteTicker` — simpler and robust for v1, but means entries can lag the
-  true first touch of a line by up to the poll interval. Worth upgrading to
-  `KiteTicker` if this trades a fast-moving instrument.
+- `run_live.py --stream` (see above) addresses the polling lag using
+  KiteTicker, but is itself untested against a live connection.
 - Daily access-token regeneration is manual (see Setup) — Zerodha's login
   is deliberately behind 2FA, and this repo doesn't try to script around it.

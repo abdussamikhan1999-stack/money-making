@@ -27,7 +27,20 @@ python run_live.py --token <instrument_token> --symbol <symbol> --exchange <NSE|
   "decide what to do given this data" separable from "go get the data" so
   it's testable without mocking a broker. `tests/` runs against plain
   floats/dataclasses, no fixtures needed, no network ever.
-- `kite_client.py` / `data.py` are the only files that import `kiteconnect`.
+- `kite_client.py` / `data.py` / `kite_ticker.py` are the only files that
+  import `kiteconnect`.
+- `kite_ticker.py`: real-time price via Kite's own `KiteTicker` class, used
+  by `run_live.py --stream` instead of polling. Original implementation
+  against KiteTicker's documented API — NOT copied from any third-party
+  project. (A well-known open-source algo platform, OpenAlgo, is
+  AGPL-3.0-licensed and reimplements the raw WebSocket protocol itself for
+  reasons specific to its hosted, multi-user, 1800+-symbol deployment;
+  copying that code would obligate this repo to AGPL's copyleft terms, and
+  none of its scaling reasons apply to a personal single-instrument bot
+  anyway — KiteTicker directly is the right-sized tool here.) `run_live.py`'s
+  `Trader` class holds the shared strategy/broker/risk state behind a lock,
+  since `--stream` calls `on_ltp` from KiteTicker's background thread while
+  candle refreshes happen on the main thread.
 - `data_yfinance.py` is a free alternative data source (Yahoo Finance, no
   API key) — used by `backtest.py --source yfinance`, the default, since
   the free Kite "Personal" app tier has no historical-data access at all.
