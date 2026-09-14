@@ -684,6 +684,51 @@ simple technical/statistical rules over liquid NSE instruments — the
 option-selling result remains the one exception, real but blocked by
 capital-tier structure rather than by noise.
 
+## Ninth: trying to fix the iron condor's capital problem — halving position size doesn't help, and it's a SEBI-wide wall anyway
+
+Two follow-ups to the capital-tier problem the iron condor hit, both aimed
+at making options premium selling actually reachable at lower capital.
+
+**1. Single-sided, trend-filtered put credit spread** (sell a put OTM, buy
+a further put as protection — one spread instead of the iron condor's two,
+only entered when spot is above its 200-day SMA). Same synthetic
+Black-Scholes/India-VIX pricing as the iron condor. Genuinely better risk
+profile than the plain iron condor: no quarter-split decay (Q4 2024-2026 is
+the *strongest* quarter, smallest drawdown, not the weakest), both
+walk-forward halves positive and improving. **But safely sized (~2%
+risk/trade, ~₹300,000 capital), it nets only +1.3%/year** — a 9-config
+perturbation sweep is positive everywhere but every cell is between +0.2%
+and +2.2%/year. Same lesson as RSI-2 and the full iron condor: halving
+position size does not fix a thin edge, because return and risk dilute
+together at safe sizing — it just moves the "unsafe-but-good-looking vs.
+safe-but-negligible" tradeoff to a smaller absolute capital number.
+
+**2. Is a different index/instrument the fix? No — this is a SEBI-wide
+regulatory floor, not a Nifty quirk.** Confirmed via research: SEBI's
+November 2024 rule (effective April 2025) mandates **every** index
+derivatives contract — Nifty, Bank Nifty, FinNifty, Midcap Nifty, Nifty
+Next 50, any index, any future index — be sized so its contract value sits
+in a ₹15-20 lakh band at introduction. Bank Nifty's lot size dropped to 30
+specifically *to hit this same band* at its own price level, not to be
+smaller — so switching indices doesn't change the max-loss-per-lot
+economics at all, only the lot-size number cosmetically. Individual STOCK
+options have a lower floor (~₹7.5 lakh minimum contract value, up from
+₹2-4 lakh pre-2025) — roughly half the capital of an index spread — but
+this project's own sector/stock sweep above already found no stock-specific
+edge bigger than the ones already measured, so a lower capital floor there
+doesn't change the underlying magnitude problem, just its absolute scale.
+
+**Net verdict**: the capital-tier wall around options premium selling in
+India isn't something a cleverer construction (single-sided vs.
+symmetric) or a different underlying escapes — it's a regulatory
+minimum-contract-value floor applied market-wide since April 2025, and even
+where it's lower (individual stocks), the same "edge dilutes to
+sub-benchmark at safe sizing" finding already established elsewhere in this
+file still applies. This closes out the options-premium-selling line
+credibly rather than leaving it as "just needs more capital" — more capital
+alone was never going to fix a thin edge, and less capital was never
+achievable given the regulatory floor.
+
 ## Two strategy variants exist — same data pipeline, opposite premise
 
 - `HighLowOpenStrategy` ("reversal", default): the source thread's rule —
