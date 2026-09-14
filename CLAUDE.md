@@ -356,6 +356,37 @@ Worth remembering when evaluating the next candidate: passing every
 rigor check is necessary but not sufficient — always compute annualized
 return on realistic capital before calling anything "found."
 
+## Donchian extended to FX pairs and more MCX commodities: also no survivors
+
+Followed through on the "next step" noted above: tested the instruments the
+BTC/ETH/gold/oil sweep hadn't covered yet — 4 Kite-tradable currency pairs
+(`USDINR=X`, `EURINR=X`, `GBPINR=X`, `JPYINR=X`) and 4 more MCX commodities
+(`NG=F` natural gas, `HG=F` copper, `SI=F` silver, `PL=F` platinum) — at both
+classic Turtle periods (`--entry-period 20` and `55`), 10y history, ~20-unit
+commission per round trip, walk-forward halves. 16 configs total.
+
+**Zero passed the first screen** (both halves profitable, no drawdown-halt) —
+didn't even reach the perturbation/quarter-split stage, since walk-forward
+alone eliminated every one:
+- 20-day: all 8 negative on both halves except `USDINR=X`, which flipped sign
+  (+3,565 in-sample / -3,648 out-of-sample) — the same "looks good on one
+  half, reverses on the other" pattern already seen and distrusted elsewhere
+  in this file.
+- 55-day: mostly negative-both-halves again; the exceptions are all sign
+  flips with small magnitudes (`USDINR=X` +520/-1,865, `EURINR=X` -119/+278,
+  `HG=F` +405/-2,786) — same pattern, not a real edge.
+
+**Net verdict**: extends the existing finding rather than changing it. Across
+this whole project (intraday reversal: 1/216 configs survived screening and
+died under perturbation+costs; Donchian daily trend: BTC/ETH cleared
+robustness but turned out to be decaying bull-market beta, not tradable via
+Kite anyway; gold/oil were weak; RSI-2 passed every rigor check but the edge
+was too thin to matter) — FX pairs and the remaining MCX commodities add a
+fourth negative result to the Donchian family specifically. No further
+instruments obviously remain to try under this same mechanism; a genuinely
+different next step (different mechanism entirely, not another instrument
+swap) would be needed to keep searching.
+
 ## Two strategy variants exist — same data pipeline, opposite premise
 
 - `HighLowOpenStrategy` ("reversal", default): the source thread's rule —
