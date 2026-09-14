@@ -549,6 +549,31 @@ required to capture it. This is the same transaction-cost lesson the project
 already learned from SI=F, now shown at its most extreme (a strategy that
 looks like it 12x's an account gross, and is instead wiped out net).
 
+## Follow-up: filtering the overnight-drift trade doesn't rescue it either
+
+Natural next question after the overnight-drift finding above: the naive
+"trade every single night" version died on costs (2,465 round trips), but
+maybe a FILTER that only takes the trade on a subset of higher-conviction
+nights keeps enough of the edge to survive at a lower trade count. Tested 11
+filters on `^NSEI` (after red/green intraday sessions, after big down days,
+by realized-vol tercile, by day-of-week) — trade counts ranged from 2,465
+(baseline) down to 220 (only after a >1% down intraday session, ~22
+trades/year).
+
+**Every single filter still nets negative**, including the most selective
+one: after->1% down days, gross CAGR is a thin +1.6% but net is **-4.2%**
+even at only ~22 trades/year. The fixed-cost floor per round trip (~0.2%
+STT+stamp + a ~₹16 flat DP charge, roughly 0.25-0.3% all-in on a ₹30,000
+position) is simply larger than what a typical overnight move is worth at
+this capital size — cutting frequency cuts the gross edge and the cost drag
+together, and the cost side never falls fast enough relative to trade count
+to let net catch up to zero, let alone positive. This isn't a "found the
+right filter" problem; it's the underlying per-trade cost structure being
+incompatible with capturing a single-day return at this account size, full
+stop. Confirms the earlier verdict rather than reopening it — the overnight
+anomaly is real but this project's low-capital constraint rules it out
+regardless of how selectively it's traded.
+
 ## Two strategy variants exist — same data pipeline, opposite premise
 
 - `HighLowOpenStrategy` ("reversal", default): the source thread's rule —
