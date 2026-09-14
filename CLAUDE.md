@@ -574,6 +574,70 @@ stop. Confirms the earlier verdict rather than reopening it — the overnight
 anomaly is real but this project's low-capital constraint rules it out
 regardless of how selectively it's traded.
 
+## Seventh: options premium selling (weekly Nifty iron condor) — real edge, wrong capital tier
+
+The one mechanism not yet tried because it needs option pricing, not just
+spot history: selling a defined-risk weekly Nifty iron condor (short
+strangle with wings bought to cap loss) to harvest the volatility risk
+premium. Explored as a standalone probe script, not ported into this
+repo's architecture.
+
+**Methodology, and its real limitation**: no free/reliable historical NSE
+option-chain data source exists, so premiums are synthesized with
+Black-Scholes using `^NSEI` spot (real) and `^INDIAVIX` (NSE's own official
+implied-vol index, real, not a guess) as a single flat IV input applied to
+all four legs. This can't capture volatility skew (real index puts trade
+richer than a flat-IV model implies, calls cheaper) or bid-ask spread on
+entry, especially on the less-liquid long wings — both bias the result
+optimistic relative to what a real fill would achieve. Flagging this
+prominently: **this has not been validated against real option-chain
+prices**, unlike every other strategy in this file which at minimum uses
+real spot OHLC throughout.
+
+**Within that caveat, the statistical result is the strongest and most
+robust of anything tried in this project**: full 10y period +20.5% CAGR /
+-25.2% max drawdown / 74% win rate (short strikes ~2% OTM, wings ~1%
+further out, weekly cycle, realistic options STT + brokerage modeled, 493
+cycles). Both walk-forward halves positive (33.3% and 51.4% CAGR) — no
+sign flip. A 9-config perturbation sweep (short_otm x wing width) is
+positive everywhere except the tightest/riskiest corner. **Quarter-split
+shows no decay** — unlike every prior "promising" finding in this project
+(Donchian/BTC, momentum rotation), all 4 quarters are positive AND the most
+recent quarter (2024-2026) is the *best* one (+85.7% CAGR), not the worst.
+This is the first mechanism tested here that doesn't die under the same
+scrutiny that killed everything else.
+
+**But it's disqualified anyway, on a different axis: position sizing at
+this project's capital tier is structurally impossible to do safely.**
+Nifty's current lot size (65 units, raised under SEBI's minimum-contract-
+value rules) means even ONE defined-risk spread's max loss (wing width
+minus credit received, x lot size) runs roughly ₹6,500-9,500 at typical
+2026 Nifty levels — **20-30% of a ₹30,000 account in a single trade**,
+10-20x this project's own stated 1-2% risk-per-trade standard (see
+README's capital-requirements note). The quarter-split run surfaced this
+concretely: Q3 (2021-2024) shows a **-130.4% drawdown** — mathematically
+only possible because the probe kept trading a fixed 1 lot regardless of
+shrinking capital, with no circuit breaker (exactly the class of bug
+`risk.py`'s drawdown breaker exists elsewhere in this repo to catch,
+reproduced here because this probe never wired one in). Sizing down to a
+genuine 1-2% risk per trade isn't possible with fractional lots — it would
+require roughly ₹350,000-475,000 of capital to make ONE lot's max loss a
+sane fraction of the account. That's the same wall the Nifty-futures
+overnight-carry idea hit earlier in this file, now shown to apply to
+options as well: Nifty's contract size itself is incompatible with
+"low capital," independent of whether the underlying edge is real.
+
+**Net verdict**: the first genuinely non-decaying, statistically coherent
+edge found in this whole project (short volatility / theta harvesting) —
+and still not usable at the capital level this project has targeted, for a
+structural reason (minimum lot size) rather than the noise/decay/thin-edge
+reasons that killed everything else. Two honest paths if pursued further:
+validate against real historical option-chain data before trusting the
+synthetic-pricing result at all, and separately accept that trading it
+properly needs meaningfully more capital (mid-lakhs, not tens of
+thousands) — "low capital Nifty options selling" is close to a contradiction
+in terms at 2026 lot sizes.
+
 ## Two strategy variants exist — same data pipeline, opposite premise
 
 - `HighLowOpenStrategy` ("reversal", default): the source thread's rule —
