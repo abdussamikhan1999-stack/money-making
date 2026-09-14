@@ -453,6 +453,53 @@ change the core finding: there's still no strategy in this project, of four
 tried, showing a current, non-decayed edge. Capital size was never the
 blocker for any of the four; the absence of a real current edge was.
 
+## Fifth strategy explored: pairs trading (statistical arbitrage) — magnitude too small
+
+Prompted by the user confirming the machine can stay up continuously, which
+removes the operational objection to strategies needing active monitoring.
+Explored a mechanism with a genuinely different return source from all four
+above: market-neutral mean reversion on the spread between two correlated
+stocks (long one leg, short the other), rather than betting on market
+direction the way trend/momentum/reversal all do. Rationale: every prior
+strategy's fatal flaw was decaying when the directional regime changed
+(bull-market decay, momentum crash) — a market-neutral spread has no such
+directional exposure in principle. Not yet ported into this repo's
+architecture — explored as a standalone probe script.
+
+Method: rolling 60-day OLS hedge ratio (plain numpy lstsq — no statsmodels
+dependency added, consistent with this repo's no-framework style) on log
+prices, z-score the spread over the same window, enter at \|z\| > 2, exit at
+\|z\| < 0.5 or a 20-day max hold. Tested 8 sector pairs (banking: HDFCBANK/
+ICICIBANK/KOTAKBANK/AXISBANK/SBIN cross-pairs; IT: TCS/INFY/WIPRO; FMCG:
+ITC/HINDUNILVR; cement: ULTRACEMCO/SHREECEM), 10y daily data, realistic
+per-leg costs (0.2% STT+stamp, ~₹16 DP charge per leg sold).
+
+**Result: no viable edge, on magnitude rather than sign or consistency**.
+Half the pairs were outright negative over 10 years (HDFCBANK/ICICIBANK
+-2.2%/yr, TCS/INFY -2.5%/yr, ITC/HINDUNILVR -5.4%/yr with a brutal -52.3% max
+drawdown). The best two (HDFCBANK/KOTAKBANK +2.5%/yr, ICICIBANK/AXISBANK
++2.8%/yr) still carry -11.7% and -14.2% max drawdown respectively — a poor
+risk-adjusted return, worse than a fixed deposit for the risk taken. A
+window/entry-threshold perturbation sweep on those two best pairs found a
+genuine cliff: 60-day and 90-day lookback windows cluster around a thin
++0.5% to +3.4%/yr, while the 30-day window is negative across every
+threshold tested (-3.4% to -4.6%/yr) — not the smooth, no-cliff robustness
+that would justify trusting it, and even the "good" side of the cliff is too
+thin to be worth the operational complexity of running two-legged trades.
+
+**Net verdict**: fifth mechanism tried, fifth to fail — this time on
+magnitude/risk-adjustment rather than sign-flip or regime-decay. Confirms
+uptime was never the real blocker either: it unlocked this mechanism as
+operationally feasible to run, but the underlying statistical premise (these
+particular pairs mean-revert usefully) just isn't there at a magnitude worth
+trading. Across the whole project (intraday reversal, Donchian trend, RSI-2
+mean reversion, momentum rotation, pairs trading), every genuinely different
+mechanism tried on liquid Kite-tradable NSE instruments has failed for a
+different specific reason — noise, decay, thin edge, or poor risk-adjustment
+— which is itself a meaningful, if unwelcome, finding about how hard it is to
+find exploitable inefficiency in these particular liquid, well-arbitraged
+instruments with simple technical/statistical rules.
+
 ## Two strategy variants exist — same data pipeline, opposite premise
 
 - `HighLowOpenStrategy` ("reversal", default): the source thread's rule —
