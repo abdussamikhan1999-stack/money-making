@@ -638,6 +638,52 @@ properly needs meaningfully more capital (mid-lakhs, not tens of
 thousands) — "low capital Nifty options selling" is close to a contradiction
 in terms at 2026 lot sizes.
 
+## Eighth: sector/stock diversity sweep — no sector shows a hidden edge either
+
+Direct test of "maybe a specific sector or stock, not the broad blends
+already tried, is where one of these mechanisms actually works." Reused
+this repo's own tested code (`daily_strategy.py`'s two strategies,
+`backtest_daily.py`'s `simulate_daily`/`walk_forward_daily`/
+`fetch_daily_yfinance`) rather than reimplementing, across 8 sectors x ~5
+stocks each (IT, Banking/Financials, FMCG, Pharma, Auto, Metals,
+Energy/PSU, Cement/Infra/Telecom — 39 valid symbols, TATAMOTORS.NS failed
+to fetch) x {donchian, rsi2} = 78 walk-forward tests, screening on "both
+halves positive, no drawdown halt."
+
+**14/78 (18%) passed the initial screen — at or below what pure chance
+alone predicts** for two independent coin-flip halves (~25% expected).
+That's the headline finding on its own: this sweep is statistically
+indistinguishable from noise before even looking at which 14 passed.
+
+Ran the two strongest-by-magnitude passers through the same
+perturbation + quarter-split rigor used everywhere else in this file:
+
+- **ONGC.NS (Donchian)**: decays to negative in Q4 (2024-2026,
+  `P&L -547`) — the identical recent-quarter-decay pattern already seen on
+  Donchian/BTC and momentum rotation. Not a new finding, a repeat of the
+  same one.
+- **VEDL.NS (Donchian)**: the closest thing to a survivor — smooth across
+  a 6-point `entry_period` perturbation sweep (10 to 90 days, only one
+  near-zero dip), and 3 of 4 quarters positive including the most recent
+  (`Q4 +373`). But the magnitude is negligible either way — a few hundred
+  to a few thousand rupees per multi-year half on ₹100,000 capital, well
+  under 1%/year — and it surfaced from a 78-test sweep whose overall hit
+  rate was already at chance level. Not distinguishable from a lucky draw.
+- VEDL.NS's RSI-2 pass and JINDALSTEL.NS's RSI-2 pass were both weaker
+  still under perturbation (sign flips at nearby thresholds, magnitude
+  collapsing toward zero between halves) and quarters alternating
+  sign with no coherent pattern — noise, not signal.
+
+**Net verdict**: broadening the search across individual stocks and
+sectors, rather than the large-cap/index blends tried earlier, changes
+nothing. No sector shows a concentration of real edge; the apparent hits
+are exactly what a search this wide produces by chance. Combined with the
+seven mechanism categories above, this is the point where "try a different
+stock/sector/mechanism" stops being a productive search direction on
+simple technical/statistical rules over liquid NSE instruments — the
+option-selling result remains the one exception, real but blocked by
+capital-tier structure rather than by noise.
+
 ## Two strategy variants exist — same data pipeline, opposite premise
 
 - `HighLowOpenStrategy` ("reversal", default): the source thread's rule —
