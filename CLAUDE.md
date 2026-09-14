@@ -500,6 +500,55 @@ different specific reason — noise, decay, thin edge, or poor risk-adjustment
 find exploitable inefficiency in these particular liquid, well-arbitraged
 instruments with simple technical/statistical rules.
 
+## Sixth: calendar/microstructure effects — real in the data, unharvestable after costs
+
+Continued the search per "keep testing on historical data" with a category
+that doesn't bet on direction, a spread, or momentum at all: known
+microstructure/calendar anomalies, on `^NSEI` (and `^INDIAVIX` for the third
+one), free yfinance daily data, 10y. All three are illustrative of the same
+lesson already learned from the SI=F silver case (`+22,310 gross -> -1,269
+net`), just at a more extreme scale.
+
+- **Overnight (close->open) vs intraday (open->close) decomposition**: a
+  striking gross result — overnight-only +29.9% CAGR / -26.9% max drawdown /
+  10.4% annualized vol, vs intraday-only **-15.0% CAGR / -80.8% max
+  drawdown**, vs full buy-and-hold +10.4% CAGR. This overnight-return
+  concentration is a real, published effect (documented in US and Indian
+  market literature), not a data artifact — but harvesting it means a full
+  delivery round trip **every single trading day** (buy at close, sell next
+  open), and equity delivery costs 0.2% STT+stamp plus a ~₹16 DP charge per
+  round trip. At roughly daily frequency, that compounds to a catastrophic
+  net result: a ₹30,000 account backtested this way goes to zero and past it
+  (`total return -128.8%`) over the same 9.8 years the gross version made
+  +1,262%. Nifty futures have much lower STT (0.05% vs equity delivery's
+  0.2%) and no DP charge, so the arithmetic is less brutal there — but one
+  Nifty futures lot's margin requirement (roughly ₹1.5-2L) is fundamentally
+  incompatible with "low capital," so that route doesn't apply to this
+  project's stated constraint either way. **Real anomaly, unharvestable at
+  the account sizes this project targets.**
+- **Turn-of-month effect** (long the last 2 + first 3 trading days of each
+  month, flat otherwise): gross +5.6% CAGR / -21.8% max drawdown (already
+  below the +10.4%/-38.4% benchmark on return, though better on drawdown and
+  volatility). Net of realistic costs (241 in/out transitions over the
+  period, each a delivery round trip) it flips to **-0.7% CAGR** — the
+  already-thin gross edge doesn't survive even a couple hundred transitions'
+  worth of STT+DP drag.
+- **India VIX tactical timing** (long `^NSEI` only when `^INDIAVIX` is above
+  its own trailing 252-day 70th percentile): weak even gross, +2.0% CAGR
+  against -37.8% max drawdown — worse on both dimensions than plain
+  buy-and-hold before any cost is even applied. Didn't bother cost-modeling
+  a result already this weak gross.
+
+**Net verdict**: three more genuinely different mechanisms (none of them
+directional-trend, mean-reversion-on-price, or spread-convergence — this
+time market-structure and calendar-based), and all three fail, this time
+specifically illustrating that a real, publicly-documented statistical
+regularity (overnight drift) can still be completely unharvestable once
+realistic small-account transaction costs are applied at the frequency
+required to capture it. This is the same transaction-cost lesson the project
+already learned from SI=F, now shown at its most extreme (a strategy that
+looks like it 12x's an account gross, and is instead wiped out net).
+
 ## Two strategy variants exist — same data pipeline, opposite premise
 
 - `HighLowOpenStrategy` ("reversal", default): the source thread's rule —
