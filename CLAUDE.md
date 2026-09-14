@@ -387,6 +387,72 @@ instruments obviously remain to try under this same mechanism; a genuinely
 different next step (different mechanism entirely, not another instrument
 swap) would be needed to keep searching.
 
+## Fourth strategy explored: cross-sectional momentum rotation — also decays to nothing recently
+
+Explored per the "genuinely different mechanism" suggestion above, prompted
+by a low-capital-focused request: monthly-rebalanced top-N momentum rotation
+across a 25-stock NSE large/mid-cap universe (6-month trailing return, 1-month
+skip — the standard academic "12-1"-style construction scaled to 6-1), not
+yet ported into this repo's pure-strategy architecture (explored as a
+standalone probe script, not committed as code here).
+
+**Why this shape looked attractive for a low-capital setup specifically**:
+monthly rebalance means ~12 decisions/year, decided after market close using
+free EOD data (no Kite Connect subscription needed at all — `data_yfinance.py`
+already covers this), with the actual order placed the next morning via
+Kite's free Personal tier (order placement only; no paid Connect tier needed
+since no live/historical data is pulled from Kite). No need for the machine
+to be on during market hours either, unlike every intraday strategy already
+in this repo. And unlike everything else tested here, Zerodha equity
+**delivery brokerage is zero** — the only real per-trade costs are ~0.2%
+STT+stamp on traded value and a flat ~₹16/scrip DP charge on the sell side,
+both modeled explicitly.
+
+**Initially the most robust-looking result of the whole project**: full
+10-year period beat the `^NSEI` benchmark on both return and drawdown
+(14.8% CAGR / -27.4% max DD vs benchmark's 10.5% / -29.3%); walk-forward
+halves were BOTH positive and both beat their own half's benchmark
+(24.1% vs bench 15.0% in-sample, 10.5% vs bench 5.8% out-of-sample); a
+16-config perturbation sweep (top_n in {3,5,7,10} x lookback in
+{3,6,9,12} months) was positive in all 16 cells with no cliffs — smoother
+than any other sweep run in this project. Realistic low-capital costs
+(₹20k-₹300k tested) barely moved the needle: the flat DP fee costs a
+₹20k account ~13.5% of starting capital cumulatively over 10 years
+(~1.35%/year drag) vs ~0.9% for a ₹300k account, but CAGR stayed
+13.5-14.3% net across every capital size tested — the edge, if real,
+isn't capital-size-dependent the way flat fees alone would suggest.
+
+**Killed by the same check that caught BTC/ETH's decay**: quarter-splitting
+(4 chronological chunks instead of 2 halves) shows Q1-Q3 all strongly
+positive (+8.7%, +31.7%, +22.3% CAGR) but **Q4 (2024-03 to 2026-09, the most
+recent and most relevant window) is -7.1% CAGR, -16.3% total return** —
+negative, not just weaker. Exactly the pattern already seen and distrusted
+with Donchian/BTC-USD ("captured a historic run, shows no edge in the window
+closest to now") and exactly why this file's Donchian section insists on
+quarter-splitting, not just walk-forward halves, before trusting a result.
+The 2-way walk-forward split alone would have called this one "done" (both
+halves positive) without surfacing the decay — it took the finer split to
+catch it, same blind spot already documented above.
+
+**Also flagged, not yet resolved**: the 25-stock universe was hand-picked
+using *today's* well-known large/mid-caps, not a point-in-time historical
+index membership list. That's a real survivorship-bias risk on top of the
+decay finding — a stock is disproportionately likely to be on a "large-cap"
+list picked today if it did well over the backtest window, which could
+inflate momentum's apparent edge independent of whether the mechanism is
+real. Not resolved here for lack of a free point-in-time constituents
+source; would need to be fixed before trusting this further even if the
+recent-quarter decay weren't already disqualifying on its own.
+
+**Net verdict**: like Donchian/BTC, a mechanism that captured a real
+multi-year run (2019-2024 here) but shows no edge — in fact a loss — in the
+window closest to now, on top of an unresolved survivorship-bias question.
+Low capital changes the cost arithmetic (flat fees matter more
+proportionally, delivery being brokerage-free matters a lot) but doesn't
+change the core finding: there's still no strategy in this project, of four
+tried, showing a current, non-decayed edge. Capital size was never the
+blocker for any of the four; the absence of a real current edge was.
+
 ## Two strategy variants exist — same data pipeline, opposite premise
 
 - `HighLowOpenStrategy` ("reversal", default): the source thread's rule —
