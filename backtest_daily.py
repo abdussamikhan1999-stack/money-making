@@ -13,7 +13,7 @@ import argparse
 
 from paper_broker import PaperBroker
 from risk import RiskManager
-from daily_strategy import DonchianBreakoutStrategy, ConnorsRSI2Strategy, Side
+from daily_strategy import DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, Side
 from backtest import split_by_date, _report  # reuse: same date-splitting + reporting used for intraday backtests
 
 STRATEGIES = {
@@ -22,6 +22,10 @@ STRATEGIES = {
         rsi_period=args.rsi_period, trend_period=args.trend_period, exit_sma_period=args.exit_sma_period,
         rsi_entry_long=args.rsi_entry_long, rsi_entry_short=args.rsi_entry_short,
         stop_atr_multiple=args.stop_atr_multiple,
+    ),
+    "threebar": lambda args: ThreeBarBreakoutStrategy(
+        compression_atr_mult=args.compression_atr_mult, stop_buffer_atr_mult=args.stop_buffer_atr_mult,
+        target_r_multiple=args.target_r_multiple, max_hold_days=args.max_hold_days,
     ),
 }
 
@@ -144,6 +148,14 @@ if __name__ == "__main__":
     parser.add_argument("--rsi-entry-long", type=float, default=5.0, help="[rsi2] RSI oversold threshold")
     parser.add_argument("--rsi-entry-short", type=float, default=95.0, help="[rsi2] RSI overbought threshold")
     parser.add_argument("--stop-atr-multiple", type=float, default=3.0, help="[rsi2] initial stop = N x ATR")
+    # threebar params
+    parser.add_argument("--compression-atr-mult", type=float, default=0.5,
+                         help="[threebar] bar1/bar2 closes must be within N ATRs of each other")
+    parser.add_argument("--stop-buffer-atr-mult", type=float, default=0.5,
+                         help="[threebar] stop = N ATRs beyond bar2's structural low/high")
+    parser.add_argument("--target-r-multiple", type=float, default=2.5,
+                         help="[threebar] fixed take-profit at N x entry risk")
+    parser.add_argument("--max-hold-days", type=int, default=20, help="[threebar] time-stop if neither hit")
     args = parser.parse_args()
 
     daily = fetch_daily_yfinance(args.symbol, args.period)

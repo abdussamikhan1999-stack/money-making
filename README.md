@@ -11,14 +11,15 @@ accredited financial specialist before risking real capital. Backtest and
 paper-trade thoroughly before ever running this live. You are solely
 responsible for any trades it places.
 
-## Daily-bar strategies (a second family, two mechanisms so far)
+## Daily-bar strategies (a second family, three mechanisms so far)
 
 `backtest_daily.py` backtests daily-bar strategies against years of data
-instead of intraday's 60-day cap, via `--strategy {donchian,rsi2}`:
+instead of intraday's 60-day cap, via `--strategy {donchian,rsi2,threebar}`:
 
 ```
 python backtest_daily.py --strategy donchian --symbol '^NSEI' --period 10y --walk-forward
 python backtest_daily.py --strategy rsi2 --symbol RELIANCE.NS --period 10y --walk-forward
+python backtest_daily.py --strategy threebar --symbol SBIN.NS --period 10y --walk-forward --commission-per-trade 20
 ```
 
 **`donchian`** — the "Turtle Trading" entry rule (N-day high/low channel
@@ -55,6 +56,22 @@ RSI-2's own exit rule already functions as a profit target for its
 mean-reversion mechanism. Off by default (`None`/`None`); left in the code
 as a generic tool for a future strategy whose entry has no natural
 profit-taking exit of its own.
+
+**`threebar`** — a 3-bar range-compression breakout/continuation pattern
+sourced from a ForexFactory thread (see CLAUDE.md for the exact thread
+citations): two prior bars closing near the same level, then a third
+closing decisively beyond both, with a fixed R-multiple take-profit. The
+best instrument hit rate in the project after RSI-2 (6/12 Kite-tradable
+instruments passed walk-forward screening) with genuinely stable
+quarter-split results on 5 of those 6. At standard 0.5% risk-per-trade the
+edge is thin (0.4-2.2%/year) like RSI-2 — but unlike RSI-2, a modest bump
+to 1% risk-per-trade (still conservative) turns this into 1.9-4.6%/year
+across five independent instruments at 1-4.4% max drawdown, without the
+"return and drawdown just scale together" problem that made leverage
+useless for RSI-2. Still requires per-instrument selection (half the
+instruments tested show no edge) and one passer (`INFY.NS`) leans heavily
+on a single COVID-era quarter. See CLAUDE.md's "Twelfth" section for the
+full breakdown.
 
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 

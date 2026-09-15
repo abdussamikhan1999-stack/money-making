@@ -1,4 +1,4 @@
-from daily_strategy import DonchianBreakoutStrategy, ConnorsRSI2Strategy
+from daily_strategy import DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy
 from strategy import Side
 
 
@@ -116,3 +116,87 @@ def test_exit_true_when_trend_filter_flips_against_a_long():
     # trend SMA = 100; a close well below it should force an exit even if
     # the exit_sma condition alone wouldn't have fired
     assert s.check_exit(close=90, side=Side.LONG) is True
+
+
+# --- ThreeBarBreakoutStrategy ---
+
+def _build_threebar_with_compression(bar1_close, bar2_close, bar2_high=101, bar2_low=99):
+    """13 stable bars (high=101/low=99/close=100, true range 2 each) to fill
+    the 14-period ATR window, then bar1 and bar2 with the given closes -
+    keeping high/low at the same 101/99 level (bar2 overridden if given)
+    means every true range stays exactly 2, so ATR is exactly 2 and stop/
+    target math is exact rather than approximate."""
+    s = ThreeBarBreakoutStrategy(atr_period=14)
+    for _ in range(13):
+        s.push(bar(101, 99, 100))
+    s.push(bar(101, 99, bar1_close))
+    s.push(bar(bar2_high, bar2_low, bar2_close))
+    return s
+
+
+def test_no_signal_before_atr_window_fills():
+    s = ThreeBarBreakoutStrategy(atr_period=14)
+    for _ in range(10):
+        s.push(bar(101, 99, 100))
+    assert s.check_entry(close=110) is None
+
+
+def test_long_breakout_requires_compression_then_close_above_both_priors():
+    s = _build_threebar_with_compression(bar1_close=100.2, bar2_close=100.3)
+    assert s.current_atr() == 2.0
+    sig = s.check_entry(close=105)  # above both 100.2 and 100.3
+    assert sig is not None
+    assert sig.side is Side.LONG
+    assert sig.entry_price == 105
+    assert sig.stop_loss == 98  # bar2's low (99) - 0.5 * ATR(2)
+
+
+def test_short_breakdown_requires_compression_then_close_below_both_priors():
+    s = _build_threebar_with_compression(bar1_close=100.2, bar2_close=100.3)
+    sig = s.check_entry(close=95)  # below both 100.2 and 100.3
+    assert sig is not None
+    assert sig.side is Side.SHORT
+    assert sig.entry_price == 95
+    assert sig.stop_loss == 102  # bar2's high (101) + 0.5 * ATR(2)
+
+
+def test_no_signal_when_bar1_and_bar2_are_not_compressed():
+    # bar1/bar2 closes 2.8 apart, vs the 0.5 * ATR(2) = 1.0 compression cap
+    s = _build_threebar_with_compression(bar1_close=100.2, bar2_close=103.0)
+    assert s.check_entry(close=110) is None
+
+
+def test_no_signal_when_close_does_not_clear_both_priors():
+    s = _build_threebar_with_compression(bar1_close=100.2, bar2_close=100.3)
+    assert s.check_entry(close=100.25) is None  # between bar1 and bar2, clears neither
+
+
+def test_check_exit_true_once_target_is_reached():
+    s = _build_threebar_with_compression(bar1_close=100.2, bar2_close=100.3)
+    sig = s.check_entry(close=105)
+    # risk = 105 - 98 = 7; target = 105 + 2.5 * 7 = 122.5 (default target_r_multiple)
+    assert s.check_exit(close=122.4, side=sig.side) is False
+    assert s.check_exit(close=122.5, side=sig.side) is True
+
+
+def test_check_exit_true_after_max_hold_days_even_without_target():
+    s = ThreeBarBreakoutStrategy(atr_period=14, max_hold_days=3)
+    for _ in range(13):
+        s.push(bar(101, 99, 100))
+    s.push(bar(101, 99, 100.2))
+    s.push(bar(101, 99, 100.3))
+    sig = s.check_entry(close=105)
+    assert sig is not None
+    s.push(bar(106, 104, 106))  # day 1 in trade, nowhere near target, not timed out
+    assert s.check_exit(close=106, side=sig.side) is False
+    s.push(bar(106, 104, 106))  # day 2
+    assert s.check_exit(close=106, side=sig.side) is False
+    s.push(bar(106, 104, 106))  # day 3 - hits max_hold_days
+    assert s.check_exit(close=106, side=sig.side) is True
+
+
+def test_reset_clears_state():
+    s = _build_threebar_with_compression(bar1_close=100.2, bar2_close=100.3)
+    s.check_entry(close=105)
+    s.reset()
+    assert s.check_entry(close=110) is None  # ATR window emptied, needs refilling

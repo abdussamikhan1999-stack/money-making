@@ -833,3 +833,89 @@ is actively counterproductive. The mechanism (ATR-scaled `TrailingStopManager`
 reuse) is now available to any future daily strategy via `--breakeven-atr-mult`/
 `--trail-atr-mult` where it might genuinely apply (e.g. a trend-following
 entry with no natural profit-taking exit of its own) — just not this one.
+
+## Twelfth: 3-bar compression breakout, sourced from ForexFactory — the best hit rate yet, still thin at safe sizing
+
+Dedicated research pass through ForexFactory specifically (the same forum
+`strategy.py`'s own Highest-Open/Lowest-Open source came from), per the
+user's request to look there again for newer material rather than just
+sweeping more instruments on an existing mechanism. Pulled a concrete,
+rule-specific pattern from the "Daily chart trading - simple entry and exit
+criteria" thread (forexfactory.com/thread/1126565) and the related "Daily
+Chart 3-Candle" / "3 Consecutive Candles Method" threads (759887, 758687):
+two consecutive daily bars closing near the same level ("compression"),
+followed by a third bar closing decisively beyond both ("breakout") signals
+continuation — stop a fixed pip buffer past the compression zone's
+structural low/high, take-profit a fixed pip target (source: ~100-200 pips
+against ~50-65 pips risk, roughly 2-3R). Genuinely different mechanism from
+every strategy already in this file: not a channel breakout (Donchian), not
+mean-reversion (RSI-2), and the first one here with a FIXED profit target
+instead of a moving exit condition.
+
+Implemented as `ThreeBarBreakoutStrategy` in `daily_strategy.py`
+(`--strategy threebar` in `backtest_daily.py`), with the same pip-to-ATR
+generalization this project has had to apply everywhere else a forex
+source gave raw pip numbers (see the Donchian section above and the
+TrailingStopManager bug): `compression_atr_mult` (bar1/bar2 must be within
+N ATRs of each other, default 0.5), `stop_buffer_atr_mult` (stop N ATRs
+past bar2's structural level, default 0.5), `target_r_multiple` (fixed
+take-profit at N x risk, default 2.5). Added `max_hold_days` (default 20)
+as a deliberate addition beyond the source thread — a fixed-target trade
+with no time stop can sit open indefinitely on a sideways drift, and every
+other strategy here already has some bounded holding mechanism.
+
+**Screening result: 6/12 instruments passed (both walk-forward halves
+positive, no drawdown-halt)** — `INFY.NS`, `TCS.NS`, `HDFCBANK.NS`,
+`SBIN.NS`, `CL=F`, `GC=F`. A 50% hit rate, well above the sector sweep's
+chance-level 18% and better than anything except RSI-2's 57%. Failed:
+`^NSEI`, `AXISBANK.NS`, `ITC.NS` (all consistently negative, `ITC.NS` also
+drawdown-halted both halves), `^NSEBANK`, `RELIANCE.NS`, `WIPRO.NS` (sign
+flips between halves).
+
+**Quarter-split (four ~2.5y chunks over 10y) on the five passers beyond
+INFY.NS is genuinely stable** — no severe decay, only mild single-quarter
+dips (`SBIN.NS` Q3 -867, `CL=F` Q1 -142, `GC=F` Q2 -2289, all small relative
+to the other quarters), and none of the "most recent quarter is the worst
+one" pattern that killed Donchian/BTC and momentum rotation. `INFY.NS`
+itself is the one exception worth flagging: 10,058 of its ~13,753 10-year
+total P&L is concentrated in the single 2019-2021 quarter (COVID crash and
+recovery) — the same regime-concentration signature already distrusted
+elsewhere in this file, so treat `INFY.NS`'s result as weaker evidence than
+the other four.
+
+**Parameter perturbation on `INFY.NS`** across `compression_atr_mult`
+(0.25-1.0), `target_r_multiple` (1.5-4.0), and `stop_buffer_atr_mult`
+(0.25-1.0) is mostly smooth and all-positive, with one soft cliff at the
+extreme low end (`target_r_multiple=1.5`'s out-of-sample half goes
+negative) — better robustness than most candidates tested in this project,
+on par with RSI-2's.
+
+**But magnitude is still the limiting factor, same lesson as RSI-2 and
+every "found it" before falling to it**: at the standard 0.5% risk-per-
+trade, the five non-INFY-anomalous passers return 0.4-2.2%/year net of a
+₹20/round-trip commission on ₹100,000 capital — thin, comparable to a
+fixed deposit. **Unlike RSI-2, more aggressive (but still conservative)
+sizing genuinely helps here rather than just scaling drawdown alongside
+return**: at 1% risk-per-trade (still well inside a sane range, not the
+reckless 10% RSI-2 needed to test), `SBIN.NS` reaches 4.56%/year at 1.2%
+max drawdown, `INFY.NS` 3.67%/year at 1.2%, `HDFCBANK.NS` 3.81%/year at
+1.0%, `CL=F` 2.87%/year at 4.4%, `GC=F` 1.87%/year at 2.4% — real
+year-over-year growth at very low drawdown across five independent
+instruments, not a single cherry-picked one. `TCS.NS` stays weak (0.36%/yr)
+even at 1% risk. Pushing further to 2-3% risk-per-trade breaks this: both
+`SBIN.NS` and `INFY.NS` hit the drawdown-halt breaker (25-27% drawdown) at
+that point, so 1% appears to be close to the safe ceiling for this specific
+strategy, not a floor to push past.
+
+**Net verdict**: the best-documented hit rate and quarter-split stability of
+any strategy family in this project besides options-selling, backed by a
+real, specific, cited source (unlike some of the vaguer candidates
+ForexFactory search turned up, which were skipped for lacking testable
+rules) — and the first strategy where modest sizing (not reckless
+leverage) turns a thin edge into a genuinely non-negligible 2-4.6%/year
+across multiple instruments at low single-digit drawdown. Still requires
+picking the right instrument (50% hit rate, not universal) and treating
+`INFY.NS` specifically with the regime-concentration caveat. Worth
+revisiting with more instruments and a real (not flat ₹20) NSE-equity cost
+model before calling this "found," but it's the most promising single
+result since the options-selling line closed out on capital-tier grounds.
