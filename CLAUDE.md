@@ -1075,3 +1075,100 @@ freely obtainable — any future options-pricing-dependent idea in this
 project should use `probe_iron_condor_real_data.py`'s fetch/parse
 functions as a starting point instead of falling back to Black-Scholes
 synthesis.
+
+## Fifteenth: TTM Squeeze (Bollinger-Keltner squeeze breakout) — hit rate at chance level, one survivor's robustness doesn't hold up
+
+Per the user's request to pull from actual OPEN-SOURCE STRATEGY CODE this
+time (not forum rule descriptions) — searched GitHub, TradingView's public
+script library, and freqtrade/backtrader-adjacent implementations for a
+genuinely different mechanism. Picked John Carter's TTM Squeeze in the exact
+formulation of LazyBear's "Squeeze Momentum Indicator [LazyBear]" — the
+canonical open-source reference implementation, mirrored/forked across
+dozens of GitHub repos (e.g. `fmzquant/strategies`'
+Squeeze-Momentum-Indicator.md, `indie-script.github.io`'s writeup) and one
+of the most widely-copied technical indicators that exists. Genuinely
+different mechanism from everything else in this file: not a price-channel
+breakout (Donchian), a level-based mean reversion (RSI-2), or a fixed-
+pattern continuation (3-bar breakout) — it's a VOLATILITY-STATE timing
+signal. Core idea: Bollinger Bands contracting to sit entirely inside
+Keltner Channels means the market is coiled ("squeeze on"); BB expanding
+back outside KC ("squeeze fires") tends to be followed by a directional
+move, with a linear-regression-based momentum value giving the direction.
+
+Implemented as `SqueezeMomentumStrategy` in `daily_strategy.py`
+(`--strategy squeeze` in `backtest_daily.py`), reproducing LazyBear's script
+exactly: shared BB/KC `length` (default 20, matching the original), `bb_mult`
+(2.0)/`kc_mult` (1.5) also the original's defaults. Required three new pure
+indicators in `indicators.py` (`stdev`, `highest`/`lowest`, `linreg` — a
+closed-form OLS fit, no numpy, consistent with this project's plain-float
+style) since Bollinger Bands and the momentum histogram weren't needed by
+anything tested here before. No natural structural stop exists (same
+problem RSI-2 had), so the initial stop is `stop_atr_multiple` x ATR,
+reusing the Keltner Channel's own ATR rather than a second computation.
+Exit: momentum flipping sign against the position, or `max_hold_days` as a
+time-stop — this file's now-standard bounded-holding convention. Unlike
+RSI-2 (which needs today's own close to detect today's dip), sqzOn/val here
+are computed entirely from the window already pushed (today's close used
+only as the traded price, never fed into the rolling window) — a squeeze
+calculation is a slow 20-bar-wide statistic, so being one bar "behind"
+doesn't change its character the way it would for a 2-period RSI. 20 new
+unit tests (8 for the new indicators, 7 for the strategy — pure logic,
+exact-value assertions via hand-verified compression/breakout fixtures);
+full suite 87/87 green (`pytest -v`).
+
+**Screening result: 3/12 instruments passed (both walk-forward halves
+positive, no drawdown-halt)** — `TCS.NS`, `INFY.NS`, `GC=F`. A 25% hit
+rate — right at the "pure chance" level for two independent coin-flip
+halves, the same disqualifying signature already established in this
+file's Eighth entry (the sector sweep's 18% hit rate, "statistically
+indistinguishable from noise before even looking at which passed"). Failed:
+`^NSEI`, `^NSEBANK`, `ITC.NS`, `SBIN.NS` (consistently negative both
+halves); `RELIANCE.NS`, `HDFCBANK.NS`, `AXISBANK.NS`, `WIPRO.NS`, `CL=F`
+(sign flips between halves).
+
+**Quarter-split on the three passers is inconsistent, not clean like the
+3-bar breakout's five non-anomalous survivors**: `TCS.NS` has 2 of 4
+quarters negative (-1898, -473) despite passing the 2-way walk-forward
+screen — the same "hollow consistency" pattern this file's Donchian section
+warns about, where a coarser split misses decay a finer one catches.
+`GC=F` has one negative quarter (-674) but is otherwise stable. Only
+`INFY.NS` is genuinely clean: all four quarters positive (+1424, +3148,
++2055, +2130) with no single-quarter concentration this time (unlike the
+3-bar breakout's `INFY.NS`, whose edge was 73% concentrated in one COVID
+quarter — this one is much more evenly spread).
+
+**Parameter perturbation on `INFY.NS`'s `length`** is NOT smooth in the
+wide view — length=10 is negative and drawdown-halted (-7,083), 15/20/25
+are all positive (+15,837/+20,614/+10,144, peaking suspiciously close to
+the exact default), length=30 goes negative (-712), length=40 is barely
+positive on only 4 trades (unreliable sample). In the narrower 15-25
+neighborhood it's smoother, and cross-checking `TCS.NS`/`GC=F` across the
+same range shows both stay positive throughout (+17,208/+9,209/+15,749 and
++9,654/+15,665/+7,628) — so it isn't a knife-edge single-point fit, but the
+10/30/40 extremes behaving erratically is still a weaker robustness profile
+than the 3-bar breakout's "mostly smooth, one soft cliff" result.
+`kc_mult` perturbation on `INFY.NS` (1.0 to 2.0) is more reassuring —
+monotonically increasing from -4,289 at 1.0 to +33,299 at 1.75, dipping
+slightly at 2.0 — no violent cliff there.
+
+**Sizing does help, same property the 3-bar breakout has and RSI-2
+doesn't**: `INFY.NS` at 0.5% risk-per-trade returns ~0.94%/year (0.5% max
+drawdown); at 1% risk it's ~2.06%/year (1.0% max drawdown) — genuine
+doubling, not dilution. Pushing to 2% breaks it (drawdown-halted, -0.05%/yr)
+— the same "1% is close to the safe ceiling, not a floor to push past"
+pattern already seen with the 3-bar breakout.
+
+**Net verdict**: this strategy does NOT beat, or even clearly match, the
+3-bar breakout. It shares one attractive property (sizing helps) but fails
+on the more fundamental screen — a 25% hit rate is statistically
+indistinguishable from chance, the same standard that already disqualified
+VEDL.NS's sector-sweep "survival" in the Eighth entry. `INFY.NS`'s
+individual result looks clean on quarter-split and reasonable on
+perturbation, but surfacing from a chance-level sweep means it isn't
+distinguishable from a lucky draw either — the same conclusion this file
+already reached once before and should keep applying consistently rather
+than re-litigating every time a single instrument looks good in isolation.
+Left as `--strategy squeeze` in the tested architecture (unlike some
+probe-script-only explorations) since the indicators and strategy code
+themselves are reusable and correctly tested, even though this particular
+screening result doesn't clear the bar to recommend trading it.

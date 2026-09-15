@@ -11,15 +11,16 @@ accredited financial specialist before risking real capital. Backtest and
 paper-trade thoroughly before ever running this live. You are solely
 responsible for any trades it places.
 
-## Daily-bar strategies (a second family, three mechanisms so far)
+## Daily-bar strategies (a second family, four mechanisms so far)
 
 `backtest_daily.py` backtests daily-bar strategies against years of data
-instead of intraday's 60-day cap, via `--strategy {donchian,rsi2,threebar}`:
+instead of intraday's 60-day cap, via `--strategy {donchian,rsi2,threebar,squeeze}`:
 
 ```
 python backtest_daily.py --strategy donchian --symbol '^NSEI' --period 10y --walk-forward
 python backtest_daily.py --strategy rsi2 --symbol RELIANCE.NS --period 10y --walk-forward
 python backtest_daily.py --strategy threebar --symbol SBIN.NS --period 10y --walk-forward --commission-per-trade 20
+python backtest_daily.py --strategy squeeze --symbol INFY.NS --period 10y --walk-forward --commission-per-trade 20
 ```
 
 **`donchian`** — the "Turtle Trading" entry rule (N-day high/low channel
@@ -72,6 +73,19 @@ useless for RSI-2. Still requires per-instrument selection (half the
 instruments tested show no edge) and one passer (`INFY.NS`) leans heavily
 on a single COVID-era quarter. See CLAUDE.md's "Twelfth" section for the
 full breakdown.
+
+**`squeeze`** — John Carter's TTM Squeeze, reproducing LazyBear's widely-
+forked open-source "Squeeze Momentum Indicator" exactly (Bollinger Bands
+contracting inside Keltner Channels = "squeeze on"; BB expanding back out =
+"squeeze fires", trade the linear-regression momentum's sign). A genuinely
+different, volatility-state-timing mechanism — but only 3/12 Kite-tradable
+instruments passed walk-forward screening, a 25% hit rate right at the
+"pure chance" level already established as disqualifying in this project
+(see the sector sweep's 18%). One passer (`INFY.NS`) looks clean on
+quarter-split and reasonable on perturbation, and shares the "1% sizing
+roughly doubles the return" property the 3-bar breakout has — but surfacing
+from a chance-level sweep means it isn't distinguishable from a lucky draw.
+See CLAUDE.md's "Fifteenth" section for the full breakdown.
 
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 

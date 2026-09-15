@@ -13,7 +13,9 @@ import argparse
 
 from paper_broker import PaperBroker
 from risk import RiskManager
-from daily_strategy import DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, Side
+from daily_strategy import (
+    DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, SqueezeMomentumStrategy, Side,
+)
 from backtest import split_by_date, _report  # reuse: same date-splitting + reporting used for intraday backtests
 
 STRATEGIES = {
@@ -26,6 +28,10 @@ STRATEGIES = {
     "threebar": lambda args: ThreeBarBreakoutStrategy(
         compression_atr_mult=args.compression_atr_mult, stop_buffer_atr_mult=args.stop_buffer_atr_mult,
         target_r_multiple=args.target_r_multiple, max_hold_days=args.max_hold_days,
+    ),
+    "squeeze": lambda args: SqueezeMomentumStrategy(
+        length=args.squeeze_length, bb_mult=args.squeeze_bb_mult, kc_mult=args.squeeze_kc_mult,
+        stop_atr_multiple=args.squeeze_stop_atr_multiple, max_hold_days=args.squeeze_max_hold_days,
     ),
 }
 
@@ -156,6 +162,12 @@ if __name__ == "__main__":
     parser.add_argument("--target-r-multiple", type=float, default=2.5,
                          help="[threebar] fixed take-profit at N x entry risk")
     parser.add_argument("--max-hold-days", type=int, default=20, help="[threebar] time-stop if neither hit")
+    # squeeze params
+    parser.add_argument("--squeeze-length", type=int, default=20, help="[squeeze] shared BB/KC lookback")
+    parser.add_argument("--squeeze-bb-mult", type=float, default=2.0, help="[squeeze] Bollinger Band stdev multiplier")
+    parser.add_argument("--squeeze-kc-mult", type=float, default=1.5, help="[squeeze] Keltner Channel ATR multiplier")
+    parser.add_argument("--squeeze-stop-atr-multiple", type=float, default=2.0, help="[squeeze] initial stop = N x ATR")
+    parser.add_argument("--squeeze-max-hold-days", type=int, default=20, help="[squeeze] time-stop if momentum never flips")
     args = parser.parse_args()
 
     daily = fetch_daily_yfinance(args.symbol, args.period)

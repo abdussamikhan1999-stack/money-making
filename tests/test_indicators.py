@@ -1,4 +1,4 @@
-from indicators import true_range, average_true_range, sma, rsi
+from indicators import true_range, average_true_range, sma, rsi, stdev, highest, lowest, linreg
 
 
 def candle(h, l, c):
@@ -46,3 +46,43 @@ def test_rsi_100_on_an_unbroken_uptrend():
 def test_rsi_0_on_an_unbroken_downtrend():
     closes = [15, 14, 13, 12, 11, 10]  # every day down -> no gains at all
     assert rsi(closes, period=2, seed_window=5) == 0.0
+
+
+def test_stdev_zero_for_constant_values():
+    assert stdev([5, 5, 5, 5], period=4) == 0
+
+
+def test_stdev_matches_population_formula():
+    # [2, 4, 4, 4, 5, 5, 7, 9] has a well-known population stdev of 2.0
+    values = [2, 4, 4, 4, 5, 5, 7, 9]
+    assert abs(stdev(values, period=8) - 2.0) < 1e-9
+
+
+def test_stdev_none_when_not_enough_history():
+    assert stdev([1, 2], period=5) is None
+
+
+def test_highest_and_lowest_over_window():
+    values = [3, 7, 1, 9, 4]
+    assert highest(values, period=3) == 9  # max of last 3: 1,9,4
+    assert lowest(values, period=3) == 1
+
+
+def test_highest_lowest_none_when_not_enough_history():
+    assert highest([1, 2], period=5) is None
+    assert lowest([1, 2], period=5) is None
+
+
+def test_linreg_matches_last_value_on_a_perfect_line():
+    # y = 2x + 1 for x = 0..4 -> fitted line passes through every point exactly,
+    # so the fitted value at the last point equals the last actual value
+    values = [1, 3, 5, 7, 9]
+    assert abs(linreg(values) - 9) < 1e-9
+
+
+def test_linreg_flat_series_returns_the_flat_value():
+    assert abs(linreg([5, 5, 5, 5]) - 5) < 1e-9
+
+
+def test_linreg_none_with_fewer_than_two_points():
+    assert linreg([5]) is None

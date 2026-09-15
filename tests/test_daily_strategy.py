@@ -1,4 +1,6 @@
-from daily_strategy import DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy
+from daily_strategy import (
+    DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, SqueezeMomentumStrategy,
+)
 from strategy import Side
 
 
@@ -200,3 +202,100 @@ def test_reset_clears_state():
     s.check_entry(close=105)
     s.reset()
     assert s.check_entry(close=110) is None  # ATR window emptied, needs refilling
+
+
+# --- SqueezeMomentumStrategy ---
+
+def _feed_flat_then_breakout(s):
+    """8 flat days (constant close=100, high/low=101/99 -> BB stdev is 0
+    while ATR/KC width is nonzero, so BB sits entirely inside KC: squeeze
+    ON) followed by an accelerating uptrend (102, 105, then 110) that widens
+    BB enough to expand past KC on the third step -> squeeze fires, exactly
+    on the close=110 call. Every call to check_entry() during the flat
+    phase must still happen (not just push()) since sqzOn tracking is
+    updated inside _compute(), which only runs from check_entry/check_exit."""
+    for _ in range(8):
+        assert s.check_entry(close=100) is None
+        s.push(bar(101, 99, 100))
+    assert s.check_entry(close=102) is None
+    s.push(bar(103, 101, 102))
+    assert s.check_entry(close=105) is None
+    s.push(bar(106, 104, 105))
+    return s.check_entry(close=110)
+
+
+def test_no_signal_before_window_fills():
+    s = SqueezeMomentumStrategy(length=5)
+    for _ in range(5):
+        s.push(bar(101, 99, 100))
+    assert s.check_entry(close=100) is None  # 5 pushed, needs length+1=6
+
+
+def test_no_signal_without_a_prior_squeeze():
+    """A pure uptrend from the very first bar never has a squeeze to fire
+    off of (prev_sqz_on starts None/False) - momentum alone isn't enough."""
+    s = SqueezeMomentumStrategy(length=5)
+    fired = False
+    price = 100
+    for _ in range(10):
+        price *= 1.03
+        if s.check_entry(close=price):
+            fired = True
+        s.push(bar(price + 1, price - 1, price))
+    assert fired is False
+
+
+def test_squeeze_fires_long_on_breakout_from_compression():
+    s = SqueezeMomentumStrategy(length=5, stop_atr_multiple=2.0)
+    sig = _feed_flat_then_breakout(s)
+    assert sig is not None
+    assert sig.side is Side.LONG
+    assert sig.entry_price == 110
+    # stop = entry - stop_atr_multiple * ATR, using the SAME ATR the signal
+    # itself was built from (current_atr() reflects the just-completed
+    # _compute() call inside check_entry)
+    assert sig.stop_loss == 110 - 2.0 * s.current_atr()
+
+
+def test_squeeze_fires_short_on_breakdown_from_compression():
+    s = SqueezeMomentumStrategy(length=5, stop_atr_multiple=2.0)
+    for _ in range(8):
+        assert s.check_entry(close=100) is None
+        s.push(bar(101, 99, 100))
+    assert s.check_entry(close=98) is None
+    s.push(bar(99, 97, 98))
+    assert s.check_entry(close=95) is None
+    s.push(bar(96, 94, 95))
+    sig = s.check_entry(close=90)
+    assert sig is not None
+    assert sig.side is Side.SHORT
+    assert sig.entry_price == 90
+    assert sig.stop_loss == 90 + 2.0 * s.current_atr()
+
+
+def test_check_exit_true_once_momentum_flips_against_a_long():
+    s = SqueezeMomentumStrategy(length=5, stop_atr_multiple=2.0, max_hold_days=50)
+    sig = _feed_flat_then_breakout(s)
+    s.push(bar(111, 109, 110))
+    assert s.check_exit(close=90, side=sig.side) is False  # one sharp drop, not yet reflected
+    s.push(bar(91, 89, 90))
+    assert s.check_exit(close=70, side=sig.side) is True  # momentum has now flipped negative
+
+
+def test_check_exit_true_after_max_hold_days_even_without_momentum_flip():
+    s = SqueezeMomentumStrategy(length=5, stop_atr_multiple=2.0, max_hold_days=3)
+    sig = _feed_flat_then_breakout(s)
+    s.push(bar(111, 109, 110))  # day 1 in trade
+    assert s.check_exit(close=111, side=sig.side) is False
+    s.push(bar(112, 110, 111))  # day 2
+    assert s.check_exit(close=112, side=sig.side) is False
+    s.push(bar(113, 111, 112))  # day 3 - hits max_hold_days
+    assert s.check_exit(close=113, side=sig.side) is True
+
+
+def test_reset_clears_squeeze_state():
+    s = SqueezeMomentumStrategy(length=5)
+    sig = _feed_flat_then_breakout(s)
+    assert sig is not None
+    s.reset()
+    assert s.check_entry(close=110) is None  # window emptied, needs refilling

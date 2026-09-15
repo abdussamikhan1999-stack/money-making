@@ -14,7 +14,7 @@ run any of them interchangeably:
 from dataclasses import dataclass, field
 
 from strategy import Signal, Side
-from indicators import average_true_range, sma, rsi
+from indicators import average_true_range, sma, rsi, stdev, highest, lowest, linreg
 
 
 @dataclass
@@ -312,5 +312,163 @@ class ThreeBarBreakoutStrategy:
         timed_out = self._days_in_trade >= self.max_hold_days
         if hit_target or timed_out:
             self._target = None
+            return True
+        return False
+
+
+@dataclass
+class SqueezeMomentumStrategy:
+    """John Carter's TTM Squeeze, in the exact formulation of LazyBear's
+    "Squeeze Momentum Indicator [LazyBear]" — the canonical open-source
+    implementation (originally published as a public TradingView Pine
+    script; mirrored/forked widely, e.g. fmzquant/strategies'
+    Squeeze-Momentum-Indicator.md and indie-script.github.io's Squeeze
+    Momentum writeup). Genuinely different mechanism from everything else
+    in this file: it isn't a price-channel breakout (Donchian), a level-
+    based mean reversion (RSI-2), or a fixed-pattern continuation (3-bar
+    breakout) — it's a VOLATILITY-STATE timing signal. The core idea: when
+    Bollinger Bands contract to sit entirely inside Keltner Channels, the
+    market is coiled ("squeeze on"); when BB expands back outside KC
+    ("squeeze fires off"), that release tends to be followed by a directional
+    move, and a linear-regression-based momentum value gives the direction.
+
+    Rules, reproduced exactly from LazyBear's script (bb_length =
+    kc_length = `length` here, matching the original's shared default of
+    20; `bb_mult`/`kc_mult` default 2.0/1.5, also the original's defaults):
+      - basis = SMA(close, length); dev = bb_mult * stdev(close, length)
+        -> upperBB = basis + dev, lowerBB = basis - dev
+      - ma = SMA(close, length); rangema = ATR(length) (this project's
+        average_true_range() is already the "simple/unsmoothed ATR" the
+        original script uses for its KC range component, since it just
+        SMAs the true-range series — no adaptation needed)
+        -> upperKC = ma + rangema * kc_mult, lowerKC = ma - rangema * kc_mult
+      - sqzOn = (lowerBB > lowerKC) and (upperBB < upperKC)
+      - val = linreg(close - avg(avg(highest(high,length), lowest(low,length)),
+              SMA(close,length))) over the same `length` window — the
+        "momentum" histogram; its SIGN gives direction, not its magnitude.
+
+    Entry: the trading rule everyone actually cites for this indicator
+    (Carter's own writeups, every retail breakdown) is "wait for the squeeze
+    to fire (go from on to off) and enter in the direction of the momentum
+    value" — so entry fires exactly on the sqzOn(prev) -> not-sqzOn(now)
+    transition, sign(val) at that same bar sets direction. No natural
+    structural stop exists (same problem RSI-2 had), so the initial stop is
+    `stop_atr_multiple` x ATR(length) — reusing the same ATR already
+    computed for the Keltner Channel rather than adding a second ATR window.
+
+    Exit: momentum flipping sign against the position (the standard "first
+    opposite-color bar" exit cited everywhere for this indicator) OR
+    max_hold_days as a hard time-stop — this file's now-standard bounded-
+    holding convention (see ThreeBarBreakoutStrategy's docstring for why
+    every strategy here needs one).
+
+    Unlike RSI-2 (which must see today's own close to detect today's dip),
+    sqzOn/val here are computed ENTIRELY from the `length` days already
+    pushed — today's close is used only as the price actually traded at,
+    never fed into the rolling window. This is the Donchian/exit-channel
+    convention rather than RSI-2's: a squeeze/BB/KC calculation is a slow,
+    20-bar-wide lagging statistic, so being one bar "behind" doesn't change
+    its character the way it would for a 2-period RSI. Same no-lookahead
+    principle as every other strategy here either way.
+    """
+    length: int = 20
+    bb_mult: float = 2.0
+    kc_mult: float = 1.5
+    stop_atr_multiple: float = 2.0
+    max_hold_days: int = 20
+
+    _closes: list[float] = field(default_factory=list, init=False)
+    _highs: list[float] = field(default_factory=list, init=False)
+    _lows: list[float] = field(default_factory=list, init=False)
+    _prev_sqz_on: bool | None = field(default=None, init=False)
+    _in_trade: bool = field(default=False, init=False)
+    _days_in_trade: int = field(default=0, init=False)
+    _last_atr: float | None = field(default=None, init=False)
+
+    def reset(self) -> None:
+        self._closes = []
+        self._highs = []
+        self._lows = []
+        self._prev_sqz_on = None
+        self._in_trade = False
+        self._days_in_trade = 0
+        self._last_atr = None
+
+    def push(self, bar: dict) -> None:
+        self._highs.append(bar["high"])
+        self._lows.append(bar["low"])
+        self._closes.append(bar["close"])
+        if self._in_trade:
+            self._days_in_trade += 1
+
+    def current_atr(self) -> float | None:
+        """Same public-wrapper convention as ConnorsRSI2Strategy/
+        ThreeBarBreakoutStrategy: the Keltner Channel's own ATR (its range
+        component), reused rather than computing a second one."""
+        return self._last_atr
+
+    def _compute(self) -> tuple[bool | None, bool, float | None] | None:
+        """(prev_sqz_on, sqz_on, val) from the `length` days already pushed
+        — today NOT included, same no-lookahead convention as Donchian/
+        RSI-2 (called from check_entry/check_exit BEFORE push() runs for
+        today). Updates self._prev_sqz_on/self._last_atr as a side effect,
+        exactly once per day regardless of whether check_entry or
+        check_exit is the caller — simulate_daily's if/elif calls exactly
+        one of them per bar, so this is still called once per day and the
+        sqzOn(prev) -> sqzOn(now) transition tracking stays correct even
+        while a position spans multiple days of check_exit-only calls.
+        Needs length+1 closes so average_true_range (itself needing
+        period+1 candles) has a full window."""
+        if len(self._closes) < self.length + 1:
+            return None
+        window_closes = self._closes[-self.length:]
+        window_highs = self._highs[-self.length:]
+        window_lows = self._lows[-self.length:]
+
+        basis = sma(window_closes)
+        dev = self.bb_mult * stdev(window_closes)
+        upper_bb, lower_bb = basis + dev, basis - dev
+
+        atr_candles = [{"high": h, "low": l, "close": c} for h, l, c in
+                       zip(self._highs[-(self.length + 1):], self._lows[-(self.length + 1):],
+                           self._closes[-(self.length + 1):])]
+        range_ma = average_true_range(atr_candles, period=self.length)
+        self._last_atr = range_ma
+        upper_kc, lower_kc = basis + range_ma * self.kc_mult, basis - range_ma * self.kc_mult
+
+        sqz_on = (lower_bb > lower_kc) and (upper_bb < upper_kc)
+
+        hh, ll = highest(window_highs, self.length), lowest(window_lows, self.length)
+        donchian_mid = (hh + ll) / 2
+        centered = [c - (donchian_mid + basis) / 2 for c in window_closes]
+        val = linreg(centered)
+
+        prev_sqz_on = self._prev_sqz_on
+        self._prev_sqz_on = sqz_on
+        return prev_sqz_on, sqz_on, val
+
+    def check_entry(self, close: float) -> Signal | None:
+        result = self._compute()
+        if result is None:
+            return None
+        prev_sqz_on, sqz_on, val = result
+
+        if prev_sqz_on is True and not sqz_on and val is not None and val != 0 and self._last_atr:
+            self._in_trade = True
+            self._days_in_trade = 0
+            if val > 0:
+                return Signal(Side.LONG, close, close - self.stop_atr_multiple * self._last_atr,
+                              "TTM Squeeze fired long (momentum positive)")
+            return Signal(Side.SHORT, close, close + self.stop_atr_multiple * self._last_atr,
+                          "TTM Squeeze fired short (momentum negative)")
+        return None
+
+    def check_exit(self, close: float, side: Side) -> bool:
+        result = self._compute()
+        timed_out = self._days_in_trade >= self.max_hold_days
+        val = result[2] if result is not None else None
+        momentum_flipped = val is not None and ((val < 0) if side == Side.LONG else (val > 0))
+        if momentum_flipped or timed_out:
+            self._in_trade = False
             return True
         return False

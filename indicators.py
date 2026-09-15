@@ -34,6 +34,52 @@ def sma(values: list[float], period: int | None = None) -> float | None:
     return sum(values[-period:]) / period
 
 
+def stdev(values: list[float], period: int | None = None) -> float | None:
+    """Population standard deviation of the last `period` values (matches
+    Pine Script's `stdev`, which divides by N not N-1 — needed to reproduce
+    LazyBear's Squeeze Momentum Indicator's Bollinger Band width exactly).
+    Returns None if there isn't enough history."""
+    period = len(values) if period is None else period
+    if len(values) < period or period <= 0:
+        return None
+    window = values[-period:]
+    mean = sum(window) / period
+    variance = sum((v - mean) ** 2 for v in window) / period
+    return variance ** 0.5
+
+
+def highest(values: list[float], period: int) -> float | None:
+    if len(values) < period:
+        return None
+    return max(values[-period:])
+
+
+def lowest(values: list[float], period: int) -> float | None:
+    if len(values) < period:
+        return None
+    return min(values[-period:])
+
+
+def linreg(values: list[float]) -> float | None:
+    """Value of the ordinary-least-squares best-fit line at the LAST point
+    of `values` (Pine Script's `linreg(source, length, 0)` — the length is
+    just len(values), since callers already pass a fixed-size window). Pure
+    closed-form OLS, no numpy: x = 0..n-1, fitted value at x = n-1."""
+    n = len(values)
+    if n < 2:
+        return None
+    sum_x = n * (n - 1) / 2
+    sum_x2 = (n - 1) * n * (2 * n - 1) / 6
+    sum_y = sum(values)
+    sum_xy = sum(i * v for i, v in enumerate(values))
+    denom = n * sum_x2 - sum_x ** 2
+    if denom == 0:
+        return None
+    slope = (n * sum_xy - sum_x * sum_y) / denom
+    intercept = (sum_y - slope * sum_x) / n
+    return intercept + slope * (n - 1)
+
+
 def rsi(closes: list[float], period: int = 2, seed_window: int = 20) -> float | None:
     """Wilder-smoothed RSI, windowed rather than tracking state from all of
     history (consistent with average_true_range's own windowed style):
