@@ -985,3 +985,93 @@ exact failure mode this project has already confirmed repeatedly on similar
 high-frequency pattern setups (SI=F, the overnight-drift trade). Skipped to
 avoid re-spending backtest effort re-confirming a well-documented negative
 result rather than testing something genuinely untried.
+
+## Fourteenth: validating the iron condor against REAL option-chain data — edge direction confirmed, magnitude drastically smaller than Black-Scholes implied
+
+The "Seventh" entry above flagged its biggest weakness explicitly: the
+iron condor's +20.5% CAGR came from Black-Scholes premiums synthesized with
+a flat India-VIX IV input, not real market prices, and "validate against
+real historical option-chain data" was listed as the open next step. This
+entry does that, using genuinely free data sources (no paid Kite Connect
+"Historical" tier, no subscription):
+
+- **`jugaad-data`** (MIT-licensed, PyPI) for NSE's old-format F&O bhavcopy
+  (`bhavcopy_fo_raw`), which covers roughly 2015 through mid-2024 reliably
+  (verified working back to 2015, ~0.5s per fetch, no rate-limiting hit in
+  ~150 sequential calls a few hundred ms apart).
+- NSE's own new-format F&O UDIFF bhavcopy, fetched directly once the URL
+  pattern was found by inspecting the CM-segment UDIFF path jugaad-data
+  already knows about and probing the equivalent `/content/fo/
+  BhavCopy_NSE_FO_..._F_0000.csv.zip` path on `nsearchives.nseindia.com` —
+  the installed jugaad-data version's own `bhavcopy_udiff_raw` only covers
+  the equity/CM segment, not F&O, so this had to be done as a plain
+  `requests` call rather than through the library. Verified working from
+  mid-2024 through September 2026 (today).
+
+Together these give genuinely real historical NIFTY option settlement
+prices (OHLC + settlement per strike/expiry) end to end, 2015-2026, for
+free. **This resolves this project's biggest single open data gap.**
+
+**Method** (`probe_iron_condor_real_data.py`, standalone, not ported into
+the tested architecture): same parameters as the synthetic run (short
+strikes ~2% OTM, wings ~1% further out, weekly cycle, current 65-unit lot
+size, ~₹100/cycle flat cost estimate for 4-leg brokerage+STT). Per cycle:
+fetch the real bhavcopy on entry day, find the real CLOSE price of the
+exact 4 strikes nearest the target OTM levels (real net credit, not a
+Black-Scholes estimate — and unlike the synthetic version, this
+automatically reflects real volatility skew across strikes, since it's
+reading actual traded/settled prices per strike rather than applying one
+flat IV to all four legs), then settle at expiry using `^NSEI`'s real
+close on the expiry date.
+
+**Result, 140 real weekly cycles, 2024-01-01 to 2026-08-31** (chosen to
+directly re-test the specific "Q4 2024-2026 is the best quarter, +85.7%
+CAGR" claim from the synthetic run, since that's the most recent and most
+decision-relevant window):
+
+- Total net P&L: **₹25,907** over ~2.67 years, 77.1% win rate (108/140) —
+  close to the synthetic run's 74% win rate, so the qualitative hit-rate
+  claim holds up.
+- **Walk-forward both halves positive** (₹2,181 first half, ₹23,725 second
+  half, 70 cycles each) — no sign flip, corroborating the synthetic run's
+  "no decay" finding directionally.
+- Quarter-split is NOT uniformly smooth on real prices, though — three
+  quarters are meaningfully negative (2024 Q2 -₹3,604, 2024 Q4 -₹9,188)
+  even though the overall trend across the period is toward strength (2025
+  Q2 alone was +₹16,644). Real quarter-to-quarter variance is higher than
+  the synthetic run's clean "all 4 quarters positive" picture.
+- **The magnitude gap is the real finding**: annualized, ₹25,907 over 2.67
+  years is **~₹9,700/year**. At the ₹350,000-475,000 capital this
+  strategy structurally needs to size one lot safely (per the Seventh
+  entry's own math), that's **only ~2.0-2.8%/year** — a small fraction of
+  the +20.5% CAGR (and nowhere near the +85.7% CAGR claimed for this exact
+  calendar window) the Black-Scholes synthetic version reported. Real
+  market option pricing collects meaningfully less net credit than a
+  flat-IV model assumes, once actual skew/liquidity/pricing efficiency
+  across strikes is accounted for by construction (this backtest reads
+  real traded closes, not a model).
+- Caveat in the other direction: this still uses settlement/last-close
+  prices as fills, not bid/ask-executed prices, and models no slippage —
+  real achieved returns are likely *below* this ~2-2.8%/year, not above
+  it. No perturbation sweep was re-run on real data (time-boxed); the
+  walk-forward + quarter-split were prioritized as the higher-value checks
+  given the primary question was "does real data corroborate the
+  synthetic edge's existence," not full robustness re-certification.
+
+**Net verdict**: the direction of the edge is real — it survives contact
+with actual market prices, unlike almost everything else in this project.
+But the magnitude was substantially inflated by the Black-Scholes/flat-IV
+synthesis, the same lesson this project has learned repeatedly about not
+trusting a backtest number until it's checked against something more
+real (transaction costs, walk-forward, now real pricing data). Combined
+with the Seventh/Ninth entries' capital-tier finding, this closes the
+loop rather than reopening it: even fully funded at ₹350-475k, real
+returns here (~2-3%/year) are below what a risk-free instrument pays,
+which is a second, independent reason (on top of the capital-access
+problem) this strategy isn't worth pursuing further at this project's
+scale. The open methodological win, independent of this specific
+strategy's fate, is that real NSE F&O historical data is now known to be
+freely obtainable — any future options-pricing-dependent idea in this
+project should use `probe_iron_condor_real_data.py`'s fetch/parse
+functions as a starting point instead of falling back to Black-Scholes
+synthesis.

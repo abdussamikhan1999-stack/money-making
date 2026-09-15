@@ -91,6 +91,36 @@ one survivor's internals look real (smooth perturbation, no quarter decay,
 and sizing up to 1% risk more than triples the return) but one instrument
 out of eight is thin ground — see CLAUDE.md's "Thirteenth" entry.
 
+`probe_iron_condor_real_data.py` (weekly Nifty iron condor, real NSE
+option-chain prices instead of Black-Scholes synthesis — see below and
+CLAUDE.md's "Fourteenth" entry) is the strongest mechanism found in this
+project on raw robustness, but real market pricing shows a much thinner
+edge than the earlier synthetic backtest implied, and it's separately
+blocked by a capital-tier problem regardless of pricing method.
+
+### Options premium selling (weekly Nifty iron condor) — real edge, wrong capital tier, and now real-data validated
+
+Not a daily-bar or intraday-candle strategy, so it doesn't fit either
+family above — a defined-risk short strangle (iron condor) sold weekly on
+Nifty, harvesting the volatility risk premium. First tested with
+Black-Scholes-synthesized premiums (CLAUDE.md's "Seventh" entry): +20.5%
+CAGR, no quarter-decay, the most robust-looking result in the whole
+project — but flagged immediately as unvalidated against real prices, and
+separately shown to need ~₹350,000-475,000 of capital to size one lot
+safely (Nifty's SEBI-mandated lot size makes one spread's max loss 20-30%
+of a ₹30,000 account — see "Ninth").
+
+Later validated against **real NSE F&O bhavcopy data** (free — `jugaad-data`
+for older dates, NSE's own new-format UDIFF bhavcopy fetched directly for
+newer dates, both covering 2015-2026, no paid Kite "Historical" subscription
+needed). 140 real weekly cycles (2024-2026): the edge's *direction* holds up
+(77% win rate, both walk-forward halves positive) but the *magnitude* was
+drastically overstated by the synthetic pricing — real annualized return
+at the capital this strategy needs is only ~2-3%/year, not 20%+, likely
+below a risk-free rate. See CLAUDE.md's "Fourteenth" entry for the full
+numbers. Net effect: this mechanism is now closed out on two independent
+grounds (capital access AND thin real magnitude), not just one.
+
 ## Two variants
 
 `--variant reversal` (default) is the rule described below. `--variant
