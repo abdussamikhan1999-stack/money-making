@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from backtest_daily import simulate_daily, walk_forward_daily
 from daily_strategy import DonchianBreakoutStrategy
+from strategy import Signal, Side
 
 
 def bar(day, open_, high, low, close):
@@ -81,3 +82,55 @@ def test_walk_forward_daily_splits_into_two_fresh_halves():
     (b1, r1), (b2, r2) = walk_forward_daily(bars, lambda: DonchianBreakoutStrategy(entry_period=3), capital=100_000)
     assert r1.equity == 100_000
     assert r2.equity == 100_000
+
+
+class _FakeCurrentAtrStrategy:
+    """Minimal strategy exposing current_atr(), to test the profit-booking
+    ATR-scaling wiring in simulate_daily() in isolation from
+    ConnorsRSI2Strategy's own entry/exit rules (see CLAUDE.md's
+    profit-booking-overlay finding: RSI2 itself is a bad fit for this, but
+    the wiring mechanism is generic and worth testing on its own)."""
+    def __init__(self):
+        self._entered = False
+
+    def push(self, bar) -> None:
+        pass
+
+    def check_entry(self, close):
+        if self._entered:
+            return None
+        self._entered = True
+        return Signal(Side.LONG, close, close - 10, "fake entry")
+
+    def check_exit(self, close, side) -> bool:
+        return False  # never exits via strategy rule; only the trailing stop should end it
+
+    def current_atr(self):
+        return 2.0
+
+
+def test_simulate_daily_profit_booking_tightens_stop_using_strategy_current_atr():
+    bars = [
+        bar(1, 100, 100, 100, 100),  # enters long @ 100, hard stop = 90
+        bar(2, 100, 106, 100, 106),  # +6 profit = 3x the fake 2.0 ATR -> both triggers (1x, 2x ATR) fire
+        bar(3, 100, 106, 96, 96),    # pulls back hard - the tightened stop should catch this well above 90
+    ]
+    broker, risk = simulate_daily(bars, _FakeCurrentAtrStrategy(), capital=100_000,
+                                   breakeven_atr_mult=1.0, trail_atr_mult=2.0)
+    assert len(broker.trade_log) == 1
+    assert broker.trade_log[0]["exit"] > 90  # far above the original hard stop - profit was locked in
+
+
+def test_simulate_daily_without_atr_mults_keeps_old_inf_inf_behavior():
+    """Default (None, None) must reproduce the pre-existing behavior exactly:
+    a strategy exposing current_atr() should NOT have its stop tightened
+    unless both --breakeven-atr-mult and --trail-atr-mult are explicitly set."""
+    bars = [
+        bar(1, 100, 100, 100, 100),
+        bar(2, 100, 106, 100, 106),  # would have tightened the stop well above 90 WITH profit-booking on
+        bar(3, 100, 106, 96, 96),    # doesn't breach the original hard stop of 90 - stays open
+        bar(4, 96, 96, 85, 85),      # now breaches the original hard stop
+    ]
+    broker, risk = simulate_daily(bars, _FakeCurrentAtrStrategy(), capital=100_000)
+    assert len(broker.trade_log) == 1
+    assert broker.trade_log[0]["exit"] == 90  # only the original hard stop, untouched

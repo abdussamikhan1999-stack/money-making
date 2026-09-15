@@ -46,6 +46,26 @@ fixed along the way (a fake 100% win rate from a units mismatch, and a
 never-reset daily-loss breaker that silently truncated trading after ~4
 losses in any multi-year run).
 
+`rsi2`'s exits can optionally route through an ATR-scaled profit-booking
+overlay (`--breakeven-atr-mult` / `--trail-atr-mult`, reusing
+`strategy.py`'s `TrailingStopManager`) — tested specifically to see if
+locking in profit earlier fixes RSI-2's thin-magnitude problem. **It
+doesn't**: it made every tested instrument worse (see CLAUDE.md), because
+RSI-2's own exit rule already functions as a profit target for its
+mean-reversion mechanism. Off by default (`None`/`None`); left in the code
+as a generic tool for a future strategy whose entry has no natural
+profit-taking exit of its own.
+
+## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
+
+`probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an
+opening gap reverts toward yesterday's close within the session) failed
+the same way the sector sweep and calendar-effects mechanisms did: a
+narrow band of the parameter space looks marginally positive on `^NSEI`,
+but it sign-flips on walk-forward, is mixed across quarters, and doesn't
+reproduce on `^NSEBANK` or `RELIANCE.NS` — see CLAUDE.md's "Tenth" entry
+for the full numbers.
+
 ## Two variants
 
 `--variant reversal` (default) is the rule described below. `--variant

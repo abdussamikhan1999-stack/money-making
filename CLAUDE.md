@@ -745,3 +745,91 @@ achievable given the regulatory floor.
   trending instrument without testing it, as this one didn't hold up.
 - Select via `backtest.py --variant {reversal,breakout}`; both share
   `simulate()`, `walk_forward()`, and the same CLI flags.
+
+## Tenth: intraday gap-fill mean reversion — same failure pattern as everything else
+
+Sourced from repeated (loosely-quantified) trading-forum/blog claims about
+NSE gap behavior — a genuinely different mechanism from anything above:
+bets on reversion of the OPENING GAP itself within a single session, not a
+multi-bar trend/reversion/spread signal. Rule: `gap_pct = (open -
+prior_close) / prior_close`; if it exceeds a threshold, trade back toward
+`prior_close` (short a gap-up, long a gap-down), stop a fixed % beyond the
+open, exit at target/stop/close whichever the day's OHLC path hits first
+(same conservative adverse-first approximation used elsewhere in this
+file). Implemented as `probe_gap_fill.py` — a standalone script, not ported
+into `daily_strategy.py`'s architecture, because the entry decision and
+price both depend on the day's OPEN relative to yesterday's close, which
+the existing `push(bar)`/`check_entry(close)` interface doesn't expose
+(same reasoning as the momentum-rotation and pairs-trading probes above).
+
+**Result: fails on all four checks that have caught every prior false
+positive.** On `^NSEI` (10y, ~0.05%/trade all-in cost approximating NSE
+intraday equity STT+charges+brokerage): net P&L is negative below a
+~0.75% gap threshold (390 trades at 0.5% threshold, gross +5,603 but net
+-14,061 — the now-familiar high-frequency-cost-drag pattern) and only
+marginally positive above it (best case +1.97%/yr at threshold=1.0%,
+stop_extra=0.3%, which IS smooth/monotonic as stop_extra widens — the one
+axis that behaved like a real parameter). But: **walk-forward on that exact
+config is sign-flipped** (in-sample +2.49%/yr, out-of-sample -0.46%/yr,
+INCONSISTENT), **quarter-split is mixed** (Q1/Q2/Q4 positive, Q3 -2.18%/yr),
+and **the "edge" doesn't generalize across instruments** — the same
+threshold sweep is net-negative almost everywhere on `^NSEBANK` and
+`RELIANCE.NS` (best cases there: -0.21%/yr and +0.20%/yr respectively,
+i.e. noise-floor). One index, one narrow threshold band, inconsistent
+across both time and instrument — textbook curve-fit, not a real pattern.
+
+**Net verdict**: tenth mechanism, tenth failure, and the specific way it
+fails (looks OK in aggregate, falls apart on every split) is now such a
+recurring signature in this project that it's worth naming: **any
+candidate that only "works" within a narrow parameter band, on one
+instrument, and doesn't reproduce across both walk-forward halves AND all
+four quarters should be treated as noise by default**, not investigated
+further parameter-by-parameter looking for the config that survives.
+
+## Eleventh: profit-booking overlay on RSI-2 — actively hurts, doesn't help
+
+Directly tests the "booking profit" question against the one strategy in
+this project with a real, robust, but too-thin edge (Connors RSI-2, see
+above) — the exact case where a better exit could plausibly move the
+magnitude verdict. Wired `strategy.py`'s existing `TrailingStopManager`
+back in for `daily_strategy.py` strategies (previously always disabled via
+`breakeven_trigger=trail_trigger=float("inf")`, see the bug story above)
+but scaled to the position's OWN entry-time ATR instead of reusing the
+forex-pip defaults that caused that bug: `ConnorsRSI2Strategy.current_atr()`
+(new public wrapper around the existing private `_current_atr()`) feeds
+`backtest_daily.py --breakeven-atr-mult` / `--trail-atr-mult`, which
+`simulate_daily()` only applies when both are set AND the strategy exposes
+`current_atr()` (Donchian doesn't, so it's unaffected either way — default
+`None`/`None` reproduces the old inf/inf behavior exactly, checked by a
+regression test).
+
+**Result: makes every single instrument tested worse, not better.**
+Compared baseline (no profit-booking) against `--breakeven-atr-mult 1.0
+--trail-atr-mult 2.0` across all 7 instruments that traded at all (10y,
+₹20/trade commission): `^NSEI` -1,324 -> -2,210, `RELIANCE.NS` +774 ->
+-517, `INFY.NS` +638 -> -263, `HDFCBANK.NS` +604 -> -242, `ITC.NS` -442 ->
+-1,104, `CL=F` -22 -> -610, `TCS.NS` (the best baseline performer) +1,104
+-> +440 — positive in only one case and still cut by more than half.
+Widening the triggers to 2+ ATR never fires at all (RSI-2's mean-reversion
+moves apparently never run that far before the existing SMA-cross exit
+catches them), reproducing the baseline exactly; the only range where the
+overlay does anything (roughly 0.5-1.5 ATR) is exactly where it hurts.
+
+**Why**: RSI-2's exit rule (close back through the 5-day SMA, or the trend
+filter flipping) already IS a profit-taking rule tuned to this specific
+mean-reversion mechanism — it rides a reversion move to what is
+functionally close to its natural target. Locking in profit earlier via a
+generic ATR trail doesn't protect gains against a mechanism the strategy
+was already benefiting from; it just truncates the same moves the SMA-exit
+was already capturing efficiently, converting bigger wins into smaller
+wins or (when the tightened stop sits exactly at breakeven) commission-only
+losing scratches.
+
+**Net verdict**: "add a profit-booking overlay" is not a free lever — it
+has to match the entry mechanism's own natural holding period/target, not
+be bolted on generically. For a mean-reversion strategy whose own exit rule
+already functions as a profit target, an independent trailing-profit lock
+is actively counterproductive. The mechanism (ATR-scaled `TrailingStopManager`
+reuse) is now available to any future daily strategy via `--breakeven-atr-mult`/
+`--trail-atr-mult` where it might genuinely apply (e.g. a trend-following
+entry with no natural profit-taking exit of its own) — just not this one.

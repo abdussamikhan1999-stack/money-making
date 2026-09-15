@@ -27,16 +27,28 @@ STRATEGIES = {
 
 
 def simulate_daily(daily: list[dict], strategy, capital: float = 100_000.0, risk_per_trade_pct: float = 0.5,
-                    max_drawdown_pct: float = 10.0, commission_per_trade: float = 0.0) -> tuple[PaperBroker, RiskManager]:
+                    max_drawdown_pct: float = 10.0, commission_per_trade: float = 0.0,
+                    breakeven_atr_mult: float | None = None, trail_atr_mult: float | None = None,
+                    breakeven_offset_atr_mult: float = 0.0, trail_offset_atr_mult: float = 0.5,
+                    ) -> tuple[PaperBroker, RiskManager]:
     """`strategy` is any daily_strategy.py object implementing push(bar) /
     check_entry(close) / check_exit(close, side).
 
-    breakeven_trigger/trail_trigger are passed to PaperBroker.enter() as
-    +inf, deliberately disabling strategy.py's TrailingStopManager (its
+    By default breakeven_trigger/trail_trigger are passed to PaperBroker.enter()
+    as +inf, deliberately disabling strategy.py's TrailingStopManager (its
     fixed point thresholds are tuned for forex pips - see daily_strategy.py's
     docstring for the fake-100%-win-rate bug this caused before it was
     caught). Positions are held at their ORIGINAL structural/ATR stop until
-    either that stop is hit or the strategy's own check_exit() fires."""
+    either that stop is hit or the strategy's own check_exit() fires.
+
+    Passing breakeven_atr_mult/trail_atr_mult (both None by default -> the
+    old inf/inf behavior, unchanged) opts a strategy INTO profit-booking:
+    the same TrailingStopManager mechanism, but scaled to THIS entry's own
+    ATR (via strategy.current_atr(), when the strategy exposes it) instead
+    of reusing the raw forex-pip defaults that caused the earlier bug. Only
+    strategies that implement current_atr() (currently ConnorsRSI2Strategy)
+    can use this; others silently keep the inf/inf no-op since there's no
+    per-entry ATR to scale from."""
     broker = PaperBroker(commission_per_trade=commission_per_trade)
     risk = RiskManager(capital=capital, risk_per_trade_pct=risk_per_trade_pct, max_drawdown_pct=max_drawdown_pct)
     current_side: Side | None = None
@@ -62,8 +74,18 @@ def simulate_daily(daily: list[dict], strategy, capital: float = 100_000.0, risk
             if signal:
                 qty = risk.position_size(signal.entry_price, signal.stop_loss)
                 if qty > 0:
+                    breakeven_trigger = trail_trigger = float("inf")
+                    breakeven_offset = 1.0
+                    trail_offset = 5.0
+                    atr = getattr(strategy, "current_atr", lambda: None)()
+                    if atr and breakeven_atr_mult is not None and trail_atr_mult is not None:
+                        breakeven_trigger = breakeven_atr_mult * atr
+                        trail_trigger = trail_atr_mult * atr
+                        breakeven_offset = breakeven_offset_atr_mult * atr
+                        trail_offset = trail_offset_atr_mult * atr
                     broker.enter(signal.side, signal.entry_price, qty, signal.stop_loss,
-                                 breakeven_trigger=float("inf"), trail_trigger=float("inf"))
+                                 breakeven_trigger=breakeven_trigger, breakeven_offset=breakeven_offset,
+                                 trail_trigger=trail_trigger, trail_offset=trail_offset)
                     current_side = signal.side
         strategy.push(bar)
         risk.reset_day()  # one bar IS one day here; without this, RiskManager's "daily"
@@ -105,6 +127,12 @@ if __name__ == "__main__":
     parser.add_argument("--risk-per-trade-pct", type=float, default=0.5)
     parser.add_argument("--max-drawdown-pct", type=float, default=10.0)
     parser.add_argument("--commission-per-trade", type=float, default=0.0)
+    parser.add_argument("--breakeven-atr-mult", type=float, default=None,
+                         help="[profit-booking] lock to breakeven after this many ATRs of profit "
+                              "(only takes effect on strategies exposing current_atr(), e.g. rsi2; "
+                              "requires --trail-atr-mult too)")
+    parser.add_argument("--trail-atr-mult", type=float, default=None,
+                         help="[profit-booking] trail the stop after this many ATRs of profit")
     parser.add_argument("--walk-forward", action="store_true")
     # donchian params
     parser.add_argument("--entry-period", type=int, default=20, help="[donchian] entry channel lookback in days")
@@ -121,7 +149,8 @@ if __name__ == "__main__":
     daily = fetch_daily_yfinance(args.symbol, args.period)
     strategy_factory = lambda: STRATEGIES[args.strategy](args)
     kwargs = dict(risk_per_trade_pct=args.risk_per_trade_pct,
-                  max_drawdown_pct=args.max_drawdown_pct, commission_per_trade=args.commission_per_trade)
+                  max_drawdown_pct=args.max_drawdown_pct, commission_per_trade=args.commission_per_trade,
+                  breakeven_atr_mult=args.breakeven_atr_mult, trail_atr_mult=args.trail_atr_mult)
 
     if args.walk_forward:
         (b1, r1), (b2, r2) = walk_forward_daily(daily, strategy_factory, args.capital, **kwargs)

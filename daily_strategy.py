@@ -152,6 +152,14 @@ class ConnorsRSI2Strategy:
                   zip(self._highs[-n:], self._lows[-n:], self._closes[-n:])]
         return average_true_range(window, period=self.atr_period)
 
+    def current_atr(self) -> float | None:
+        """Public wrapper so a caller (e.g. backtest_daily.py's profit-booking
+        overlay) can scale a trailing-stop's trigger distance to THIS
+        instrument's actual volatility at entry time, rather than reusing
+        strategy.py's forex-pip-scale defaults — see CLAUDE.md's note on the
+        fake-100%-win-rate bug that unscaled defaults caused here before."""
+        return self._current_atr()
+
     def check_entry(self, close: float) -> Signal | None:
         """Uses the window BEFORE today for the trend SMA and ATR (push()
         for today not yet called) — same no-lookahead convention as
