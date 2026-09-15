@@ -83,6 +83,14 @@ but it sign-flips on walk-forward, is mixed across quarters, and doesn't
 reproduce on `^NSEBANK` or `RELIANCE.NS` — see CLAUDE.md's "Tenth" entry
 for the full numbers.
 
+`probe_ibs.py` (Internal Bar Strength mean reversion — long when today's
+close fell near today's own low, `IBS = (close-low)/(high-low) < 0.2`) found
+exactly one passing instrument (`GC=F`, gold) out of 8 tested — a 12.5% hit
+rate at or below the sector sweep's already-distrusted chance-level 18%. The
+one survivor's internals look real (smooth perturbation, no quarter decay,
+and sizing up to 1% risk more than triples the return) but one instrument
+out of eight is thin ground — see CLAUDE.md's "Thirteenth" entry.
+
 ## Two variants
 
 `--variant reversal` (default) is the rule described below. `--variant

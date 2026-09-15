@@ -919,3 +919,69 @@ picking the right instrument (50% hit rate, not universal) and treating
 revisiting with more instruments and a real (not flat ₹20) NSE-equity cost
 model before calling this "found," but it's the most promising single
 result since the options-selling line closed out on capital-tier grounds.
+
+## Thirteenth: Internal Bar Strength (IBS) mean reversion — one gold survivor, at-chance hit rate
+
+Widened the research net beyond ForexFactory per the user's request to keep
+searching for the 3-bar breakout's specific profile (consistent, and sizing
+UP genuinely helps rather than just diluting): Reddit-adjacent quant sources
+this time — Alvarez Quant Trading's "Internal Bar Strength for Mean
+Reversion", Jonathan Kinlay's "The Internal Bar Strength Indicator", and
+QuantifiedStrategies.com's IBS writeups, all citing a documented decades-long
+edge on broad equity indices. Genuinely different mechanism from everything
+above: IBS = (close - low) / (high - low) is a SAME-DAY positional signal —
+where today's close fell within TODAY's own high-low range — not a multi-day
+momentum oscillator (RSI-2) or a channel/pattern breakout (Donchian,
+ThreeBarBreakout). Published rule: long when IBS < ~0.2 ("closed near the
+day's low"), exit when IBS closes back above ~0.5.
+
+Implemented as `probe_ibs.py`, a standalone script rather than a
+`daily_strategy.py` addition — `check_entry(close)`'s interface only exposes
+TODAY's close, not today's own high/low, which IBS specifically needs at the
+entry decision (same shape-mismatch reasoning as the momentum-rotation,
+pairs-trading, and gap-fill probes). Symmetric short side (IBS > 0.8) added
+for consistency with this project's other strategies but flagged explicitly
+as this project's own extension, not itself literature-backed — the
+published edge is specifically the long side. ATR-based stop (no natural
+structural stop in the published rule, same situation RSI-2 was in) and a
+10-day time-stop (this project's standard bounded-hold convention).
+
+**Screening result: 1/8 instruments passed (both walk-forward halves
+positive)** — only `GC=F` (gold). Failed: `^NSEI`, `^NSEBANK`,
+`RELIANCE.NS`, `HDFCBANK.NS` (all consistently negative), `TCS.NS`,
+`INFY.NS` (sign flips between halves). A 12.5% hit rate — at or below the
+sector sweep's already-distrusted 18% "chance level" finding, well short of
+the 3-bar breakout's 50%. On this project's own screening standard, this
+does not clear the bar of a broad, real edge.
+
+**The one survivor is not a hollow fluke, for what that's worth**: `GC=F`'s
+quarter-split is 3/4 positive with the most recent quarter (Q4, +1.18%/yr)
+the *best* one, not the worst — no regime-decay red flag. A 5-point
+`ibs_entry_long` perturbation (0.10 to 0.30) is smooth and monotonic
+(0.33% to 0.72%/yr, no cliffs). And it does show the specific property being
+searched for: **sizing from 0.5% to 1% risk-per-trade more than triples the
+return** (0.66%/yr -> 2.21%/yr) while drawdown only grows 2.5% -> 3.9% —
+sizing helps here too, not just the 3-bar breakout.
+
+**Net verdict**: a real research trail with a credible, well-cited mechanism
+that produced exactly one instrument clearing the bar, at a hit rate
+statistically indistinguishable from the noise floor already established by
+the sector sweep. The single survivor's internals (perturbation, quarter-
+split, sizing-helps) look like the real thing, but "one instrument out of
+eight, on a mechanism whose published edge is on indices and this is a
+commodity" is thin ground to stand on alone — this is closer to "flag and
+retest with more instruments/parameters later" than "found," unlike the
+3-bar breakout's broader six-instrument confirmation. Not ported into
+`daily_strategy.py`'s tested architecture for that reason — it stays a probe
+script, same treatment as gap-fill (dead) and momentum-rotation/pairs-trading
+(decayed), until either more instruments confirm it or it's dropped.
+
+**Also researched, not tested**: Toby Crabel's NR7 (single-day range-
+contraction breakout, close cousin of `ThreeBarBreakoutStrategy`'s 2-day
+compression but 7-day and single-bar) came up in the same search pass. Not
+implemented — multiple independent sources (QuantifiedStrategies.com among
+them) already report it failing to survive realistic transaction costs, the
+exact failure mode this project has already confirmed repeatedly on similar
+high-frequency pattern setups (SI=F, the overnight-drift trade). Skipped to
+avoid re-spending backtest effort re-confirming a well-documented negative
+result rather than testing something genuinely untried.
