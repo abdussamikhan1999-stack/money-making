@@ -179,6 +179,18 @@ walk-forward, and unlike every prior cost-driven failure in this project
 across the whole grid — no real edge being masked by costs, just a flat
 result. See CLAUDE.md's "Nineteenth" entry.
 
+`probe_trend_volume_ibs.py` — this project's first ORIGINAL strategy, not
+sourced from a forum thread or open-source repo: a hypothesis built from
+three prior findings (IBS's lone `GC=F` survivor, RSI-2's real trend
+filter, CMF-volume's own `GC=F` survivor), testing whether requiring all
+three to agree on entry extends IBS's narrow edge. **0/10 instruments
+passed** — and strikingly, `GC=F` itself (the one instrument where both
+ingredient strategies individually worked) fails when combined, at every
+one of 10 perturbed configs. Stacking independently-real signals didn't
+compound their edges; it destroyed them — the same direction (if a
+different mechanism) as the Eleventh entry's exit-side stacking finding.
+See CLAUDE.md's "Twenty-second" entry.
+
 ### Options premium selling (weekly Nifty iron condor) — real edge, wrong capital tier, and now real-data validated
 
 Not a daily-bar or intraday-candle strategy, so it doesn't fit either

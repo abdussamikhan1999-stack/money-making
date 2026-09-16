@@ -11,6 +11,17 @@ def true_range(prev_close: float, high: float, low: float) -> float:
     return max(high - low, abs(high - prev_close), abs(low - prev_close))
 
 
+def internal_bar_strength(bar: dict) -> float | None:
+    """Internal Bar Strength: where today's close fell within TODAY's own
+    high-low range (0 = closed at the low, 1 = at the high). Returns None
+    on a zero-range bar. Promoted here (was a private helper duplicated
+    inline in probe_ibs.py) once a second caller needed it."""
+    rng = bar["high"] - bar["low"]
+    if rng <= 0:
+        return None
+    return (bar["close"] - bar["low"]) / rng
+
+
 def average_true_range(candles: list[dict], period: int = 14) -> float | None:
     """Simple (unsmoothed) ATR over the last `period` candles, each a
     {high, low, close, ...} dict in chronological order. Returns None if

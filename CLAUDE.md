@@ -1586,3 +1586,66 @@ the most famous indicators in retail technical analysis turning in one of
 the weakest hit rates in this project is itself informative — popularity
 and public familiarity (everyone's broker platform has a MACD indicator)
 evidently isn't correlated with this project's rigor bar.
+
+## Twenty-second: Trend + Volume-Confirmed IBS Reversion — an ORIGINAL strategy, and a clean test of whether stacking independently-real signals compounds edges (it doesn't)
+
+The first mechanism in this project NOT sourced from a forum thread or an
+open-source repo — a hypothesis built directly from three of this
+project's own prior findings, combined explicitly rather than cited:
+
+1. IBS mean reversion (Thirteenth) found exactly one survivor (`GC=F`) out
+   of 8 instruments — 12.5%, at/below chance level — trading every IBS
+   extreme with no context about trend or real money flow behind it.
+2. RSI-2 (Third) found its SMA trend filter was the most theoretically
+   coherent, robust result in the project — the edge held up specifically
+   BECAUSE trades were filtered to align with the prevailing direction.
+3. CMF volume confirmation (Sixteenth) found its own one clean `GC=F`
+   survivor — the SAME instrument IBS's lone survivor was.
+
+**Hypothesis**: an unfiltered IBS extreme is often either a falling knife
+or a low-conviction wiggle; requiring it to occur WITH the trend AND with
+money already flowing in (CMF > 0) should filter out both failure modes
+and might extend IBS's real-but-narrow edge beyond the one instrument it
+found alone. This is a genuine three-way ENTRY-side confirmation — a
+different claim from the Eleventh entry's finding that EXIT-side stacking
+(an ATR trailing-profit overlay bolted onto RSI-2's own exit) actively
+hurts; entry-side AND-confirmation hadn't been tested.
+
+Implemented as `probe_trend_volume_ibs.py` (same shape-mismatch reasoning
+as `probe_ibs.py` for not porting into `daily_strategy.py` — IBS needs
+today's own high/low at the entry decision). `IBS` itself was promoted
+from a private helper duplicated inside `probe_ibs.py` to a shared
+`indicators.internal_bar_strength()`, since a second caller now needed it
+— `probe_ibs.py` refactored to import it rather than keep its own copy.
+Also added direct unit tests for `internal_bar_strength()` and
+`ema_update()` (the MACD primitive from the Twenty-first entry, which only
+had indirect coverage via `MACDStrategy`'s own tests until now) — full
+suite 124/124 green.
+
+**Result: 0/10 instruments passed** walk-forward (both halves positive) —
+worse than IBS alone (1/8, 12.5%) or CMF-volume alone (3/10, 30%). Most
+strikingly, **`GC=F` — the one instrument where BOTH ingredient strategies
+individually had a clean, real survivor — fails when combined**: in-sample
+negative, out-of-sample marginally positive, inconsistent. A follow-up
+10-config perturbation on `GC=F` specifically (`trend_period` 20-150,
+`ibs_entry_long` 0.1-0.3) found the same inconsistent pattern at every
+single tested value — not a default-parameter artifact, a genuine null
+result across the whole tested space.
+
+**Net verdict**: the hypothesis is cleanly refuted, and the way it fails is
+informative. Combining three independently-plausible signals via AND-logic
+didn't compound their edges — on the one instrument most likely to benefit,
+it destroyed a working pair of independent edges instead. The likely
+mechanism: each individual filter (trend, CMF sign) is itself noisy at
+daily resolution, and requiring several noisy conditions to align
+simultaneously shrinks the sample toward statistical noise faster than it
+concentrates toward "quality" setups — plus a strong IBS dip WITHIN an
+already-confirmed uptrend may just be a different (and not necessarily
+better) market event than an IBS dip on its own. Combined with the
+Eleventh entry's exit-side finding, this project now has two independent,
+differently-constructed tests of "stack multiple real signals together for
+a stronger edge," and both went the wrong direction — a real, generalizable
+lesson for evaluating future multi-factor ideas here: prefer testing one
+NEW mechanism over combining several already-tested ones, unless there's a
+specific causal story for why the combination should behave differently
+than either signal alone (this one had a story, and it still didn't hold).

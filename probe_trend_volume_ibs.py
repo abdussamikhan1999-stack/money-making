@@ -1,52 +1,53 @@
 """
-Probe: Internal Bar Strength (IBS) mean reversion — genuinely different
-mechanism from every strategy in daily_strategy.py. RSI-2 (already tested,
-CLAUDE.md's "Third") is a multi-day momentum oscillator computed across
-several closes; IBS is a SAME-DAY positional signal — where today's close
-fell within TODAY's own high-low range, nothing else:
+Probe: Trend + Volume-Confirmed IBS Reversion — an ORIGINAL strategy for
+this project, not sourced from a forum thread or open-source repo like
+every mechanism before it. Motivated directly by three of this project's
+own prior findings, combined as an explicit hypothesis rather than a
+citation:
 
-    IBS = (close - low) / (high - low)   # 0 = closed at the day's low, 1 = at the high
+  1. IBS mean reversion (CLAUDE.md's "Thirteenth") found exactly one
+     survivor (GC=F) out of 8 instruments — a 12.5% hit rate, at/below
+     this project's chance-level floor. It trades every IBS extreme with
+     no context about the prevailing trend or whether real money is
+     backing the move.
+  2. RSI-2 (CLAUDE.md's "Third") found its SMA trend filter ("only buy
+     dips ABOVE the long-term trend") was the most theoretically coherent,
+     robust result in the whole project — the edge held up specifically
+     BECAUSE trades were filtered to align with the prevailing direction.
+  3. Volume confirmation via CMF (CLAUDE.md's "Sixteenth") found its own
+     one clean GC=F survivor — same instrument IBS's survivor was.
 
-Sourced from widely-cited, decades-of-data quant literature: Alvarez Quant
-Trading's "Internal Bar Strength for Mean Reversion", Jonathan Kinlay's "The
-Internal Bar Strength Indicator", and QuantifiedStrategies.com's IBS
-writeups. The published edge is specifically documented on broad equity
-INDICES (not single stocks) and is strongest during volatile/bear regimes —
-this project already has ^NSEI and ^NSEBANK as Kite-tradable index
-candidates, a good fit.
+Hypothesis: an IBS extreme unfiltered is often a falling knife (bad) or a
+low-conviction wiggle (noise); requiring it to occur WITH the trend AND
+with money-flow already accumulating (CMF > 0) should filter out both
+failure modes and might extend IBS's real-but-narrow gold edge to more
+instruments than the 1/8 it found alone. This is a genuine three-way
+ENTRY-side confirmation, not the exit-side stacking this project already
+found actively HURTS a working strategy (CLAUDE.md's "Eleventh": bolting
+an ATR trailing-profit overlay onto RSI-2's own exit made every instrument
+worse) - a different claim, not yet tested here.
 
-Published rule (long side, the literature-backed direction): buy at close
-when IBS < ibs_entry_long (classic ~0.2, "closed near the day's low"), exit
-when IBS closes back above ibs_exit (classic ~0.5-0.8 depending on source).
-The SHORT side (IBS > ibs_entry_short -> short) is this project's own
-symmetric extension for consistency with every other strategy here trading
-both directions — it is NOT itself a literature-backed claim, and should be
-read with extra skepticism if it looks good.
+Rule:
+  long:  IBS < ibs_entry_long   AND close > trend_sma(trend_period)
+         AND CMF(cmf_period) > 0
+  short: IBS > ibs_entry_short  AND close < trend_sma(trend_period)
+         AND CMF(cmf_period) < 0   (this project's own symmetric extension,
+         same caveat as every other strategy's short side here - the
+         literature is long-only)
+  exit:  IBS crosses back through ibs_exit (long) / 1-ibs_exit (short),
+         OR the trend filter flips against the position (borrowed from
+         RSI-2's own exit rule), OR max_hold_days, OR the ATR stop is hit
+         intrabar (OHLC-order approximation, same as every backtest here).
 
-No natural structural stop exists in the published rule (same situation
-RSI-2 was in), so stop_atr_multiple x ATR is used, and max_hold_days bounds
-the hold the same way every other strategy in this project does (Donchian's
-exit channel, RSI-2's SMA cross, ThreeBarBreakout's time-stop).
-
-Not ported into daily_strategy.py's push/check_entry/check_exit interface:
-that interface's check_entry(close) only receives TODAY's close, not
-today's own high/low — fine for RSI-2 (closes only) and Donchian/ThreeBar
-(prior days' high/low only), but IBS specifically needs today's OWN
-high/low at the moment of the entry decision. Same shape-mismatch reasoning
-already documented for the momentum-rotation, pairs-trading, and gap-fill
-probes in CLAUDE.md — own loop instead of distorting the shared interface.
-
-Uses a flat commission_per_trade (India equity delivery round-trip ~0.2%
-STT+stamp is roughly proxied here as a flat rupee amount per round trip
-rather than percentage — this project's daily-bar strategies use
-commission_per_trade this way, e.g. `backtest_daily.py --commission-per-trade
-20`), and the same OHLC-order (open->high->low->close) stop-check
-approximation as every other backtest here.
+Not ported into daily_strategy.py's push/check_entry(close)/check_exit
+interface: IBS needs TODAY's own high/low at the entry decision, the same
+shape-mismatch reasoning already documented for probe_ibs.py itself and
+the momentum-rotation/pairs-trading/gap-fill probes - own loop instead of
+distorting the shared interface.
 """
 import argparse
-import statistics
 
-from indicators import internal_bar_strength as _ibs
+from indicators import internal_bar_strength as ibs_of, sma, chaikin_money_flow
 
 
 def _atr(daily: list[dict], i: int, period: int) -> float | None:
@@ -62,25 +63,22 @@ def _atr(daily: list[dict], i: int, period: int) -> float | None:
     return sum(trs) / len(trs)
 
 
-def simulate_ibs(daily: list[dict], ibs_entry_long: float = 0.2, ibs_entry_short: float = 0.8,
-                  ibs_exit: float = 0.5, stop_atr_multiple: float = 3.0, atr_period: int = 14,
-                  max_hold_days: int = 10, capital: float = 100_000.0, risk_per_trade_pct: float = 0.5,
-                  commission_per_trade: float = 20.0, max_drawdown_pct: float = 10.0,
-                  enable_short: bool = True):
+def simulate(daily: list[dict], trend_period: int = 50, cmf_period: int = 20,
+             ibs_entry_long: float = 0.2, ibs_entry_short: float = 0.8, ibs_exit: float = 0.5,
+             stop_atr_multiple: float = 3.0, atr_period: int = 14, max_hold_days: int = 10,
+             capital: float = 100_000.0, risk_per_trade_pct: float = 0.5,
+             commission_per_trade: float = 20.0, max_drawdown_pct: float = 10.0,
+             enable_short: bool = True):
     capital_track = capital
     peak = capital
     max_dd = 0.0
     halted = False
     trades = []
-
-    position = None  # dict: side, entry, stop, target_exit_ibs, days_in_trade, qty
-    daily_loss_floor = capital * -0.02  # matches this project's 2% same-day breaker convention; reset each bar
-    realized_today = 0.0
+    position = None  # dict: side, entry, stop, days_in_trade, qty
 
     for i, bar in enumerate(daily):
         if halted:
             break
-        realized_today = 0.0  # one bar is one day here, same reset-per-bar convention as simulate_daily
 
         if position is not None:
             position["days_in_trade"] += 1
@@ -98,12 +96,15 @@ def simulate_ibs(daily: list[dict], ibs_entry_long: float = 0.2, ibs_entry_short
                     break
 
             if exit_price is None:
-                ibs = _ibs(bar)
+                ibs = ibs_of(bar)
+                trend = sma([d["close"] for d in daily[max(0, i - trend_period + 1):i + 1]])
                 timed_out = position["days_in_trade"] >= max_hold_days
-                if side == "long" and ibs is not None and ibs > ibs_exit:
-                    exit_price, outcome = bar["close"], "ibs_exit"
-                elif side == "short" and ibs is not None and ibs < (1 - ibs_exit):
-                    exit_price, outcome = bar["close"], "ibs_exit"
+                trend_flipped = trend is not None and (
+                    (side == "long" and bar["close"] < trend) or (side == "short" and bar["close"] > trend))
+                ibs_exit_hit = ibs is not None and (
+                    (side == "long" and ibs > ibs_exit) or (side == "short" and ibs < (1 - ibs_exit)))
+                if ibs_exit_hit or trend_flipped:
+                    exit_price, outcome = bar["close"], "ibs_exit" if ibs_exit_hit else "trend_flip"
                 elif timed_out:
                     exit_price, outcome = bar["close"], "timeout"
 
@@ -112,7 +113,6 @@ def simulate_ibs(daily: list[dict], ibs_entry_long: float = 0.2, ibs_entry_short
                     else (position["entry"] - exit_price) * position["qty"]
                 net = gross - commission_per_trade
                 capital_track += net
-                realized_today += net
                 peak = max(peak, capital_track)
                 dd = (peak - capital_track) / peak * 100 if peak > 0 else 0.0
                 max_dd = max(max_dd, dd)
@@ -122,14 +122,16 @@ def simulate_ibs(daily: list[dict], ibs_entry_long: float = 0.2, ibs_entry_short
                                     gross_pnl=gross, net_pnl=net))
                 position = None
 
-        elif not halted:
-            ibs = _ibs(bar)
+        elif not halted and i >= trend_period:
+            ibs = ibs_of(bar)
             atr = _atr(daily, i, atr_period)
-            if ibs is not None and atr and atr > 0:
+            trend = sma([d["close"] for d in daily[i - trend_period + 1:i + 1]])
+            cmf = chaikin_money_flow(daily[max(0, i - cmf_period + 1):i + 1], period=cmf_period)
+            if ibs is not None and atr and atr > 0 and trend is not None and cmf is not None:
                 side = None
-                if ibs < ibs_entry_long:
+                if ibs < ibs_entry_long and bar["close"] > trend and cmf > 0:
                     side = "long"
-                elif enable_short and ibs > ibs_entry_short:
+                elif enable_short and ibs > ibs_entry_short and bar["close"] < trend and cmf < 0:
                     side = "short"
                 if side is not None:
                     entry = bar["close"]
@@ -167,15 +169,14 @@ def _report(label, result, capital, years):
 def walk_forward(daily, split_ratio=0.5, **kwargs):
     n = len(daily)
     cutoff = max(1, int(n * split_ratio))
-    before, after = daily[:cutoff], daily[cutoff:]
-    return simulate_ibs(before, **kwargs), simulate_ibs(after, **kwargs)
+    return simulate(daily[:cutoff], **kwargs), simulate(daily[cutoff:], **kwargs)
 
 
 def quarter_split(daily, **kwargs):
     n = len(daily)
     chunk = max(1, n // 4)
     chunks = [daily[i:i + chunk] for i in range(0, n, chunk)][:4]
-    return [simulate_ibs(c, **kwargs) for c in chunks]
+    return [simulate(c, **kwargs) for c in chunks]
 
 
 def fetch_daily_yfinance(symbol, period):
@@ -189,19 +190,22 @@ if __name__ == "__main__":
     parser.add_argument("--period", default="10y")
     parser.add_argument("--capital", type=float, default=100_000.0)
     parser.add_argument("--risk-per-trade-pct", type=float, default=0.5)
+    parser.add_argument("--trend-period", type=int, default=50)
+    parser.add_argument("--cmf-period", type=int, default=20)
     parser.add_argument("--ibs-entry-long", type=float, default=0.2)
     parser.add_argument("--ibs-entry-short", type=float, default=0.8)
     parser.add_argument("--ibs-exit", type=float, default=0.5)
     parser.add_argument("--stop-atr-multiple", type=float, default=3.0)
     parser.add_argument("--max-hold-days", type=int, default=10)
     parser.add_argument("--commission-per-trade", type=float, default=20.0)
-    parser.add_argument("--no-short", action="store_true", help="literature-backed long-only mode")
+    parser.add_argument("--no-short", action="store_true")
     parser.add_argument("--walk-forward", action="store_true")
     parser.add_argument("--quarter-split", action="store_true")
     args = parser.parse_args()
 
     daily = fetch_daily_yfinance(args.symbol, args.period)
-    kwargs = dict(ibs_entry_long=args.ibs_entry_long, ibs_entry_short=args.ibs_entry_short,
+    kwargs = dict(trend_period=args.trend_period, cmf_period=args.cmf_period,
+                  ibs_entry_long=args.ibs_entry_long, ibs_entry_short=args.ibs_entry_short,
                   ibs_exit=args.ibs_exit, stop_atr_multiple=args.stop_atr_multiple,
                   max_hold_days=args.max_hold_days, capital=args.capital,
                   risk_per_trade_pct=args.risk_per_trade_pct,
@@ -220,5 +224,5 @@ if __name__ == "__main__":
         for i, c in enumerate(chunks):
             _report(f"Q{i+1}", c, args.capital, years / 4)
     else:
-        result = simulate_ibs(daily, **kwargs)
+        result = simulate(daily, **kwargs)
         _report("Full period", result, args.capital, years)

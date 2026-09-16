@@ -1,6 +1,6 @@
 from indicators import (
     true_range, average_true_range, sma, rsi, stdev, highest, lowest, linreg,
-    chaikin_money_flow, on_balance_volume,
+    chaikin_money_flow, on_balance_volume, internal_bar_strength, ema_update,
 )
 
 
@@ -125,3 +125,28 @@ def test_on_balance_volume_flat_day_contributes_nothing():
 def test_on_balance_volume_none_when_not_enough_history():
     candles = [candle(0, 0, 10, v=100), candle(0, 0, 11, v=100)]
     assert on_balance_volume(candles, period=3) is None
+
+
+def test_internal_bar_strength_at_the_high_is_one():
+    assert internal_bar_strength(candle(110, 100, 110)) == 1.0
+
+
+def test_internal_bar_strength_at_the_low_is_zero():
+    assert internal_bar_strength(candle(110, 100, 100)) == 0.0
+
+
+def test_internal_bar_strength_midpoint_is_half():
+    assert internal_bar_strength(candle(110, 100, 105)) == 0.5
+
+
+def test_internal_bar_strength_none_on_zero_range_bar():
+    assert internal_bar_strength(candle(100, 100, 100)) is None
+
+
+def test_ema_update_matches_the_standard_recursive_formula():
+    # k = 2/(period+1) = 2/6 = 1/3 for period=5
+    assert ema_update(prev_ema=100.0, price=130.0, period=5) == 110.0
+
+
+def test_ema_update_returns_the_seed_unchanged_when_price_equals_it():
+    assert ema_update(prev_ema=50.0, price=50.0, period=10) == 50.0
