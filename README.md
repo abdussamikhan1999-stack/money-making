@@ -136,8 +136,11 @@ works at the exact default parameter — a single-point-fit red flag). The
 one clean survivor, `CL=F` (oil), clears quarter-split, perturbation, AND
 sizing (2% risk reaches 3.78%/year at 7.4% drawdown, genuine scaling, not
 dilution) — comparable in quality to this project's best results, but
-still just one instrument out of a chance-level sweep. See CLAUDE.md's
-"Seventeenth" entry.
+still just one instrument out of a chance-level sweep. **Retested on 8 more
+commodities/FX pairs (the instrument class `CL=F` belongs to) — 0/8
+passed**, confirming `CL=F` doesn't generalize within its own instrument
+class and was the lucky draw its chance-level screen already implied might
+exist. Closed; see CLAUDE.md's "Seventeenth"/"Eighteenth" entries.
 
 ### Options premium selling (weekly Nifty iron condor) — real edge, wrong capital tier, and now real-data validated
 

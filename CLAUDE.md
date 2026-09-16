@@ -1353,3 +1353,35 @@ instrument class `CL=F` belongs to) before calling this "found" — flagged
 for a future session rather than ported into the tested `daily_strategy.py`
 architecture yet, same treatment IBS and gap-fill received while still
 unconfirmed.
+
+## Eighteenth: SuperTrend retested on 8 more commodities/FX pairs — zero survivors, CL=F confirmed as a lucky draw
+
+Direct follow-up on the Seventeenth entry's own flagged next step: retested
+`probe_supertrend.py` (unchanged, default `st_period=10`/`multiplier=3.0`) on
+the 8 Kite-tradable commodities/FX pairs not in the original 12-instrument
+screen — the same set the Donchian section above used to extend its own
+search (`NG=F`, `HG=F`, `SI=F`, `PL=F` on MCX; `USDINR=X`, `EURINR=X`,
+`GBPINR=X`, `JPYINR=X` on the currency segment) — specifically because
+`CL=F` (oil) is itself an MCX commodity and this instrument class was the
+natural place to look for corroboration.
+
+**Result: 0/8 passed** (both walk-forward halves positive, no
+drawdown-halt). 6/8 were consistently negative on both halves (`HG=F`,
+`SI=F`, `PL=F`, `USDINR=X`, `EURINR=X`, `JPYINR=X` — `PL=F` also
+drawdown-halted in-sample); 2/8 sign-flipped between halves (`NG=F`,
+`GBPINR=X`) — the same "looks different on each half" pattern this file has
+repeatedly distrusted, not a pass.
+
+**Net verdict**: this directly answers the Seventeenth entry's open
+question, and the answer is negative. Combined with the original 12, the
+running SuperTrend hit rate is now 4/20 (20%) — still chance-level — but
+more specifically, the 8 fresh instruments most similar to `CL=F` in kind
+(commodities and FX, the exact class it belongs to) went 0/8. `CL=F` isn't
+corroborated by nearby instruments the way a real cross-instrument mechanism
+would be; it was the one lucky draw its own chance-level screen already
+implied might exist. No further instruments obviously remain to retest
+under this specific reasoning — closing this line rather than continuing to
+sweep one instrument at a time. A genuinely different construction (not
+another instrument swap on an existing one) is the next useful step if
+continuing this project, per the same "no further instruments remain"
+conclusion the Donchian FX/MCX extension reached earlier.
