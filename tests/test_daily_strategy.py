@@ -1,11 +1,12 @@
 from daily_strategy import (
     DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, SqueezeMomentumStrategy,
+    VolumeConfirmationStrategy,
 )
 from strategy import Side
 
 
-def bar(high, low, close, open_=None):
-    return {"open": open_ if open_ is not None else close, "high": high, "low": low, "close": close, "volume": 0}
+def bar(high, low, close, open_=None, volume=0):
+    return {"open": open_ if open_ is not None else close, "high": high, "low": low, "close": close, "volume": volume}
 
 
 # --- DonchianBreakoutStrategy ---
@@ -299,3 +300,90 @@ def test_reset_clears_squeeze_state():
     assert sig is not None
     s.reset()
     assert s.check_entry(close=110) is None  # window emptied, needs refilling
+
+
+# --- VolumeConfirmationStrategy ---
+
+def _feed_bullish_days(s, n=4, start=105, step=5):
+    """n up-days, close at each day's own high, real volume every day -
+    fills CMF/OBV/ATR positive across the board."""
+    price = start
+    for _ in range(n):
+        s.push(bar(price, price - 5, price, volume=100))
+        price += step
+
+
+def test_no_signal_before_window_fills():
+    s = VolumeConfirmationStrategy(cmf_period=3, obv_period=3, atr_period=3)
+    _feed_bullish_days(s, n=3)  # needs obv_period+1=4 / atr_period+1=4, only 3 pushed
+    assert s.check_entry(close=125) is None
+
+
+def test_long_entry_when_cmf_and_obv_both_positive():
+    s = VolumeConfirmationStrategy(cmf_period=3, obv_period=3, atr_period=3, stop_atr_multiple=2.0)
+    _feed_bullish_days(s, n=4)  # 4 up-days, close at the high every day, real volume
+    sig = s.check_entry(close=125)
+    assert sig is not None
+    assert sig.side is Side.LONG
+    assert sig.entry_price == 125
+    assert sig.stop_loss == 125 - 2.0 * s.current_atr()
+
+
+def test_no_entry_when_volume_is_zero_throughout():
+    """An index with no real traded volume (yfinance reports 0) - CMF can't
+    be computed, so this strategy must never fire on it."""
+    s = VolumeConfirmationStrategy(cmf_period=3, obv_period=3, atr_period=3)
+    price = 105
+    for _ in range(4):
+        s.push(bar(price, price - 5, price, volume=0))
+        price += 5
+    assert s.check_entry(close=125) is None
+
+
+def test_short_entry_when_cmf_and_obv_both_negative():
+    s = VolumeConfirmationStrategy(cmf_period=3, obv_period=3, atr_period=3, stop_atr_multiple=2.0)
+    price = 120
+    for _ in range(4):
+        s.push(bar(price + 5, price, price, volume=100))  # close at the LOW every day
+        price -= 5
+    sig = s.check_entry(close=95)
+    assert sig is not None
+    assert sig.side is Side.SHORT
+    assert sig.entry_price == 95
+    assert sig.stop_loss == 95 + 2.0 * s.current_atr()
+
+
+def test_check_exit_true_once_cmf_and_obv_both_flip_negative():
+    s = VolumeConfirmationStrategy(cmf_period=3, obv_period=3, atr_period=3, max_hold_days=50)
+    _feed_bullish_days(s, n=4)
+    sig = s.check_entry(close=125)
+    assert sig is not None
+    # feed 4 down-days, close at the low every day, to flip CMF/OBV negative
+    price = 125
+    for _ in range(3):
+        s.push(bar(price, price - 5, price - 5, volume=100))
+        price -= 5
+        if s.check_exit(close=price, side=sig.side):
+            break
+    else:
+        assert False, "expected check_exit to fire once CMF/OBV both turned negative"
+
+
+def test_check_exit_true_after_max_hold_days_even_without_signal_flip():
+    s = VolumeConfirmationStrategy(cmf_period=3, obv_period=3, atr_period=3, max_hold_days=2)
+    _feed_bullish_days(s, n=4)
+    sig = s.check_entry(close=125)
+    assert sig is not None
+    s.push(bar(130, 125, 130, volume=100))  # day 1 in trade, still bullish
+    assert s.check_exit(close=130, side=sig.side) is False
+    s.push(bar(135, 130, 135, volume=100))  # day 2 - hits max_hold_days
+    assert s.check_exit(close=135, side=sig.side) is True
+
+
+def test_reset_clears_volume_state():
+    s = VolumeConfirmationStrategy(cmf_period=3, obv_period=3, atr_period=3)
+    _feed_bullish_days(s, n=4)
+    sig = s.check_entry(close=125)
+    assert sig is not None
+    s.reset()
+    assert s.check_entry(close=125) is None  # window emptied, needs refilling

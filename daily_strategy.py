@@ -14,7 +14,10 @@ run any of them interchangeably:
 from dataclasses import dataclass, field
 
 from strategy import Signal, Side
-from indicators import average_true_range, sma, rsi, stdev, highest, lowest, linreg
+from indicators import (
+    average_true_range, sma, rsi, stdev, highest, lowest, linreg,
+    chaikin_money_flow, on_balance_volume,
+)
 
 
 @dataclass
@@ -469,6 +472,131 @@ class SqueezeMomentumStrategy:
         val = result[2] if result is not None else None
         momentum_flipped = val is not None and ((val < 0) if side == Side.LONG else (val > 0))
         if momentum_flipped or timed_out:
+            self._in_trade = False
+            return True
+        return False
+
+
+@dataclass
+class VolumeConfirmationStrategy:
+    """Chaikin Money Flow + On-Balance Volume dual confirmation, reproducing
+    XBT3K/VOLUME-ALGO-EURUSD's `VolumeOBVCMF` backtrader strategy
+    (github.com/XBT3K/VOLUME-ALGO-EURUSD) — a real, runnable open-source
+    strategy implementation, per the user's request to keep sourcing new
+    mechanisms from actual strategy CODE rather than forum rule
+    descriptions (see SqueezeMomentumStrategy's docstring, same standard).
+    Genuinely different mechanism from everything else in this file: it's
+    the first strategy here to use VOLUME/money-flow at all — everything
+    tried before this (Donchian, RSI-2, 3-bar breakout, Squeeze) is
+    price-only.
+
+    Source rule (long-only in the original): buy when both CMF and OBV are
+    above `cmf_level`/`obv_level` (0.0 in the source); close the position
+    when both drop below. Two adaptations from the source, both
+    interpretation decisions — check against intent before trusting
+    results:
+      - **OBV windowed, not cumulative-since-inception** (see
+        `indicators.on_balance_volume`'s own docstring for why): the
+        source's raw backtrader OBV crossing a fixed "0" is only meaningful
+        relative to wherever its running sum happened to start at the
+        beginning of that specific data feed — not comparable across the
+        different windows this project's walk-forward/quarter-split checks
+        require. Windowing it makes the 0-crossing a stable "more up-volume
+        than down-volume in the last N days" signal instead.
+      - **Symmetric short side added** (the source is long-only): this
+        project's own extension for consistency with every other strategy
+        here, the same caveat already applied to `probe_ibs.py`'s short
+        side — not itself source-backed, flag results on it accordingly.
+
+    No natural structural stop in the source rule (same situation RSI-2 and
+    Squeeze were in), so the initial stop is `stop_atr_multiple` x ATR.
+    `max_hold_days` is this file's now-standard bounded-holding time-stop
+    (same `_days_in_trade`-via-`push()` convention as SqueezeMomentumStrategy).
+
+    Known applicability limit, not a bug: yfinance reports zero/unreliable
+    volume for INDEX symbols (`^NSEI`, `^NSEBANK`) since an index itself
+    has no traded volume — `chaikin_money_flow` returns None in that case
+    (see its docstring) and this strategy simply never enters. Only test
+    this against real instruments (stocks, futures), not indices.
+    """
+    cmf_period: int = 20
+    obv_period: int = 20
+    cmf_level: float = 0.0
+    obv_level: float = 0.0
+    stop_atr_multiple: float = 2.0
+    atr_period: int = 14
+    max_hold_days: int = 20
+
+    _highs: list[float] = field(default_factory=list, init=False)
+    _lows: list[float] = field(default_factory=list, init=False)
+    _closes: list[float] = field(default_factory=list, init=False)
+    _volumes: list[float] = field(default_factory=list, init=False)
+    _in_trade: bool = field(default=False, init=False)
+    _days_in_trade: int = field(default=0, init=False)
+
+    def reset(self) -> None:
+        self._highs = []
+        self._lows = []
+        self._closes = []
+        self._volumes = []
+        self._in_trade = False
+        self._days_in_trade = 0
+
+    def push(self, bar: dict) -> None:
+        self._highs.append(bar["high"])
+        self._lows.append(bar["low"])
+        self._closes.append(bar["close"])
+        self._volumes.append(bar["volume"])
+        if self._in_trade:
+            self._days_in_trade += 1
+
+    def _window(self, n: int) -> list[dict]:
+        return [{"high": h, "low": l, "close": c, "volume": v} for h, l, c, v in
+                zip(self._highs[-n:], self._lows[-n:], self._closes[-n:], self._volumes[-n:])]
+
+    def current_atr(self) -> float | None:
+        n = self.atr_period + 1
+        if len(self._closes) < n:
+            return None
+        window = [{"high": h, "low": l, "close": c} for h, l, c in
+                  zip(self._highs[-n:], self._lows[-n:], self._closes[-n:])]
+        return average_true_range(window, period=self.atr_period)
+
+    def _cmf_obv(self) -> tuple[float | None, float | None]:
+        """(cmf, obv) from the days already pushed — today NOT included
+        (called from check_entry/check_exit BEFORE push() runs for today),
+        same no-lookahead convention as Donchian/Squeeze."""
+        cmf = chaikin_money_flow(self._window(self.cmf_period), period=self.cmf_period)
+        obv = on_balance_volume(self._window(self.obv_period + 1), period=self.obv_period)
+        return cmf, obv
+
+    def check_entry(self, close: float) -> Signal | None:
+        cmf, obv = self._cmf_obv()
+        atr = self.current_atr()
+        if cmf is None or obv is None or atr is None or atr <= 0:
+            return None
+        if cmf > self.cmf_level and obv > self.obv_level:
+            self._in_trade = True
+            self._days_in_trade = 0
+            return Signal(Side.LONG, close, close - self.stop_atr_multiple * atr,
+                          f"CMF={cmf:.3f} OBV={obv:.0f} both above {self.cmf_level}/{self.obv_level}")
+        if cmf < -self.cmf_level and obv < -self.obv_level:
+            self._in_trade = True
+            self._days_in_trade = 0
+            return Signal(Side.SHORT, close, close + self.stop_atr_multiple * atr,
+                          f"CMF={cmf:.3f} OBV={obv:.0f} both below -{self.cmf_level}/-{self.obv_level}")
+        return None
+
+    def check_exit(self, close: float, side: Side) -> bool:
+        cmf, obv = self._cmf_obv()
+        timed_out = self._days_in_trade >= self.max_hold_days
+        if cmf is None or obv is None:
+            signal_exit = False
+        elif side == Side.LONG:
+            signal_exit = cmf < self.cmf_level and obv < self.obv_level
+        else:
+            signal_exit = cmf > -self.cmf_level and obv > -self.obv_level
+        if signal_exit or timed_out:
             self._in_trade = False
             return True
         return False

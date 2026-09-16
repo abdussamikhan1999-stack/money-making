@@ -80,6 +80,52 @@ def linreg(values: list[float]) -> float | None:
     return intercept + slope * (n - 1)
 
 
+def chaikin_money_flow(candles: list[dict], period: int = 20) -> float | None:
+    """Chaikin Money Flow: each day's money-flow-volume (where the close sat
+    within that day's own high-low range, weighted by that day's volume)
+    summed over `period` days and normalized by total volume in the window.
+    >0 means net buying pressure, <0 net selling. Needs `volume` in each
+    candle dict alongside high/low/close. Returns None if there isn't
+    enough history, or every bar's volume in the window is zero (e.g. an
+    index with no real traded volume)."""
+    if len(candles) < period:
+        return None
+    window = candles[-period:]
+    total_volume = sum(c["volume"] for c in window)
+    if total_volume == 0:
+        return None
+    mfv_sum = 0.0
+    for c in window:
+        day_range = c["high"] - c["low"]
+        if day_range == 0:
+            continue
+        mfm = ((c["close"] - c["low"]) - (c["high"] - c["close"])) / day_range
+        mfv_sum += mfm * c["volume"]
+    return mfv_sum / total_volume
+
+
+def on_balance_volume(candles: list[dict], period: int = 20) -> float | None:
+    """Windowed On-Balance Volume: net signed volume (an up day adds its
+    volume, a down day subtracts it, a flat day contributes nothing) over
+    the last `period` day-over-day changes — windowed rather than the
+    classic running cumulative total since the start of all history
+    (consistent with average_true_range/rsi's own windowed style in this
+    module), so its sign is comparable across different time windows
+    instead of drifting with wherever the cumulative sum happens to have
+    started. Needs `period + 1` candles (period changes need period+1
+    closes). Returns None if there isn't enough history."""
+    if len(candles) < period + 1:
+        return None
+    window = candles[-(period + 1):]
+    obv = 0.0
+    for i in range(1, len(window)):
+        if window[i]["close"] > window[i - 1]["close"]:
+            obv += window[i]["volume"]
+        elif window[i]["close"] < window[i - 1]["close"]:
+            obv -= window[i]["volume"]
+    return obv
+
+
 def rsi(closes: list[float], period: int = 2, seed_window: int = 20) -> float | None:
     """Wilder-smoothed RSI, windowed rather than tracking state from all of
     history (consistent with average_true_range's own windowed style):

@@ -1,8 +1,11 @@
-from indicators import true_range, average_true_range, sma, rsi, stdev, highest, lowest, linreg
+from indicators import (
+    true_range, average_true_range, sma, rsi, stdev, highest, lowest, linreg,
+    chaikin_money_flow, on_balance_volume,
+)
 
 
-def candle(h, l, c):
-    return {"high": h, "low": l, "close": c}
+def candle(h, l, c, v=0):
+    return {"high": h, "low": l, "close": c, "volume": v}
 
 
 def test_true_range_picks_largest_of_three_measures():
@@ -86,3 +89,39 @@ def test_linreg_flat_series_returns_the_flat_value():
 
 def test_linreg_none_with_fewer_than_two_points():
     assert linreg([5]) is None
+
+
+def test_chaikin_money_flow_all_closes_at_high_is_fully_positive():
+    candles = [candle(110, 100, 110, v=100) for _ in range(3)]  # close at high every day -> mfm=+1
+    assert abs(chaikin_money_flow(candles, period=3) - 1.0) < 1e-9
+
+
+def test_chaikin_money_flow_all_closes_at_low_is_fully_negative():
+    candles = [candle(110, 100, 100, v=100) for _ in range(3)]  # close at low every day -> mfm=-1
+    assert abs(chaikin_money_flow(candles, period=3) - (-1.0)) < 1e-9
+
+
+def test_chaikin_money_flow_none_when_not_enough_history():
+    assert chaikin_money_flow([candle(110, 100, 105, v=100)], period=3) is None
+
+
+def test_chaikin_money_flow_none_when_window_has_zero_volume():
+    candles = [candle(110, 100, 105, v=0) for _ in range(3)]
+    assert chaikin_money_flow(candles, period=3) is None
+
+
+def test_on_balance_volume_nets_signed_volume_over_the_window():
+    candles = [candle(0, 0, c, v=v) for c, v in [(10, 999), (12, 50), (11, 30), (13, 70)]]
+    # day-over-day: +50 (12>10), -30 (11<12), +70 (13>11) -> net 90
+    assert on_balance_volume(candles, period=3) == 90
+
+
+def test_on_balance_volume_flat_day_contributes_nothing():
+    candles = [candle(0, 0, c, v=v) for c, v in [(10, 999), (10, 50), (12, 30)]]
+    # day1 flat (10==10) contributes 0, day2 up contributes +30
+    assert on_balance_volume(candles, period=2) == 30
+
+
+def test_on_balance_volume_none_when_not_enough_history():
+    candles = [candle(0, 0, 10, v=100), candle(0, 0, 11, v=100)]
+    assert on_balance_volume(candles, period=3) is None

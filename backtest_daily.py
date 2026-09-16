@@ -14,7 +14,8 @@ import argparse
 from paper_broker import PaperBroker
 from risk import RiskManager
 from daily_strategy import (
-    DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, SqueezeMomentumStrategy, Side,
+    DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, SqueezeMomentumStrategy,
+    VolumeConfirmationStrategy, Side,
 )
 from backtest import split_by_date, _report  # reuse: same date-splitting + reporting used for intraday backtests
 
@@ -32,6 +33,10 @@ STRATEGIES = {
     "squeeze": lambda args: SqueezeMomentumStrategy(
         length=args.squeeze_length, bb_mult=args.squeeze_bb_mult, kc_mult=args.squeeze_kc_mult,
         stop_atr_multiple=args.squeeze_stop_atr_multiple, max_hold_days=args.squeeze_max_hold_days,
+    ),
+    "volume": lambda args: VolumeConfirmationStrategy(
+        cmf_period=args.cmf_period, obv_period=args.obv_period,
+        stop_atr_multiple=args.volume_stop_atr_multiple, max_hold_days=args.volume_max_hold_days,
     ),
 }
 
@@ -168,6 +173,11 @@ if __name__ == "__main__":
     parser.add_argument("--squeeze-kc-mult", type=float, default=1.5, help="[squeeze] Keltner Channel ATR multiplier")
     parser.add_argument("--squeeze-stop-atr-multiple", type=float, default=2.0, help="[squeeze] initial stop = N x ATR")
     parser.add_argument("--squeeze-max-hold-days", type=int, default=20, help="[squeeze] time-stop if momentum never flips")
+    # volume params
+    parser.add_argument("--cmf-period", type=int, default=20, help="[volume] Chaikin Money Flow lookback")
+    parser.add_argument("--obv-period", type=int, default=20, help="[volume] windowed On-Balance Volume lookback")
+    parser.add_argument("--volume-stop-atr-multiple", type=float, default=2.0, help="[volume] initial stop = N x ATR")
+    parser.add_argument("--volume-max-hold-days", type=int, default=20, help="[volume] time-stop if signal never flips")
     args = parser.parse_args()
 
     daily = fetch_daily_yfinance(args.symbol, args.period)

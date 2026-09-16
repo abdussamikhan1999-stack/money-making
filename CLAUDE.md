@@ -1172,3 +1172,93 @@ Left as `--strategy squeeze` in the tested architecture (unlike some
 probe-script-only explorations) since the indicators and strategy code
 themselves are reusable and correctly tested, even though this particular
 screening result doesn't clear the bar to recommend trading it.
+
+## Sixteenth: Chaikin Money Flow + On-Balance Volume confirmation — one clean survivor (gold), too thin to size up
+
+Sourced from real open-source strategy CODE again (per the same standard
+the Squeeze entry set): `XBT3K/VOLUME-ALGO-EURUSD` on GitHub, a runnable
+backtrader strategy (`VolumeOBVCMF`) that buys when both Chaikin Money Flow
+and On-Balance Volume are positive and closes when both turn negative.
+Genuinely different mechanism from all fifteen prior entries: this is the
+**first strategy in this project to use volume at all** — everything before
+this (Donchian, RSI-2, 3-bar breakout, IBS, Squeeze) is price-only.
+
+Implemented as `VolumeConfirmationStrategy` in `daily_strategy.py`
+(`--strategy volume` in `backtest_daily.py`), with two adaptations from the
+source, both interpretation decisions:
+- **OBV windowed, not cumulative-since-inception.** The source's raw OBV
+  crossing a fixed "0" is only meaningful relative to wherever backtrader's
+  running sum happened to start at the beginning of that data feed — not
+  comparable across the different time windows this project's walk-forward
+  and quarter-split checks require. `indicators.on_balance_volume()` sums
+  signed volume over a rolling `period` window instead (same windowed
+  philosophy as `average_true_range`/`rsi` already have in this file),
+  making the 0-crossing a stable "more up-volume than down-volume in the
+  last N days" signal.
+- **Symmetric short side added** (the source is long-only) — this
+  project's own extension for consistency with every other strategy here,
+  same caveat already applied to `probe_ibs.py`'s short side.
+
+New indicators `chaikin_money_flow()`/`on_balance_volume()` added to
+`indicators.py` (7 new unit tests), plus 8 new strategy tests — full suite
+100/100 green.
+
+**A real applicability limit surfaced immediately, not a bug**: yfinance
+reports zero volume for index symbols (`^NSEI`, `^NSEBANK` — an index
+itself has no traded volume), so `chaikin_money_flow()` correctly returns
+`None` and the strategy simply never trades them. Screened stocks/futures
+only this time (10 Kite-tradable instruments: `RELIANCE.NS`, `TCS.NS`,
+`INFY.NS`, `HDFCBANK.NS`, `ITC.NS`, `SBIN.NS`, `AXISBANK.NS`, `WIPRO.NS`,
+`GC=F`, `CL=F`).
+
+**Screening result: 3/10 passed (both halves positive, no drawdown-halt)**
+— `INFY.NS`, `WIPRO.NS`, `GC=F`. A 30% hit rate, marginally above the
+"pure chance" band this project has repeatedly used as a disqualifying
+signal (sector sweep 18%, Squeeze 25%) but not comfortably clear of it
+either. `TCS.NS` and `SBIN.NS` were sign-CONSISTENT across both halves but
+both **negative** — a consistent loser, not a passer; the walk-forward
+check alone doesn't distinguish the two, which is exactly why this file's
+screening standard has always been "both halves positive," not just
+"matching sign."
+
+**Quarter-split separates the three passers cleanly** (four ~2.5y chunks
+over 10y): `INFY.NS` and `WIPRO.NS` both show the same recent-quarter-decay
+signature already disqualifying elsewhere in this file — Q4 (2024-2026,
+the most recent and most relevant window) is **negative** for both
+(-262, -2,845) despite 3 of their 4 quarters being positive. Only `GC=F`
+(gold) is genuinely clean: 3 of 4 quarters positive, and Q4 is not just
+positive but the **strongest** quarter (+6,056) — no decay red flag, same
+"most-recent-quarter-is-best" pattern the options-selling line saw before
+its capital problem, not the "historic run now flat" pattern that killed
+Donchian/BTC and momentum rotation.
+
+**`GC=F`'s perturbation sweep is smooth and all-positive** — `cmf_period`
+10 through 30 and `obv_period` 10 through 30 both stay positive on both
+walk-forward halves at every tested value, no cliffs, no sign flips. This
+is real robustness, on par with RSI-2 and the 3-bar breakout, and clearly
+better than Squeeze's erratic `length` sweep.
+
+**But sizing doesn't help here — GC=F fails the same way RSI-2 did, not
+the way 3-bar breakout/Squeeze/IBS did**: raising `--risk-per-trade-pct`
+from the default 0.5% to 1% or 2% doesn't scale the return up, it
+DRAWDOWN-HALTS the run almost immediately (10.2%/10.9% drawdown, trade
+count collapsing from 192 to 38 to 18) — return and risk are diluting
+together, not compounding. Stuck at the default-sizing magnitude:
+**+12,969.80 net P&L over the full 10-year period on ₹100,000 capital is
+~1.30%/year** — thin, comparable to RSI-2's and the options single-sided
+credit spread's verdicts, well short of a usable edge.
+
+**Net verdict**: sixteenth mechanism, and the first one to genuinely
+introduce a new data dimension (volume) rather than a new way of reading
+price alone — and it still lands in the now-familiar "real but too thin"
+bucket rather than "found it." One instrument (gold) clears every rigor
+check in this project (walk-forward, quarter-split, perturbation) as
+cleanly as RSI-2 or the 3-bar breakout did, but the 30% hit rate across the
+other nine instruments is close enough to chance that a single clean
+survivor isn't strong independent confirmation on its own, and — unlike
+the two strategies here that turned "thin" into "usable" via modest
+sizing (3-bar breakout, Squeeze) — this one's return and drawdown scale
+together the way RSI-2's did, so there's no size-based lever to pull.
+Left as `--strategy volume` in the tested architecture since the code
+(indicators and strategy) is reusable and correctly tested, same treatment
+as Squeeze, even though it doesn't clear the bar to recommend trading it.

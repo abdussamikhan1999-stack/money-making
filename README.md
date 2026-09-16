@@ -21,6 +21,7 @@ python backtest_daily.py --strategy donchian --symbol '^NSEI' --period 10y --wal
 python backtest_daily.py --strategy rsi2 --symbol RELIANCE.NS --period 10y --walk-forward
 python backtest_daily.py --strategy threebar --symbol SBIN.NS --period 10y --walk-forward --commission-per-trade 20
 python backtest_daily.py --strategy squeeze --symbol INFY.NS --period 10y --walk-forward --commission-per-trade 20
+python backtest_daily.py --strategy volume --symbol GC=F --period 10y --walk-forward --commission-per-trade 20
 ```
 
 **`donchian`** — the "Turtle Trading" entry rule (N-day high/low channel
@@ -86,6 +87,21 @@ quarter-split and reasonable on perturbation, and shares the "1% sizing
 roughly doubles the return" property the 3-bar breakout has — but surfacing
 from a chance-level sweep means it isn't distinguishable from a lucky draw.
 See CLAUDE.md's "Fifteenth" section for the full breakdown.
+
+**`volume`** — Chaikin Money Flow + On-Balance Volume confirmation,
+reproducing `XBT3K/VOLUME-ALGO-EURUSD`'s open-source `VolumeOBVCMF`
+backtrader strategy: long when both CMF and a (windowed) OBV are positive,
+exit when both turn negative. The first strategy in this project to use
+volume at all rather than price alone — and correctly never trades index
+symbols (`^NSEI`, `^NSEBANK`), since yfinance reports no real volume for an
+index. Screened on 10 stocks/futures: 3/10 passed walk-forward (`INFY.NS`,
+`WIPRO.NS`, `GC=F`), but quarter-split shows `INFY.NS`/`WIPRO.NS` both
+decaying in the most recent quarter — only `GC=F` (gold) is clean, with a
+smooth, all-positive perturbation sweep on par with RSI-2's. **Sizing
+doesn't rescue it**, though: unlike the 3-bar breakout or Squeeze, raising
+risk-per-trade just drawdown-halts the run instead of scaling the return,
+leaving `GC=F` stuck at ~1.30%/year — real but too thin, the same verdict
+as RSI-2. See CLAUDE.md's "Sixteenth" section for the full breakdown.
 
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
