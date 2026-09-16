@@ -54,6 +54,7 @@ def simulate_daily(daily: list[dict], strategy, capital: float = 100_000.0, risk
                     max_drawdown_pct: float = 10.0, commission_per_trade: float = 0.0,
                     breakeven_atr_mult: float | None = None, trail_atr_mult: float | None = None,
                     breakeven_offset_atr_mult: float = 0.0, trail_offset_atr_mult: float = 0.5,
+                    vol_size_cap: bool = False,
                     ) -> tuple[PaperBroker, RiskManager]:
     """`strategy` is any daily_strategy.py object implementing push(bar) /
     check_entry(close) / check_exit(close, side).
@@ -70,9 +71,24 @@ def simulate_daily(daily: list[dict], strategy, capital: float = 100_000.0, risk
     the same TrailingStopManager mechanism, but scaled to THIS entry's own
     ATR (via strategy.current_atr(), when the strategy exposes it) instead
     of reusing the raw forex-pip defaults that caused the earlier bug. Only
-    strategies that implement current_atr() (currently ConnorsRSI2Strategy)
-    can use this; others silently keep the inf/inf no-op since there's no
-    per-entry ATR to scale from."""
+    strategies exposing current_atr() (ConnorsRSI2Strategy, ThreeBarBreakout-
+    Strategy, VolumeConfirmationStrategy, TurtleSoupStrategy, MACDStrategy)
+    can use this; Donchian/Squeeze silently keep the inf/inf no-op since
+    there's no per-entry ATR to scale from.
+
+    vol_size_cap (default False, no behavior change) opts into
+    risk.RiskManager.volatility_position_size() as a SANITY CAP on top of
+    the existing stop-based position_size() - takes whichever quantity is
+    smaller, exactly as that method's own docstring recommends, rather than
+    replacing stop-based sizing outright. Hypothesis (CLAUDE.md's
+    "Twenty-third"): several strategies here hit the drawdown breaker at
+    2%+ risk-per-trade because a rare, unusually TIGHT stop (small
+    entry-to-stop distance relative to the instrument's typical daily
+    range) can size an oversized position that stop-based sizing alone
+    doesn't see coming - capping by the instrument's own ATR specifically
+    catches that case without touching any entry/exit logic. Same
+    current_atr()-gated strategy list as the profit-booking overlay above;
+    silently a no-op on strategies that don't expose it."""
     broker = PaperBroker(commission_per_trade=commission_per_trade)
     risk = RiskManager(capital=capital, risk_per_trade_pct=risk_per_trade_pct, max_drawdown_pct=max_drawdown_pct)
     current_side: Side | None = None
@@ -97,11 +113,13 @@ def simulate_daily(daily: list[dict], strategy, capital: float = 100_000.0, risk
             signal = strategy.check_entry(bar["close"])
             if signal:
                 qty = risk.position_size(signal.entry_price, signal.stop_loss)
+                atr = getattr(strategy, "current_atr", lambda: None)()
+                if vol_size_cap and atr:
+                    qty = min(qty, risk.volatility_position_size(atr))
                 if qty > 0:
                     breakeven_trigger = trail_trigger = float("inf")
                     breakeven_offset = 1.0
                     trail_offset = 5.0
-                    atr = getattr(strategy, "current_atr", lambda: None)()
                     if atr and breakeven_atr_mult is not None and trail_atr_mult is not None:
                         breakeven_trigger = breakeven_atr_mult * atr
                         trail_trigger = trail_atr_mult * atr
@@ -157,6 +175,10 @@ if __name__ == "__main__":
                               "requires --trail-atr-mult too)")
     parser.add_argument("--trail-atr-mult", type=float, default=None,
                          help="[profit-booking] trail the stop after this many ATRs of profit")
+    parser.add_argument("--vol-size-cap", action="store_true",
+                         help="cap position size by risk.volatility_position_size() (ATR-based) "
+                              "in addition to the existing stop-based sizing, taking whichever is "
+                              "smaller (only takes effect on strategies exposing current_atr())")
     parser.add_argument("--walk-forward", action="store_true")
     # donchian params
     parser.add_argument("--entry-period", type=int, default=20, help="[donchian] entry channel lookback in days")
@@ -204,7 +226,8 @@ if __name__ == "__main__":
     strategy_factory = lambda: STRATEGIES[args.strategy](args)
     kwargs = dict(risk_per_trade_pct=args.risk_per_trade_pct,
                   max_drawdown_pct=args.max_drawdown_pct, commission_per_trade=args.commission_per_trade,
-                  breakeven_atr_mult=args.breakeven_atr_mult, trail_atr_mult=args.trail_atr_mult)
+                  breakeven_atr_mult=args.breakeven_atr_mult, trail_atr_mult=args.trail_atr_mult,
+                  vol_size_cap=args.vol_size_cap)
 
     if args.walk_forward:
         (b1, r1), (b2, r2) = walk_forward_daily(daily, strategy_factory, args.capital, **kwargs)

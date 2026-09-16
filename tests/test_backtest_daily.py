@@ -89,9 +89,14 @@ class _FakeCurrentAtrStrategy:
     ATR-scaling wiring in simulate_daily() in isolation from
     ConnorsRSI2Strategy's own entry/exit rules (see CLAUDE.md's
     profit-booking-overlay finding: RSI2 itself is a bad fit for this, but
-    the wiring mechanism is generic and worth testing on its own)."""
-    def __init__(self):
+    the wiring mechanism is generic and worth testing on its own).
+    stop_distance/atr are parameterized (defaults unchanged) so the same
+    fixture also covers vol_size_cap's opposite case: a stop distance
+    TIGHTER than the instrument's own ATR, where the cap should bind."""
+    def __init__(self, stop_distance=10, atr=2.0):
         self._entered = False
+        self._stop_distance = stop_distance
+        self._atr = atr
 
     def push(self, bar) -> None:
         pass
@@ -100,13 +105,13 @@ class _FakeCurrentAtrStrategy:
         if self._entered:
             return None
         self._entered = True
-        return Signal(Side.LONG, close, close - 10, "fake entry")
+        return Signal(Side.LONG, close, close - self._stop_distance, "fake entry")
 
     def check_exit(self, close, side) -> bool:
         return False  # never exits via strategy rule; only the trailing stop should end it
 
     def current_atr(self):
-        return 2.0
+        return self._atr
 
 
 def test_simulate_daily_profit_booking_tightens_stop_using_strategy_current_atr():
@@ -134,3 +139,27 @@ def test_simulate_daily_without_atr_mults_keeps_old_inf_inf_behavior():
     broker, risk = simulate_daily(bars, _FakeCurrentAtrStrategy(), capital=100_000)
     assert len(broker.trade_log) == 1
     assert broker.trade_log[0]["exit"] == 90  # only the original hard stop, untouched
+
+
+def test_vol_size_cap_shrinks_qty_when_atr_exceeds_stop_distance():
+    """A tight 2-unit stop alone would size 250 units (risk_amount 500 /
+    stop_distance 2), but the instrument's own ATR is 10 - vol_size_cap
+    should take the smaller of the two (500 / 10 = 50)."""
+    bars = [
+        bar(1, 100, 100, 100, 100),  # enters long @ 100, tight stop = 98
+        bar(2, 97, 97, 97, 97),      # breaches it
+    ]
+    broker, risk = simulate_daily(bars, _FakeCurrentAtrStrategy(stop_distance=2, atr=10),
+                                   capital=100_000, vol_size_cap=True)
+    assert len(broker.trade_log) == 1
+    assert broker.trade_log[0]["qty"] == 50
+
+
+def test_vol_size_cap_off_by_default_keeps_stop_based_sizing():
+    bars = [
+        bar(1, 100, 100, 100, 100),
+        bar(2, 97, 97, 97, 97),
+    ]
+    broker, risk = simulate_daily(bars, _FakeCurrentAtrStrategy(stop_distance=2, atr=10), capital=100_000)
+    assert len(broker.trade_log) == 1
+    assert broker.trade_log[0]["qty"] == 250  # uncapped, old behavior unchanged

@@ -1649,3 +1649,69 @@ lesson for evaluating future multi-factor ideas here: prefer testing one
 NEW mechanism over combining several already-tested ones, unless there's a
 specific causal story for why the combination should behave differently
 than either signal alone (this one had a story, and it still didn't hold).
+
+## Twenty-third: does Carver-style volatility sizing rescue the "breaks at 2% risk" ceiling? No — and the reason why is the real finding
+
+Not a new entry/exit mechanism, but a targeted investigation into WHY so
+many strategies in this file hit the same wall: `RiskManager
+.volatility_position_size()` (Carver-style ATR-based sizing) has existed
+in `risk.py` since early in this project, is unit-tested, but was never
+actually wired into a backtest — exactly the kind of already-in-the-
+codebase tool the "reuse before you write" principle points at.
+
+**Hypothesis**: 3-bar breakout, Squeeze, SuperTrend, Turtle Soup, and MACD
+all show the same shape — sizing genuinely helps from 0.5% to 1% risk, then
+drawdown-halts at 2%+. Maybe this isn't because the edge itself is too
+thin, but because stop-based sizing (`risk.position_size()`, quantity =
+risk_amount / stop_distance) occasionally produces an outsized position
+when a particular trade's stop happens to sit unusually CLOSE to entry
+relative to the instrument's typical daily range — a single oversized
+trade, not a systemic problem. Capping quantity by the instrument's own
+ATR (`min(stop_qty, vol_qty)`, exactly as `volatility_position_size()`'s
+own docstring recommends using it) should catch that specific case without
+touching any entry/exit logic.
+
+Wired in as `vol_size_cap` (`simulate_daily()` parameter, `--vol-size-cap`
+CLI flag) — opt-in, defaults preserve old behavior exactly, gated on the
+same `current_atr()` strategies already used by the profit-booking
+overlay. 2 new unit tests (the cap binding on an artificially tight stop,
+and the off-by-default case).
+
+**Result: no meaningful difference on any strategy tested, at the exact
+risk levels that previously drawdown-halted** — Turtle Soup/`AXISBANK.NS`
+@2% (11.7%→11.4% drawdown, still halted), MACD/`TCS.NS` @2% (bitwise
+IDENTICAL trades and P&L — the cap never bound at all), 3-bar
+breakout/`SBIN.NS` and `INFY.NS` @2% (both still halted, P&L barely
+moved). Every case: still drawdown-halted, same trade count, marginal P&L
+shift at best.
+
+**Why it doesn't bind, and what that reveals**: MACD's stop is defined as
+`stop_atr_multiple(2.0) x ATR` directly — a PURE ATR multiple — so
+`stop_qty = risk/(2×ATR)` is mathematically ALREADY ≤ `vol_qty =
+risk/ATR` for any multiple ≥ 1. The same is true for RSI-2 (multiple 3.0),
+Squeeze and volume (2.0 each) — this project's own convention of scaling
+every structural-less stop by "N x ATR" (adopted specifically to avoid the
+forex-pip bug documented earlier in this file) already makes a SEPARATE
+ATR cap redundant by construction for most strategies here. For the
+structural-stop family (Donchian, 3-bar breakout, Turtle Soup — stop
+derived from a channel/compression/failed-extreme level, only loosely
+ATR-related), the cap occasionally binds (small P&L differences on
+`INFY.NS`) but never enough to avoid the drawdown-halt, because the halt
+isn't being caused by one-off oversized trades in the first place — it's
+that raising `risk_per_trade_pct` uniformly scales EVERY position's size
+together, so an ordinary STRING of losing trades (not one outlier) burns
+through the fixed 10% drawdown ceiling faster. That's a frequency/variance
+problem, not a per-trade-sizing-outlier problem, and no per-trade cap can
+fix it.
+
+**Net verdict**: this is a null result for the position-sizing question
+specifically, but a genuinely useful mechanistic one — it rules out "smarter
+single-trade sizing" as a lever for pushing this project's real-but-thin
+survivors past their current ~1% safe-risk ceiling, and explains precisely
+why: the ceiling is a return-variance-vs-fixed-drawdown-limit problem, not
+a sizing-outlier bug, so it can only be moved by finding an edge with a
+higher underlying Sharpe ratio (fewer, more consistent wins relative to its
+own volatility) — not by refining how any single position gets sized. Left
+wired in as `--vol-size-cap` (harmless, off by default) since the
+underlying tool is now genuinely tested and available for a future
+strategy whose stop ISN'T already ATR-scaled, where it could still matter.
