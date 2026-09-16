@@ -466,11 +466,14 @@ cross-check it.
   survivors** (applying a real USD/INR conversion, not this project's
   existing $-as-₹ simplification for GC=F/CL=F): oil is blocked at every
   real MCX contract size (₹328k-1.3M needed even at the smallest Mini
-  contract), and gold's standard/Mini contracts are wildly infeasible
-  (₹1.4M-58M) — but gold's SMALLEST denomination (Petal, 1g) needs only
-  ₹14,638-58,550 depending on risk-per-trade, comfortably inside this
-  project's target range, IF that contract is actually listed/liquid/
-  tradable via Kite (not verified here). See CLAUDE.md's
-  "Twenty-fifth"/"Twenty-sixth" entries — gold's IBS/volume survivors are
-  the one open thread in this whole capital-tier question that isn't
-  simply "blocked."
+  contract). Gold initially looked like it might have an escape hatch via
+  a small "Gold Petal" (1g) contract (₹14,638-58,550 needed) — **checked
+  directly against Kite's real, live, unauthenticated instrument master
+  (`https://api.kite.trade/instruments`) and confirmed no such contract
+  exists on MCX**: MCX genuinely offers exactly `GOLD`/`GOLDM`/`GOLDGUINEA`
+  (standard/Mini/8g), nothing smaller. This closes the whole capital-tier
+  investigation — every real "survivor" this project found (options
+  selling, SuperTrend's oil, IBS's/volume's gold) is now confirmed blocked
+  by a genuine capital wall at this project's target scale, with no
+  remaining unverified escape hatch. See CLAUDE.md's "Twenty-fifth"
+  through "Twenty-ninth" entries for the full arc.

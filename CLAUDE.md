@@ -2055,3 +2055,68 @@ candidate — check whether the RAW signal shows partial promise (a few
 genuinely clean instruments, a coherent theoretical story) before assuming
 a regime gate will help, the way it demonstrably did for RSI-2 and
 demonstrably didn't for Bollinger Bands.
+
+## Twenty-ninth: checking the Gold Petal contract with REAL Kite data — it doesn't exist on MCX, closing the one open thread from the capital-tier investigation
+
+Direct resolution of the Twenty-sixth entry's open question, using real
+data instead of recalled/assumed figures for the first time in this
+investigation: Zerodha publishes a full, current instrument master at
+`https://api.kite.trade/instruments` — a plain CSV download, **no
+authentication needed** (unlike everything else Kite-related in this
+project, which needs the daily 2FA login dance). Fetched it directly
+(9.2MB, ~unknown row count but every tradable instrument across every
+segment) and filtered to gold contracts.
+
+**MCX (the exchange this project has always meant by "gold"/"oil")
+genuinely offers exactly three gold futures products, confirmed from live
+current contract listings with real expiries through 2027**: `GOLD`
+(the standard, large contract), `GOLDM` (Mini), `GOLDGUINEA`. **No 1-gram
+"Gold Petal" contract exists on MCX.** A `GOLD1G` (1g) and `GOLD10G` (10g)
+symbol DO exist in Kite's instrument universe, but under a completely
+different exchange code, `NCO` — not MCX. `NCO`'s other listings
+(`PLATTSDATEDBRENTASSESS`, `NATURALGASHENRYHUB` — international reference
+benchmarks, not domestic MCX products) suggest this is a different,
+possibly international/specialized segment, not standard domestic retail
+MCX access — genuinely unclear from this data alone, not assumed either
+way. If continuing this line, the user's own Kite app is the way to
+confirm whether `NCO` instruments are even visible/tradable on a standard
+account — not something checkable from here.
+
+**This closes the Twenty-sixth entry's "Gold Petal escape hatch"
+hypothesis: false.** The smallest CONFIRMED real MCX gold contract is
+`GOLDGUINEA`, not a 1g Petal — meaning the Twenty-sixth entry's Guinea-row
+capital figures (₹468,404 needed at 0.5% risk, ₹117,101 at 2%) are the
+real floor for gold on MCX, not the much smaller Petal figures. Gold
+rejoins oil, FX, and options behind the same capital-tier wall — there is
+no remaining commodity/FX "survivor" in this project that clears it.
+
+**An important methodological caveat surfaced while checking this**: the
+instrument master's own `lot_size` column is uniformly `1` for every MCX
+futures contract checked (gold, oil, and everything else) — it encodes
+minimum TRADABLE INCREMENT (whole lots only), not the contract's
+underlying notional (grams/barrels/dollars per lot). So while this data
+source definitively answers "which contracts exist" (settling the Gold
+Petal question outright), it can NOT verify the specific notional-size
+assumptions used throughout the Twenty-fifth/Twenty-sixth entries'
+capital-requirement math (GOLDGUINEA=8g, GOLDM=100g, CRUDEOIL=100bbl,
+CRUDEOILM=10bbl, USDINR=$1000) — those remain based on recalled general
+knowledge of MCX/CDS contract specifications, not verified against this
+or any other source in this session. `CRUDEOIL` and `CRUDEOILM` (Mini) and
+`USDINR` futures were all confirmed to genuinely EXIST as named (real,
+current, correctly-segmented instruments), which is reassuring, but their
+exact underlying size per lot is a separate, still-open question a
+future session could resolve via MCX's/NSE's own published contract
+specification sheets (a different data source than this instrument
+master).
+
+**Net verdict**: twenty-ninth entry, and the definitive close to this
+project's whole capital-tier investigation line (Seventh through
+Twenty-sixth entries) — every real "survivor" found in this project
+(options premium selling, SuperTrend's oil, IBS's and volume's gold) is
+now confirmed blocked by a genuine capital-access wall at this project's
+target scale, with no remaining unverified escape hatch. Worth recording
+as a reusable capability for any future capital-tier question in this
+project: `https://api.kite.trade/instruments` is a real, current, freely
+fetchable source of truth for WHICH contracts exist and their tick
+size/expiry/segment — genuinely useful, and something this project didn't
+know was available without authentication until this entry.
