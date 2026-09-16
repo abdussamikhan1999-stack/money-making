@@ -1784,3 +1784,118 @@ one mechanism) rather than three coincidentally-timed individual failures.
 Any future strategy candidate showing "great full-period, both-halves-
 positive" results should be treated with active suspicion until its own
 Q4 is checked — this project's default now, not an occasional extra step.
+
+## Cross-mechanism synthesis: a real regime bifurcation, only visible by comparing entries against each other
+
+Not a new mechanism — a pattern only visible by reading every prior
+quarter-split result side by side, which no single entry above was
+positioned to notice on its own. Compiled after the Twenty-fourth entry
+made a third instance of the same decay:
+
+**Q4 2024-2026 (the most recent, most relevant window) has been NEGATIVE
+or decaying for every broad, multi-instrument, basket-style equity/crypto
+DIRECTIONAL bet tested**: Donchian trend-following on BTC-USD/ETH-USD
+(essentially flat, ~-0.05%), cross-sectional momentum rotation across 25
+NSE stocks (-7.1% CAGR), the low-volatility factor across 20 NSE stocks
+(negative at every tested config, while the equal-weight universe
+benchmark was actually +6.3% over the same window).
+
+**Q4 2024-2026 has been POSITIVE — often the single BEST quarter — for
+every single-instrument, short-horizon, mean-reversion-or-pattern-based
+mechanism tested, regardless of asset class**: options premium selling
+(both synthetic and real-data-validated — Q4 the best window, not the
+worst), IBS mean reversion on gold (Q4 its best quarter), CMF+OBV volume
+confirmation on gold (Q4 its strongest quarter), SuperTrend trend-following
+on oil (Q4 the strongest, no decay), Turtle Soup's failed-breakout fade on
+`AXISBANK.NS`/`^NSEI`/`ITC.NS` (Q4 strongest or stable), 3-bar breakout's
+five non-anomalous survivors (no recent-quarter-is-worst pattern), MACD on
+`TCS.NS` (Q4 positive, if decelerating).
+
+**Read together, not asset class, but BET STRUCTURE is what predicts
+Q4 behavior in this dataset**: a strategy making one basket-wide
+directional bet across many correlated equities/crypto at once has done
+badly in the most recent window; a strategy making narrow, mean-reverting
+or short-horizon bets on ONE instrument at a time — commodity, stock, or
+index — has done fine or well. The plausible causal story: broad factor/
+trend bets profit from a sustained, correlated move across many names at
+once (which 2019-2024 provided and 2024-2026 evidently hasn't), while
+single-instrument mean reversion profits FROM choppiness and reversal,
+which is what a regime transitioning out of a sustained rally would
+produce more of. This is a hypothesis about THIS dataset's most recent
+window, not a permanent law — but it's now been seen independently across
+seven-plus different mechanisms and is too consistent to be coincidence.
+
+**How to apply going forward**: this project should stop testing more
+broad, basket-wide equity/crypto factor rotations for now (two real
+academic factors — momentum, low-volatility — have both hit this same
+wall) and prioritize single-instrument, short-horizon candidates,
+especially ones that can be validated as currently favorable rather than
+just historically real. It also surfaces a concrete unfinished thread:
+unlike SuperTrend (retested against 8 more commodities/FX pairs in the
+Eighteenth entry after its lone survivor was found), IBS's Thirteenth
+entry flagged the identical "retest with more instruments" next step and
+it was never actually done — worth doing now, both on its own merits and
+because this synthesis raises the prior that a commodity/short-horizon
+retest might land differently than SuperTrend's did.
+
+## Twenty-fifth: the IBS/FX retest looked spectacular, then a lot-size check found the same capital wall that closed out options — and revealed a systemic gap across every commodity/FX result in this project
+
+Direct follow-up on the synthesis above: retested `probe_ibs.py` on the
+same 8 Kite-tradable commodities/FX pairs used for the SuperTrend and
+Donchian extensions (`NG=F`, `HG=F`, `SI=F`, `PL=F` on MCX; `USDINR=X`,
+`EURINR=X`, `GBPINR=X`, `JPYINR=X` on the currency segment).
+
+**Initial result looked like the best number in the whole project**: all
+4 currency pairs passed walk-forward cleanly — `USDINR=X` +7.99%/+6.18%,
+`EURINR=X` +7.91%/+8.42%, `GBPINR=X` +8.18%/+8.56%, `JPYINR=X`
++9.37%/+11.28% (both halves, 275-337 trades each) — with drawdowns under
+1% across the board. 4/4 FX pairs passing, at magnitudes far bigger than
+anything else in this project, would have been the single strongest
+result found here.
+
+**It doesn't survive the very next check, and the reason is important
+beyond just this one strategy**: `probe_ibs.py` (like every probe script
+and `backtest_daily.py`'s `RiskManager` calls in this entire project) sizes
+positions as `risk_amount / stop_distance` with NO connection to the
+instrument's actual exchange lot size — it implicitly assumes you can buy
+or sell any continuous fractional quantity, which is true for equity
+shares (Zerodha lets you buy 1 share) but NOT true for currency or
+commodity DERIVATIVES, which only trade in fixed contract lots. Checked
+directly for `USDINR=X`: mean 14-day ATR over the 10y window is ≈₹0.50,
+so IBS's default 3×ATR stop is ≈₹1.50. A real USDINR futures lot is
+$1,000 notional (needs verification against current Kite contract specs,
+not independently confirmed here) — so ONE lot's risk at that stop is
+₹1,000 × ₹1.50 ≈ **₹1,496 per trade**. Keeping that within a sane 0.5%
+risk-per-trade standard needs **≈₹299,000 of capital just to size ONE
+lot** — this is structurally the identical capital-tier wall the
+Seventh/Ninth entries found for Nifty options (₹350,000-475,000 needed),
+not a newly-found low-capital edge. The eye-catching backtest numbers were
+a mathematical artifact of assuming continuous position sizes a real Kite
+account can't actually take.
+
+**This is a systemic gap, not specific to this one test**: the exact same
+lot-size-blind sizing has been used for EVERY commodity/FX result reported
+in this project so far, including three previously-reported "real"
+survivors — SuperTrend's `CL=F` (Seventeenth), volume/CMF+OBV's `GC=F`
+(Sixteenth), and IBS's own original `GC=F` survivor (Thirteenth). None of
+those have been checked against real MCX contract lot sizes (further
+complicated there by the already-flagged currency/unit mismatch — `GC=F`
+is a USD/troy-ounce COMEX price used directly against rupee capital, a
+simplification this project has acknowledged before but never combined
+with a lot-size check). **Not resolved in this session** for lack of
+confirmed current MCX/currency contract specifications — flagged
+explicitly as an open validation gap that should be checked before trusting
+ANY of this project's commodity/FX "survivors" at face value, the same
+way the options line's capital-tier arithmetic was checked before trusting
+its headline CAGR.
+
+**Net verdict**: twenty-fifth entry, and a genuinely important methodological
+catch rather than a new tradable mechanism — this project's rigor checklist
+(walk-forward, quarter-split, perturbation, transaction costs) has never
+included "is the implied position size an integer number of real exchange
+lots," and this is the first time that gap produced a result striking
+enough to demand investigating it directly. The FX/IBS numbers are retracted
+as unvalidated, not reported as a finding. The right next step, if
+continuing this line, is a lot-size-correct re-verification of the
+project's existing commodity "survivors" (`CL=F` SuperTrend, `GC=F`
+volume/IBS) before adding anything new on top of them.

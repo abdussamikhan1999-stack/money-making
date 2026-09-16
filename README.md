@@ -437,3 +437,15 @@ cross-check it.
   KiteTicker, but is itself untested against a live connection.
 - Daily access-token regeneration is manual (see Setup) — Zerodha's login
   is deliberately behind 2FA, and this repo doesn't try to script around it.
+- **Every commodity/FX backtest in this project (all `probe_*.py` scripts
+  and `backtest_daily.py`) sizes positions as `risk_amount / stop_distance`
+  with no connection to the instrument's real exchange lot size** —
+  correct for equity shares (buyable one at a time), silently wrong for
+  currency/commodity derivatives (fixed-lot contracts only). Found via a
+  striking-looking IBS-on-FX result that fell apart once checked: one real
+  USDINR lot needs ~₹299,000 of capital to size safely within a 0.5%
+  risk-per-trade standard, the same capital-tier wall that closed out this
+  project's options-selling line. This means every prior commodity/FX
+  "survivor" (`CL=F` SuperTrend, `GC=F` volume/IBS) is unverified against
+  real lot sizes and should not be trusted at face value until checked —
+  see CLAUDE.md's "Twenty-fifth" entry.
