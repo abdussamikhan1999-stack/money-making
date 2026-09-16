@@ -41,6 +41,14 @@ UNIVERSE = [
     "KOTAKBANK.NS", "AXISBANK.NS", "SBIN.NS", "ITC.NS", "HINDUNILVR.NS",
     "WIPRO.NS", "LT.NS", "BAJFINANCE.NS", "MARUTI.NS", "ASIANPAINT.NS",
     "SUNPHARMA.NS", "TATASTEEL.NS", "ULTRACEMCO.NS", "ONGC.NS", "NTPC.NS",
+    # extended set (Thirty-first entry) - broader sector mix, no cyclical/PSU
+    # filter, to test whether the original 20-stock hit rate (3/20, 15%,
+    # at this project's own chance-level threshold) holds at chance with
+    # more instruments or was itself a lucky draw
+    "HCLTECH.NS", "TECHM.NS", "DRREDDY.NS", "CIPLA.NS", "DIVISLAB.NS",
+    "BRITANNIA.NS", "NESTLEIND.NS", "TITAN.NS", "BAJAJFINSV.NS", "BAJAJ-AUTO.NS",
+    "EICHERMOT.NS", "HEROMOTOCO.NS", "JSWSTEEL.NS", "HINDALCO.NS", "VEDL.NS",
+    "COALINDIA.NS", "POWERGRID.NS", "BPCL.NS", "GRASIM.NS", "ADANIPORTS.NS",
 ]
 
 

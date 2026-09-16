@@ -2201,3 +2201,53 @@ sizing fix is a genuine, reusable methodological improvement worth
 keeping regardless of PEAD's own fate — any future event-driven or
 multi-position strategy in this project should check concurrent capital
 deployment the same way, not just per-trade sizing in isolation.
+
+## Thirty-first: extending PEAD to 40 stocks — the pattern doesn't replicate, closing this line the same way SuperTrend's retest did
+
+Direct follow-up on the Thirtieth entry's own flagged next step: doubled
+`probe_pead.py`'s `UNIVERSE` from 20 to 40 stocks (added `HCLTECH.NS`,
+`TECHM.NS`, `DRREDDY.NS`, `CIPLA.NS`, `DIVISLAB.NS`, `BRITANNIA.NS`,
+`NESTLEIND.NS`, `TITAN.NS`, `BAJAJFINSV.NS`, `BAJAJ-AUTO.NS`,
+`EICHERMOT.NS`, `HEROMOTOCO.NS`, `JSWSTEEL.NS`, `HINDALCO.NS`, `VEDL.NS`,
+`COALINDIA.NS`, `POWERGRID.NS`, `BPCL.NS`, `GRASIM.NS`, `ADANIPORTS.NS` —
+a broader sector mix, no PSU/cyclical filter, since the original 3
+survivors (`TATASTEEL.NS`/`ONGC.NS` cyclical-PSU, `SUNPHARMA.NS`
+defensive pharma) don't actually share a coherent sector story worth
+targeting). All 20 new symbols had sufficient earnings-history coverage
+(15-24 events each) to include.
+
+**At the exact same representative config (`surprise_threshold=15`,
+`hold_days=60`) that was CONSISTENT and positive on both halves at 20
+stocks, walk-forward flips INCONSISTENT at 40 stocks**: in-sample
+-1.03%/yr (net -5,457), out-of-sample +4.63%/yr (net +27,725). The cast
+of "winning" stocks also shifted — new names (`VEDL.NS` +13,641,
+`BPCL.NS` +10,839, `HINDALCO.NS` +6,136, `JSWSTEEL.NS` +3,579) became the
+largest contributors, while `TATASTEEL.NS`, the single biggest winner in
+the Thirtieth entry's 20-stock screen (+13,940), shrank to a near-
+breakeven +377 — the specific subset "carrying" the result changes every
+time the universe changes, the same instability signature this project
+has repeatedly learned to distrust.
+
+**The full 4x3 perturbation grid, re-run on 40 stocks, confirms this
+wasn't a single-config fluke**: only **4/12 configs pass** (all at
+`surprise_threshold >= 20` — `20/60`, `20/80`, `25/60`, `25/80`), down
+from 12/12 at 20 stocks. Notably the out-of-sample half is positive in
+literally every one of the 12 configs; it's specifically the in-sample
+half that turns negative for most of them once the wider universe is
+mixed in — suggesting the newly-added stocks behave differently across
+the sample's two temporal halves than the original 20 did, diluting or
+reversing what looked like a clean effect in the smaller set.
+
+**Net verdict**: thirty-first entry, and a clean, decisive non-
+replication — the same conclusion the Eighteenth entry reached for
+SuperTrend's oil survivor (retested against more instruments, came back
+0/8) and the mirror image of what a genuine broad effect should do
+(extending the universe should, if anything, strengthen a real pattern
+with more independent confirmation; here it weakened and reshuffled it).
+PEAD is closed out for this project: real academic grounding, a coherent
+theoretical story, and internals that looked clean at every check
+performed on the narrow 20-stock universe — but it doesn't survive being
+asked to generalize, the single most important test this project applies
+to any promising-looking result. The capital-constrained sizing fix from
+the Thirtieth entry remains a permanent, valuable improvement to this
+project's event-driven backtesting method regardless.

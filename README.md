@@ -224,17 +224,22 @@ instance. See CLAUDE.md's "Twenty-fourth" entry.
 `probe_pead.py` (Post-Earnings Announcement Drift — a real academic
 anomaly, event-driven rather than a continuous technical signal: buy a
 stock that beat earnings estimates and hold for weeks, short a miss)
-passed a 12-config walk-forward grid at every tested value — the
-strongest aggregate screen since options-selling — and survives quarter-
-split with no recent-quarter decay. But per-symbol breakdown shows it's
-concentrated in 3 of 20 stocks (`TATASTEEL.NS`/`SUNPHARMA.NS`/`ONGC.NS`,
-a 15% hit rate at/below this project's own chance-level threshold) —
-excluding just those 3 flips the whole result negative. A real
-capital-deployment bug was also caught and fixed along the way (the first
-version allowed 130% of capital "deployed" simultaneously during
-earnings season clustering; rewritten to properly skip signals rather
-than over-allocate). Flagged, not found — same treatment as IBS's/
-SuperTrend's lone survivors. See CLAUDE.md's "Thirtieth" entry.
+initially passed a 12-config walk-forward grid at every tested value on a
+20-stock universe — the strongest aggregate screen since options-selling
+— but per-symbol breakdown showed it was concentrated in 3 stocks
+(`TATASTEEL.NS`/`SUNPHARMA.NS`/`ONGC.NS`, 15% hit rate). **Retested on a
+doubled 40-stock universe (the standard next step for any promising-
+looking result here) and it didn't replicate**: the same config flips
+INCONSISTENT across walk-forward halves, and the full grid drops from
+12/12 passing to 4/12. The "winning" stocks reshuffle too — new names
+become the top contributors while the original top contributor
+(`TATASTEEL.NS`) shrinks to near breakeven. Closed, the same way
+SuperTrend's oil survivor was closed by its own 8-instrument retest. A
+real capital-deployment bug was also caught and fixed along the way (the
+first version allowed 130% of capital "deployed" simultaneously during
+earnings-season clustering; rewritten to properly skip over-allocating
+signals) — a permanent improvement kept regardless of PEAD's own fate.
+See CLAUDE.md's "Thirtieth"/"Thirty-first" entries.
 
 ### Options premium selling (weekly Nifty iron condor) — real edge, wrong capital tier, and now real-data validated
 
