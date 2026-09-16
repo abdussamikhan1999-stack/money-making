@@ -1,6 +1,6 @@
 from daily_strategy import (
     DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, SqueezeMomentumStrategy,
-    VolumeConfirmationStrategy, TurtleSoupStrategy,
+    VolumeConfirmationStrategy, TurtleSoupStrategy, MACDStrategy,
 )
 from strategy import Side
 
@@ -474,3 +474,87 @@ def test_reset_clears_turtlesoup_state():
     s.check_entry(close=99.5)
     s.reset()
     assert s.check_entry(close=99.5) is None  # window emptied, needs refilling
+
+
+# --- MACDStrategy ---
+
+def _build_macd_flat(fast_period=3, slow_period=6, signal_period=2, atr_period=3, n_flat=8):
+    """n_flat identical bars (high=101/low=99/close=100, TR=2 each) seed
+    both EMAs and the signal line at macd=0/signal=0 - a stable baseline a
+    subsequent sharp move can cross away from, and keeps ATR exactly 2.0
+    (matching ThreeBarBreakoutStrategy's/TurtleSoupStrategy's fixture
+    convention) so stop-loss math is exact rather than approximate."""
+    s = MACDStrategy(fast_period=fast_period, slow_period=slow_period,
+                      signal_period=signal_period, atr_period=atr_period)
+    for _ in range(n_flat):
+        s.push(bar(101, 99, 100))
+    return s
+
+
+def test_no_signal_before_macd_window_fills():
+    s = MACDStrategy(fast_period=3, slow_period=6, signal_period=2, atr_period=3)
+    for _ in range(5):
+        s.push(bar(101, 99, 100))  # slow_period needs 6, only 5 pushed
+    assert s.check_entry(close=150) is None
+
+
+def test_long_entry_when_macd_crosses_above_signal():
+    s = _build_macd_flat()
+    sig = s.check_entry(close=150)  # sharp move up from a flat macd=0/signal=0 baseline
+    assert sig is not None
+    assert sig.side is Side.LONG
+    assert sig.entry_price == 150
+    assert sig.stop_loss == 146  # 150 - 2 * ATR(2.0), default stop_atr_multiple=2.0
+
+
+def test_short_entry_when_macd_crosses_below_signal():
+    s = _build_macd_flat()
+    sig = s.check_entry(close=50)  # sharp move down from the same baseline
+    assert sig is not None
+    assert sig.side is Side.SHORT
+    assert sig.entry_price == 50
+    assert sig.stop_loss == 54  # 50 + 2 * ATR(2.0)
+
+
+def test_no_signal_when_macd_already_above_signal_with_no_new_crossover():
+    s = _build_macd_flat()
+    s.check_entry(close=150)  # first crossover: macd moves above signal
+    s.push(bar(151, 149, 150))  # commit that bar's real state
+    # macd is already above signal; a further rise continues the trend but
+    # isn't a NEW crossover
+    assert s.check_entry(close=155) is None
+
+
+def test_check_exit_true_once_macd_crosses_back_against_a_long():
+    s = _build_macd_flat()
+    sig = s.check_entry(close=150)
+    assert sig is not None
+    s.push(bar(151, 149, 150))  # commit the entry bar's own state
+    assert s.check_exit(close=50, side=sig.side) is True  # sharp reversal flips macd below signal
+
+
+def test_check_exit_false_while_trend_continues():
+    s = _build_macd_flat()
+    sig = s.check_entry(close=150)
+    assert sig is not None
+    s.push(bar(151, 149, 150))
+    assert s.check_exit(close=151, side=sig.side) is False  # still trending, no crossover, not timed out
+
+
+def test_check_exit_true_after_max_hold_days_even_without_crossover():
+    s = MACDStrategy(fast_period=3, slow_period=6, signal_period=2, atr_period=3, max_hold_days=2)
+    for _ in range(8):
+        s.push(bar(101, 99, 100))
+    sig = s.check_entry(close=150)
+    assert sig is not None
+    s.push(bar(151, 149, 150))  # day 1 in trade (the entry bar's own push), not timed out
+    assert s.check_exit(close=151, side=sig.side) is False
+    s.push(bar(151, 149, 150))  # day 2 - hits max_hold_days
+    assert s.check_exit(close=151, side=sig.side) is True
+
+
+def test_reset_clears_macd_state():
+    s = _build_macd_flat()
+    s.check_entry(close=150)
+    s.reset()
+    assert s.check_entry(close=150) is None  # state emptied, needs refilling

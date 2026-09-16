@@ -15,7 +15,7 @@ from paper_broker import PaperBroker
 from risk import RiskManager
 from daily_strategy import (
     DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, SqueezeMomentumStrategy,
-    VolumeConfirmationStrategy, TurtleSoupStrategy, Side,
+    VolumeConfirmationStrategy, TurtleSoupStrategy, MACDStrategy, Side,
 )
 from backtest import split_by_date, _report  # reuse: same date-splitting + reporting used for intraday backtests
 
@@ -41,6 +41,11 @@ STRATEGIES = {
     "turtlesoup": lambda args: TurtleSoupStrategy(
         channel_period=args.ts_channel_period, stop_buffer_atr_mult=args.ts_stop_buffer_atr_mult,
         target_r_multiple=args.ts_target_r_multiple, max_hold_days=args.ts_max_hold_days,
+    ),
+    "macd": lambda args: MACDStrategy(
+        fast_period=args.macd_fast_period, slow_period=args.macd_slow_period,
+        signal_period=args.macd_signal_period, stop_atr_multiple=args.macd_stop_atr_multiple,
+        max_hold_days=args.macd_max_hold_days,
     ),
 }
 
@@ -187,6 +192,12 @@ if __name__ == "__main__":
     parser.add_argument("--ts-stop-buffer-atr-mult", type=float, default=0.5, help="[turtlesoup] stop = N ATRs past the failed extreme")
     parser.add_argument("--ts-target-r-multiple", type=float, default=1.5, help="[turtlesoup] fixed take-profit at N x risk")
     parser.add_argument("--ts-max-hold-days", type=int, default=5, help="[turtlesoup] time-stop if neither hit")
+
+    parser.add_argument("--macd-fast-period", type=int, default=12, help="[macd] fast EMA period")
+    parser.add_argument("--macd-slow-period", type=int, default=26, help="[macd] slow EMA period")
+    parser.add_argument("--macd-signal-period", type=int, default=9, help="[macd] signal-line EMA period")
+    parser.add_argument("--macd-stop-atr-multiple", type=float, default=2.0, help="[macd] initial stop = N x ATR")
+    parser.add_argument("--macd-max-hold-days", type=int, default=20, help="[macd] time-stop if crossover never flips")
     args = parser.parse_args()
 
     daily = fetch_daily_yfinance(args.symbol, args.period)

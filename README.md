@@ -11,11 +11,11 @@ accredited financial specialist before risking real capital. Backtest and
 paper-trade thoroughly before ever running this live. You are solely
 responsible for any trades it places.
 
-## Daily-bar strategies (a second family, six mechanisms so far)
+## Daily-bar strategies (a second family, seven mechanisms so far)
 
 `backtest_daily.py` backtests daily-bar strategies against years of data
 instead of intraday's 60-day cap, via
-`--strategy {donchian,rsi2,threebar,squeeze,volume,turtlesoup}`:
+`--strategy {donchian,rsi2,threebar,squeeze,volume,turtlesoup,macd}`:
 
 ```
 python backtest_daily.py --strategy donchian --symbol '^NSEI' --period 10y --walk-forward
@@ -24,6 +24,7 @@ python backtest_daily.py --strategy threebar --symbol SBIN.NS --period 10y --wal
 python backtest_daily.py --strategy squeeze --symbol INFY.NS --period 10y --walk-forward --commission-per-trade 20
 python backtest_daily.py --strategy volume --symbol GC=F --period 10y --walk-forward --commission-per-trade 20
 python backtest_daily.py --strategy turtlesoup --symbol AXISBANK.NS --period 10y --walk-forward --commission-per-trade 20
+python backtest_daily.py --strategy macd --symbol TCS.NS --period 10y --walk-forward --commission-per-trade 20
 ```
 
 **`donchian`** — the "Turtle Trading" entry rule (N-day high/low channel
@@ -118,6 +119,18 @@ sweep on a single-point-fit cliff. Sizing helps up to 1% risk (1.71%/year,
 1.1% drawdown) then drawdown-halts at 2%+ — thin, same bucket as
 SuperTrend's `CL=F` and volume's `GC=F`, not confirmed beyond one
 instrument. See CLAUDE.md's "Twentieth" section for the full breakdown.
+
+**`macd`** — Gerald Appel's MACD crossover, one of the most widely used
+technical indicators anywhere: buy when the MACD line (fast EMA - slow EMA
+of closes) crosses above its own signal line (an EMA of the MACD line),
+short on the reverse. Screened on the same 12-instrument set: only **2/12
+passed** (`TCS.NS`, `WIPRO.NS`) — 16.7%, the lowest hit rate of any
+indicator-based strategy in this project. `WIPRO.NS` decays negative in
+the most recent quarter; `TCS.NS` is clean (all 4 quarters positive) with
+reasonable (not perfect) perturbation robustness. Sizing helps up to 1%
+risk (1.73%/year, 2.6% drawdown) then drawdown-halts at 2%+ — thin, same
+"real but too small" bucket as most of this project's survivors. See
+CLAUDE.md's "Twenty-first" section for the full breakdown.
 
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 

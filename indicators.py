@@ -156,3 +156,17 @@ def rsi(closes: list[float], period: int = 2, seed_window: int = 20) -> float | 
         return 100.0
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
+
+
+def ema_update(prev_ema: float, price: float, period: int) -> float:
+    """One step of the standard recursive EMA update. Unlike this file's
+    other indicators (rsi/average_true_range/stdev), which recompute fresh
+    from a bounded trailing window every call, an EMA's whole point is that
+    older bars never fully drop out — recomputing it from a bounded window
+    each call would be a different (approximate) indicator, not a windowed
+    version of the same one. So callers seed the first value themselves
+    (typically an SMA over `period` bars) then call this once per
+    subsequent bar, keeping the running value as their own state (see
+    MACDStrategy in daily_strategy.py)."""
+    k = 2 / (period + 1)
+    return price * k + prev_ema * (1 - k)

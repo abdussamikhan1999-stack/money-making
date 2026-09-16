@@ -1515,3 +1515,74 @@ entries), a single-instrument survivor from a chance-level sweep isn't
 independently confirmed until retested against more instruments of a
 similar kind. Not done in this session — flagged the same way IBS's and
 SuperTrend's lone survivors were, rather than claimed as "found."
+
+## Twenty-first: MACD crossover — the lowest hit rate of any indicator-based strategy tried, one thin survivor
+
+Gerald Appel's MACD (Moving Average Convergence/Divergence) — one of the
+most widely used technical indicators that exists, and notably the first
+MOMENTUM-OF-A-TREND mechanism in this file rather than a channel breakout
+(Donchian, SuperTrend), a level oscillator (RSI-2), a fixed pattern (3-bar
+breakout, Turtle Soup), or a volatility-state signal (Squeeze). Rule:
+`macd_line = EMA(fast) - EMA(slow)` of closes, `signal_line =
+EMA(signal_period)` of the macd_line itself; buy when macd crosses above
+signal, short when it crosses below. Classic defaults 12/26/9.
+
+Implemented as `MACDStrategy` in `daily_strategy.py` (`--strategy macd` in
+`backtest_daily.py`). Required a new indicator primitive,
+`indicators.ema_update()` — unlike every other indicator in this file
+(rsi/average_true_range/stdev/linreg), which recompute fresh from a bounded
+trailing window every call, an EMA's whole point is that older bars never
+fully drop out, so recomputing it from a window each call would silently
+be a DIFFERENT indicator. `MACDStrategy` therefore keeps running EMA state
+(`_ema_fast`, `_ema_slow`, `_macd_ema`) updated once per `push()`, a
+deliberate departure from this file's usual windowed-recompute style.
+`check_entry`/`check_exit` need TWO consecutive points to detect a
+crossover, but `push()` for today hasn't run yet when they're called (same
+no-lookahead convention as everywhere else) — a private `_project(close)`
+computes what today's macd/signal WOULD be via `ema_update()` without
+mutating stored state, the same "fold today's own close into the oscillator
+without lookahead" trick `ConnorsRSI2Strategy` already established. 10 new
+unit tests; full suite 118/118 green.
+
+**Screening result: 2/12 passed** (both halves positive, no drawdown-halt)
+— `TCS.NS`, `WIPRO.NS`. A 16.7% hit rate, the lowest of any indicator-based
+strategy in this project (below Squeeze's 25%, volume's 30%, Turtle Soup's
+25% — closer to the sector sweep's already-distrusted 18% floor).
+`AXISBANK.NS` is worth flagging separately: its in-sample half
+drawdown-halted at -10,126 net P&L (10.1% drawdown) while its
+out-of-sample half was healthily positive (+3,672) — a reminder (per this
+file's own walk-forward blind-spot note) that a "CONSISTENT"-looking or
+even inconsistent-but-eye-catching result needs the halt flag checked
+before reading anything into it.
+
+**Quarter-split separates the two**: `WIPRO.NS` shows the now-familiar
+recent-quarter-decay signature — Q1-Q3 strongly positive but **Q4
+(2024-2026, the most recent) is negative** (-202). `TCS.NS` is cleaner: all
+4 quarters positive (+5,121 / +3,191 / +152 / +522) — decelerating toward
+the present but never negative, no decay red flag.
+
+**`TCS.NS`'s perturbation sweep is reasonably robust, not a single-point
+fit**: `signal_period` (5, 7, 9, 12, 15) is smooth and monotonic —
+all-positive on both halves at every tested value, improving as the signal
+line slows down. `fast_period`/`slow_period` pairs are messier — 5 of 7
+tested pairs pass (6/13, 12/26 default, 16/35, 20/43, 24/52) but two
+middling pairs fail (8/17, 10/21) — not a hard cliff at the exact default
+(both faster AND much slower variants than 8/17-10/21 still pass), more a
+soft dip in the middle of the tested range.
+
+**Sizing helps up to a point, the same "1% is near the ceiling" pattern
+already seen repeatedly in this file**: 0.5% risk-per-trade gives
+0.74%/year (1.5% max DD); 1% gives **1.73%/year** (2.6% DD) — genuine
+roughly-linear scaling. 2% breaks it (drawdown-halted at 11.2% DD, trade
+count collapsing from 106 to 41); 3% is also halted.
+
+**Net verdict**: twenty-first mechanism, and by hit rate the weakest
+initial screen of any indicator-based strategy tried here — yet the one
+survivor that matters (`TCS.NS`) clears quarter-split cleanly and shows
+real (if imperfect) perturbation robustness, landing in the same "real but
+thin" bucket as Turtle Soup/SuperTrend/volume's lone survivors (~1.7%/year
+at safe sizing) rather than either a clean pass or a clean failure. One of
+the most famous indicators in retail technical analysis turning in one of
+the weakest hit rates in this project is itself informative — popularity
+and public familiarity (everyone's broker platform has a MACD indicator)
+evidently isn't correlated with this project's rigor bar.

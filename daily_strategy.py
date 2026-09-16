@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from strategy import Signal, Side
 from indicators import (
     average_true_range, sma, rsi, stdev, highest, lowest, linreg,
-    chaikin_money_flow, on_balance_volume,
+    chaikin_money_flow, on_balance_volume, ema_update,
 )
 
 
@@ -709,5 +709,165 @@ class TurtleSoupStrategy:
         timed_out = self._days_in_trade >= self.max_hold_days
         if hit_target or timed_out:
             self._target = None
+            return True
+        return False
+
+
+@dataclass
+class MACDStrategy:
+    """MACD (Moving Average Convergence/Divergence) crossover — Gerald
+    Appel's original indicator, one of the most widely used technical
+    signals that exists, and notably the first MOMENTUM-OF-A-TREND
+    mechanism in this file rather than a price-channel breakout (Donchian,
+    SuperTrend), a level-based oscillator (RSI-2), a fixed pattern
+    (3-bar breakout, Turtle Soup), or a volatility-state signal (Squeeze).
+    Rule: macd_line = EMA(fast) - EMA(slow) of closes; signal_line =
+    EMA(signal_period) of the macd_line itself (an EMA of an EMA-derived
+    series). Buy when macd_line crosses above signal_line, sell/short when
+    it crosses below. Classic defaults 12/26/9.
+
+    Unlike every other indicator in this file (rsi/average_true_range/
+    stdev/linreg), which recompute fresh from a bounded trailing window
+    every call, an EMA's defining property is that older bars never fully
+    drop out — so recomputing it from a window each call would silently be
+    a DIFFERENT indicator. This strategy therefore keeps running EMA state
+    (`_ema_fast`, `_ema_slow`, `_macd_ema`) updated once per push() via
+    indicators.ema_update(), rather than the windowed-recompute style used
+    elsewhere in this file.
+
+    check_entry/check_exit both need TWO consecutive points (yesterday's
+    macd-vs-signal relationship, today's) to detect a crossover, but
+    push() for today hasn't run yet when they're called (same no-lookahead
+    convention as everywhere else — self._ema_fast/_ema_slow/_macd_ema
+    hold state as of the end of YESTERDAY's push). `_project(close)`
+    computes what today's macd/signal WOULD be via ema_update(), without
+    mutating any stored state — a pure "what if" projection, matching
+    ConnorsRSI2Strategy's convention of folding today's own close into its
+    oscillator while every other rolling window stays lookahead-free.
+
+    No natural structural stop in the source rule (same situation RSI-2,
+    Squeeze, and volume were in), so the initial stop is
+    `stop_atr_multiple` x ATR. `max_hold_days` is this file's now-standard
+    bounded-holding time-stop, since a crossover can be very slow to flip
+    back in a strongly trending market.
+    """
+    fast_period: int = 12
+    slow_period: int = 26
+    signal_period: int = 9
+    stop_atr_multiple: float = 2.0
+    atr_period: int = 14
+    max_hold_days: int = 20
+
+    _highs: list[float] = field(default_factory=list, init=False)
+    _lows: list[float] = field(default_factory=list, init=False)
+    _closes: list[float] = field(default_factory=list, init=False)
+    _ema_fast: float | None = field(default=None, init=False)
+    _ema_slow: float | None = field(default=None, init=False)
+    _macd_ema: float | None = field(default=None, init=False)
+    _macd_seed: list[float] = field(default_factory=list, init=False)
+    _in_trade: bool = field(default=False, init=False)
+    _days_in_trade: int = field(default=0, init=False)
+
+    def reset(self) -> None:
+        self._highs = []
+        self._lows = []
+        self._closes = []
+        self._ema_fast = None
+        self._ema_slow = None
+        self._macd_ema = None
+        self._macd_seed = []
+        self._in_trade = False
+        self._days_in_trade = 0
+
+    def push(self, bar: dict) -> None:
+        self._highs.append(bar["high"])
+        self._lows.append(bar["low"])
+        self._closes.append(bar["close"])
+        close = bar["close"]
+        n = len(self._closes)
+
+        if self._ema_fast is None:
+            if n == self.fast_period:
+                self._ema_fast = sum(self._closes[-self.fast_period:]) / self.fast_period
+        else:
+            self._ema_fast = ema_update(self._ema_fast, close, self.fast_period)
+
+        if self._ema_slow is None:
+            if n == self.slow_period:
+                self._ema_slow = sum(self._closes[-self.slow_period:]) / self.slow_period
+        else:
+            self._ema_slow = ema_update(self._ema_slow, close, self.slow_period)
+
+        if self._ema_fast is not None and self._ema_slow is not None:
+            macd = self._ema_fast - self._ema_slow
+            if self._macd_ema is None:
+                self._macd_seed.append(macd)
+                if len(self._macd_seed) == self.signal_period:
+                    self._macd_ema = sum(self._macd_seed) / self.signal_period
+            else:
+                self._macd_ema = ema_update(self._macd_ema, macd, self.signal_period)
+
+        if self._in_trade:
+            self._days_in_trade += 1
+
+    def _current_atr(self) -> float | None:
+        n = self.atr_period + 1
+        if len(self._closes) < n:
+            return None
+        window = [{"high": h, "low": l, "close": c} for h, l, c in
+                  zip(self._highs[-n:], self._lows[-n:], self._closes[-n:])]
+        return average_true_range(window, period=self.atr_period)
+
+    def current_atr(self) -> float | None:
+        """Public wrapper, same purpose as the other strategies' own."""
+        return self._current_atr()
+
+    def _project(self, close: float) -> tuple[float, float] | tuple[None, None]:
+        """What today's (macd, signal) WOULD be if `close` were pushed,
+        without mutating any stored state - see class docstring."""
+        if self._ema_fast is None or self._ema_slow is None or self._macd_ema is None:
+            return None, None
+        today_fast = ema_update(self._ema_fast, close, self.fast_period)
+        today_slow = ema_update(self._ema_slow, close, self.slow_period)
+        today_macd = today_fast - today_slow
+        today_signal = ema_update(self._macd_ema, today_macd, self.signal_period)
+        return today_macd, today_signal
+
+    def check_entry(self, close: float) -> Signal | None:
+        if self._ema_fast is None or self._ema_slow is None or self._macd_ema is None:
+            return None
+        atr = self._current_atr()
+        if atr is None or atr <= 0:
+            return None
+
+        yesterday_macd = self._ema_fast - self._ema_slow
+        yesterday_signal = self._macd_ema
+        today_macd, today_signal = self._project(close)
+
+        if yesterday_macd <= yesterday_signal and today_macd > today_signal:
+            self._in_trade = True
+            self._days_in_trade = 0
+            return Signal(Side.LONG, close, close - self.stop_atr_multiple * atr,
+                          "MACD crossed above signal")
+        if yesterday_macd >= yesterday_signal and today_macd < today_signal:
+            self._in_trade = True
+            self._days_in_trade = 0
+            return Signal(Side.SHORT, close, close + self.stop_atr_multiple * atr,
+                          "MACD crossed below signal")
+        return None
+
+    def check_exit(self, close: float, side: Side) -> bool:
+        timed_out = self._days_in_trade >= self.max_hold_days
+        yesterday_macd = self._ema_fast - self._ema_slow
+        yesterday_signal = self._macd_ema
+        today_macd, today_signal = self._project(close)
+        if today_macd is None:
+            signal_exit = False
+        elif side == Side.LONG:
+            signal_exit = yesterday_macd >= yesterday_signal and today_macd < today_signal
+        else:
+            signal_exit = yesterday_macd <= yesterday_signal and today_macd > today_signal
+        if signal_exit or timed_out:
+            self._in_trade = False
             return True
         return False
