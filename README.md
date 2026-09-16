@@ -191,6 +191,19 @@ compound their edges; it destroyed them — the same direction (if a
 different mechanism) as the Eleventh entry's exit-side stacking finding.
 See CLAUDE.md's "Twenty-second" entry.
 
+`probe_low_volatility.py` (Low-Volatility Anomaly / "Betting Against
+Beta" — a real academic factor: rank a 20-stock NSE universe by trailing
+volatility, hold the least-volatile basket, rebalance monthly) passes
+walk-forward cleanly (both halves positive, 8/8 perturbation configs
+smooth, no cliffs) — but quarter-split shows the **exact same recent-
+quarter decay** already seen with Donchian/BTC-USD and momentum rotation:
+Q1-Q3 strongly positive, **Q4 (2024-2026) negative in every tested
+config**, while the broad universe benchmark was actually +6.3% over the
+same window — genuine underperformance, not just a falling market. Third
+independent mechanism to hit this exact pattern in this exact recent
+window, which is itself the more interesting finding than any one
+instance. See CLAUDE.md's "Twenty-fourth" entry.
+
 ### Options premium selling (weekly Nifty iron condor) — real edge, wrong capital tier, and now real-data validated
 
 Not a daily-bar or intraday-candle strategy, so it doesn't fit either

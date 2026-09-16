@@ -1715,3 +1715,72 @@ own volatility) — not by refining how any single position gets sized. Left
 wired in as `--vol-size-cap` (harmless, off by default) since the
 underlying tool is now genuinely tested and available for a future
 strategy whose stop ISN'T already ATR-scaled, where it could still matter.
+
+## Twenty-fourth: Low-Volatility Anomaly — real over the full period, but the SAME recent-quarter decay now seen a third independent time
+
+A real, decades-documented academic factor sourced properly (not an
+original design this time): Frazzini & Pedersen's "Betting Against Beta"
+(2014) and Ang/Hodrick/Xing/Zhang's "The Cross-Section of Volatility and
+Expected Returns" (2006) — low-volatility/low-beta stocks earning HIGHER
+risk-adjusted returns than high-beta ones, the opposite of CAPM,
+attributed to leverage-constrained investors overpaying for high-beta
+stocks chasing return without margin. Genuinely different from momentum
+rotation (Fourth entry): ranks stocks by trailing VOLATILITY (a risk
+measure), not trailing RETURN (a momentum measure) — a risk-mispricing
+story, not price extrapolation.
+
+Implemented as `probe_low_volatility.py`, reusing momentum rotation's own
+monthly-rebalance architecture and realistic low-capital equity cost model
+(0.2% STT+stamp both legs, ~₹16 DP charge on the sell leg only, zero
+delivery brokerage) for direct comparability — rank a 20-stock NSE
+large/mid-cap universe by trailing `lookback_days` daily-return stdev,
+equal-weight the `top_n` least volatile, rebalance monthly. Same
+survivorship-bias caveat as momentum rotation: today's well-known
+large/mid-caps, not a point-in-time historical constituent list.
+
+**Screening result: passes on the surface** — full 10y period +85.2%
+total return, both walk-forward halves positive (13.12%/yr in-sample,
+3.16%/yr out-of-sample, CONSISTENT), and an 8-config perturbation sweep
+(`top_n` 3/5/7/10, `lookback_days` 126/189/252/378) is positive on BOTH
+halves at every single tested value — genuinely smooth, no cliffs.
+
+**Quarter-split reveals the exact same decay pattern already seen twice in
+this file** (Donchian/BTC-USD's historic-bull-run capture, momentum
+rotation's Fourth entry) — **and it survives the SAME perturbation
+sweep that looked clean above**: default config Q1-Q3 are strongly
+positive (+6.92%, +29.18%, +10.52%/yr) but **Q4 (2024-2026, the most
+recent and most relevant window) is -4.77%/yr**. Re-checked on the two
+strongest-looking perturbed configs specifically (`top_n=10`:
++10.25%/+34.34%/+10.60%/**-1.94%**; `lookback_days=126`:
++14.31%/+16.35%/+12.00%/**-3.26%**) — Q4 negative in every single
+config tested, not a default-parameter artifact. This is precisely the
+"walk-forward blind spot" this file has warned about before: the 2-way
+split's out-of-sample half (which spans Q3+Q4) still nets positive because
+Q3's gain outweighs Q4's loss, completely hiding the decay a finer split
+catches — exactly why this project's screening standard has never trusted
+a 2-way split alone.
+
+**A sharper detail than the prior two decay cases**: Q4's underperformance
+isn't just riding a falling market down — the equal-weight FULL UNIVERSE
+benchmark was actually **+6.3% over the same Q4 window** while the
+low-volatility basket lost money. That's genuine negative alpha in the
+most recent regime, not beta exposure to a down market — consistent with
+a well-known real characteristic of the low-vol factor: it structurally
+underperforms during beta-chasing/momentum-driven rallies (lower-beta
+stocks by construction lag when riskier names are being bid up), which is
+plausibly what 2024-2026's NSE rally looked like for this specific
+universe.
+
+**Net verdict**: twenty-fourth mechanism, and the third INDEPENDENT
+instance (trend-following on crypto, cross-sectional momentum, now a
+risk-based factor) of this exact same failure mode in this project — a
+real multi-year effect that reverses or vanishes in the ~2.5-year window
+closest to now. Three different mechanisms hitting the identical pattern
+in the identical recent window is itself the more important finding than
+any one of them individually: it suggests 2024-2026 has been a genuinely
+unfavorable regime for systematic equity strategies broadly on this NSE
+universe (a market-wide regime characteristic, not a flaw specific to any
+one mechanism) rather than three coincidentally-timed individual failures.
+Any future strategy candidate showing "great full-period, both-halves-
+positive" results should be treated with active suspicion until its own
+Q4 is checked — this project's default now, not an occasional extra step.
