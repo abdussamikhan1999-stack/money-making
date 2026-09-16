@@ -1961,3 +1961,47 @@ liquidity, whether `IBS`/`CMF+OBV` position sizes round to a sane number
 of Petal lots) — the concrete next step if this line is continued, and the
 only remaining open thread from the capital-tier question this project has
 now applied to every real "survivor" found so far.
+
+## Twenty-seventh: classic Bollinger Bands mean reversion — 0/12, the worst hit rate of any strategy tested here
+
+John Bollinger's own trading rule, one of the most widely used bands in
+technical analysis and — surprisingly, given how central it is — not yet
+tried in this project: a rolling `period`-day SMA of closes ± `num_std`
+standard deviations forms upper/lower bands; buy a close below the lower
+band, short a close above the upper, exit back at the middle band (the SMA
+itself). Genuinely different from every other mean-reversion mechanism
+here: IBS is a same-day positional signal (today's close within today's
+own high-low range); Squeeze bets on a breakout once BB contracts inside
+Keltner Channels (a continuation signal, not reversion at all). This is a
+pure multi-day statistical band on closing prices.
+
+Implemented as `BollingerBandsStrategy` in `daily_strategy.py`
+(`--strategy bollinger`), reusing `indicators.sma()`/`stdev()` directly
+(already present for `SqueezeMomentumStrategy`'s own band-width
+calculation). ATR-based stop (no natural structural stop, same situation
+RSI-2/Squeeze/volume/MACD were in); exit at the middle band or
+`max_hold_days`. 8 new unit tests; full suite 133/133 green.
+
+**Result: 0/12 instruments passed** (both halves positive, no
+drawdown-halt) — the worst hit rate of any strategy in this project,
+below even MACD's 16.7% and the sector sweep's 18% "chance" floor. Two
+instruments (`RELIANCE.NS`, `TCS.NS`) drawdown-halted outright in-sample.
+No perturbation or quarter-split needed given how uniform the failure is
+(consistent with the gold/silver ratio probe's own precedent for a result
+this clean) — 7 of 12 were consistently negative on both halves, the
+other 5 sign-flipped.
+
+**Net verdict**: twenty-seventh mechanism, and the cleanest possible
+negative result for one of the most famous bands in retail technical
+analysis. The likely reason, consistent with a well-known real critique of
+naive Bollinger mean reversion: fading a band touch with no trend
+context fights genuine trends as often as it catches real reversals,
+and on NSE large-caps/indices that showed real (if thin) trend-following
+edges elsewhere in this project (Donchian, SuperTrend), a pure
+counter-trend rule with no filter gets run over often enough to net
+negative. The Twenty-second entry already tested whether bolting a trend
+filter onto a same-day mean-reversion signal (IBS) helps, and found it
+doesn't — this result is a second independent data point suggesting
+naive band-touch mean reversion specifically needs more than this project
+has found to make it work on these instruments, not just this one
+construction.

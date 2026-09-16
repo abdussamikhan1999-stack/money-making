@@ -15,7 +15,7 @@ from paper_broker import PaperBroker
 from risk import RiskManager
 from daily_strategy import (
     DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, SqueezeMomentumStrategy,
-    VolumeConfirmationStrategy, TurtleSoupStrategy, MACDStrategy, Side,
+    VolumeConfirmationStrategy, TurtleSoupStrategy, MACDStrategy, BollingerBandsStrategy, Side,
 )
 from backtest import split_by_date, _report  # reuse: same date-splitting + reporting used for intraday backtests
 
@@ -46,6 +46,10 @@ STRATEGIES = {
         fast_period=args.macd_fast_period, slow_period=args.macd_slow_period,
         signal_period=args.macd_signal_period, stop_atr_multiple=args.macd_stop_atr_multiple,
         max_hold_days=args.macd_max_hold_days,
+    ),
+    "bollinger": lambda args: BollingerBandsStrategy(
+        period=args.bb_period, num_std=args.bb_num_std, stop_atr_multiple=args.bb_stop_atr_multiple,
+        max_hold_days=args.bb_max_hold_days,
     ),
 }
 
@@ -220,6 +224,11 @@ if __name__ == "__main__":
     parser.add_argument("--macd-signal-period", type=int, default=9, help="[macd] signal-line EMA period")
     parser.add_argument("--macd-stop-atr-multiple", type=float, default=2.0, help="[macd] initial stop = N x ATR")
     parser.add_argument("--macd-max-hold-days", type=int, default=20, help="[macd] time-stop if crossover never flips")
+
+    parser.add_argument("--bb-period", type=int, default=20, help="[bollinger] SMA/stdev lookback")
+    parser.add_argument("--bb-num-std", type=float, default=2.0, help="[bollinger] band width in std devs")
+    parser.add_argument("--bb-stop-atr-multiple", type=float, default=2.0, help="[bollinger] initial stop = N x ATR")
+    parser.add_argument("--bb-max-hold-days", type=int, default=10, help="[bollinger] time-stop if never reverts")
     args = parser.parse_args()
 
     daily = fetch_daily_yfinance(args.symbol, args.period)

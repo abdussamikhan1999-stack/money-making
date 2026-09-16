@@ -11,11 +11,11 @@ accredited financial specialist before risking real capital. Backtest and
 paper-trade thoroughly before ever running this live. You are solely
 responsible for any trades it places.
 
-## Daily-bar strategies (a second family, seven mechanisms so far)
+## Daily-bar strategies (a second family, eight mechanisms so far)
 
 `backtest_daily.py` backtests daily-bar strategies against years of data
 instead of intraday's 60-day cap, via
-`--strategy {donchian,rsi2,threebar,squeeze,volume,turtlesoup,macd}`:
+`--strategy {donchian,rsi2,threebar,squeeze,volume,turtlesoup,macd,bollinger}`:
 
 ```
 python backtest_daily.py --strategy donchian --symbol '^NSEI' --period 10y --walk-forward
@@ -25,6 +25,7 @@ python backtest_daily.py --strategy squeeze --symbol INFY.NS --period 10y --walk
 python backtest_daily.py --strategy volume --symbol GC=F --period 10y --walk-forward --commission-per-trade 20
 python backtest_daily.py --strategy turtlesoup --symbol AXISBANK.NS --period 10y --walk-forward --commission-per-trade 20
 python backtest_daily.py --strategy macd --symbol TCS.NS --period 10y --walk-forward --commission-per-trade 20
+python backtest_daily.py --strategy bollinger --symbol RELIANCE.NS --period 10y --walk-forward --commission-per-trade 20
 ```
 
 **`donchian`** — the "Turtle Trading" entry rule (N-day high/low channel
@@ -131,6 +132,15 @@ reasonable (not perfect) perturbation robustness. Sizing helps up to 1%
 risk (1.73%/year, 2.6% drawdown) then drawdown-halts at 2%+ — thin, same
 "real but too small" bucket as most of this project's survivors. See
 CLAUDE.md's "Twenty-first" section for the full breakdown.
+
+**`bollinger`** — John Bollinger's own classic bands: buy a close below a
+rolling SMA-±-stdev lower band, short above the upper band, exit at the
+middle band. Screened on the same 12-instrument set: **0/12 passed** — the
+worst hit rate of any strategy in this project (below MACD's 16.7% and
+the sector sweep's 18% floor), with two instruments (`RELIANCE.NS`,
+`TCS.NS`) drawdown-halting outright. No perturbation needed given how
+uniform the failure is. See CLAUDE.md's "Twenty-seventh" section for the
+full breakdown.
 
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 

@@ -1,6 +1,6 @@
 from daily_strategy import (
     DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, SqueezeMomentumStrategy,
-    VolumeConfirmationStrategy, TurtleSoupStrategy, MACDStrategy,
+    VolumeConfirmationStrategy, TurtleSoupStrategy, MACDStrategy, BollingerBandsStrategy,
 )
 from strategy import Side
 
@@ -558,3 +558,74 @@ def test_reset_clears_macd_state():
     s.check_entry(close=150)
     s.reset()
     assert s.check_entry(close=150) is None  # state emptied, needs refilling
+
+
+# --- BollingerBandsStrategy ---
+
+def _build_bollinger(period=4, num_std=2.0, atr_period=3):
+    """4 bars with closes [8,12,8,12] (high=close+1/low=close-1) give an
+    exact SMA=10, population stdev=2.0 - lower=6, middle=10, upper=14 at
+    num_std=2.0, clean numbers rather than approximate ones."""
+    s = BollingerBandsStrategy(period=period, num_std=num_std, atr_period=atr_period)
+    for c in (8, 12, 8, 12):
+        s.push(bar(c + 1, c - 1, c))
+    return s
+
+
+def test_no_signal_before_bollinger_window_fills():
+    s = BollingerBandsStrategy(period=4, atr_period=3)
+    for c in (8, 12, 8):
+        s.push(bar(c + 1, c - 1, c))
+    assert s.check_entry(close=5) is None
+
+
+def test_long_entry_when_close_is_below_the_lower_band():
+    s = _build_bollinger()
+    atr = s.current_atr()
+    sig = s.check_entry(close=5)  # below lower band (6)
+    assert sig is not None
+    assert sig.side is Side.LONG
+    assert sig.entry_price == 5
+    assert sig.stop_loss == 5 - 2.0 * atr  # default stop_atr_multiple=2.0
+
+
+def test_short_entry_when_close_is_above_the_upper_band():
+    s = _build_bollinger()
+    atr = s.current_atr()
+    sig = s.check_entry(close=15)  # above upper band (14)
+    assert sig is not None
+    assert sig.side is Side.SHORT
+    assert sig.entry_price == 15
+    assert sig.stop_loss == 15 + 2.0 * atr
+
+
+def test_no_signal_when_close_stays_inside_the_bands():
+    s = _build_bollinger()
+    assert s.check_entry(close=10) is None  # well inside [6, 14]
+
+
+def test_check_exit_true_once_price_reverts_to_the_middle_band():
+    s = _build_bollinger()
+    sig = s.check_entry(close=5)
+    assert sig is not None
+    assert s.check_exit(close=9.9, side=sig.side) is False  # below middle (10)
+    assert s.check_exit(close=10, side=sig.side) is True  # reverted
+
+
+def test_check_exit_true_after_max_hold_days_even_without_reversion():
+    s = BollingerBandsStrategy(period=4, atr_period=3, max_hold_days=2)
+    for c in (8, 12, 8, 12):
+        s.push(bar(c + 1, c - 1, c))
+    sig = s.check_entry(close=5)
+    assert sig is not None
+    s.push(bar(6, 4, 5))  # day 1 in trade, still below middle, not timed out
+    assert s.check_exit(close=5, side=sig.side) is False
+    s.push(bar(6, 4, 5))  # day 2 - hits max_hold_days
+    assert s.check_exit(close=5, side=sig.side) is True
+
+
+def test_reset_clears_bollinger_state():
+    s = _build_bollinger()
+    s.check_entry(close=5)
+    s.reset()
+    assert s.check_entry(close=5) is None  # window emptied, needs refilling

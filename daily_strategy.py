@@ -871,3 +871,108 @@ class MACDStrategy:
             self._in_trade = False
             return True
         return False
+
+
+@dataclass
+class BollingerBandsStrategy:
+    """Classic Bollinger Bands mean reversion (John Bollinger's own
+    trading rules): a rolling `period`-day SMA of closes plus/minus
+    `num_std` standard deviations forms an upper/lower band; buy when
+    price closes BELOW the lower band (statistically stretched down),
+    short when it closes ABOVE the upper band, exit back at the middle
+    band (the SMA itself) - the classic "reversion to the mean" trade.
+
+    Genuinely different from every other mean-reversion strategy in this
+    file: IBS (`probe_ibs.py`) is a SAME-DAY positional signal (where
+    today's close sits within today's own high-low range); Squeeze
+    (`SqueezeMomentumStrategy`) bets on a BREAKOUT once BB contracts
+    inside Keltner Channels (a volatility-state/continuation signal, not
+    mean reversion at all). This strategy is a pure multi-day statistical
+    band on CLOSING prices - the band itself, not same-day range or a
+    volatility squeeze, is the signal.
+
+    Reuses `indicators.sma()`/`indicators.stdev()` directly (both already
+    existed here for `SqueezeMomentumStrategy`'s own Bollinger Band width
+    calculation) rather than recomputing bands from scratch.
+
+    No natural structural stop exists (same situation RSI-2/Squeeze/
+    volume/MACD were in), so the initial stop is `stop_atr_multiple` x
+    ATR. Exit is the classic "price reverts to the middle band" rule
+    (crossing back through the SMA) OR `max_hold_days` as this file's
+    now-standard bounded-holding time-stop, since a genuinely trending
+    (not reverting) move could otherwise never cross back.
+    """
+    period: int = 20
+    num_std: float = 2.0
+    stop_atr_multiple: float = 2.0
+    atr_period: int = 14
+    max_hold_days: int = 10
+
+    _highs: list[float] = field(default_factory=list, init=False)
+    _lows: list[float] = field(default_factory=list, init=False)
+    _closes: list[float] = field(default_factory=list, init=False)
+    _in_trade: bool = field(default=False, init=False)
+    _days_in_trade: int = field(default=0, init=False)
+
+    def reset(self) -> None:
+        self._highs = []
+        self._lows = []
+        self._closes = []
+        self._in_trade = False
+        self._days_in_trade = 0
+
+    def push(self, bar: dict) -> None:
+        self._highs.append(bar["high"])
+        self._lows.append(bar["low"])
+        self._closes.append(bar["close"])
+        if self._in_trade:
+            self._days_in_trade += 1
+
+    def _bands(self) -> tuple[float, float, float] | tuple[None, None, None]:
+        """(lower, middle, upper), computed from days already pushed -
+        today NOT included (called from check_entry/check_exit BEFORE
+        push() runs for today), same no-lookahead convention as Squeeze."""
+        middle = sma(self._closes, self.period)
+        sd = stdev(self._closes, self.period)
+        if middle is None or sd is None:
+            return None, None, None
+        return middle - self.num_std * sd, middle, middle + self.num_std * sd
+
+    def current_atr(self) -> float | None:
+        n = self.atr_period + 1
+        if len(self._closes) < n:
+            return None
+        window = [{"high": h, "low": l, "close": c} for h, l, c in
+                  zip(self._highs[-n:], self._lows[-n:], self._closes[-n:])]
+        return average_true_range(window, period=self.atr_period)
+
+    def check_entry(self, close: float) -> Signal | None:
+        lower, middle, upper = self._bands()
+        atr = self.current_atr()
+        if lower is None or atr is None or atr <= 0:
+            return None
+        if close < lower:
+            self._in_trade = True
+            self._days_in_trade = 0
+            return Signal(Side.LONG, close, close - self.stop_atr_multiple * atr,
+                          f"close {close:.2f} below lower band {lower:.2f}")
+        if close > upper:
+            self._in_trade = True
+            self._days_in_trade = 0
+            return Signal(Side.SHORT, close, close + self.stop_atr_multiple * atr,
+                          f"close {close:.2f} above upper band {upper:.2f}")
+        return None
+
+    def check_exit(self, close: float, side: Side) -> bool:
+        _, middle, _ = self._bands()
+        timed_out = self._days_in_trade >= self.max_hold_days
+        if middle is None:
+            reverted = False
+        elif side == Side.LONG:
+            reverted = close >= middle
+        else:
+            reverted = close <= middle
+        if reverted or timed_out:
+            self._in_trade = False
+            return True
+        return False
