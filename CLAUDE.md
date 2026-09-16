@@ -2251,3 +2251,86 @@ asked to generalize, the single most important test this project applies
 to any promising-looking result. The capital-constrained sizing fix from
 the Thirtieth entry remains a permanent, valuable improvement to this
 project's event-driven backtesting method regardless.
+
+## Thirty-second: combining five of this project's own real-but-thin survivors as a diversified portfolio — worse than just running the single best one alone
+
+A genuinely different test from every prior entry: not a new signal, and
+not stacking signals into one trade (already found twice to hurt, the
+Eleventh/Twenty-second entries) — the standard, sound portfolio-
+construction question this project had never actually asked: does
+combining SEVERAL of its own already-validated "real, clears every rigor
+check, just too thin alone" survivors, each running independently on its
+own instrument, produce a better combined risk-adjusted return than any
+one alone? Real quant funds routinely do exactly this — diversify capital
+across many small, uncorrelated edges rather than searching for one big
+one.
+
+Five components, each this project's own best-known instrument/strategy
+pairing: `rsi2`/`RELIANCE.NS` (Third entry), `threebar`/`SBIN.NS` and
+`threebar`/`HDFCBANK.NS` (Twelfth entry's two strongest survivors),
+`macd`/`TCS.NS` (Twenty-first), `turtlesoup`/`AXISBANK.NS` (Twentieth —
+this project's smoothest perturbation sweep). Implemented as
+`probe_portfolio_combo.py`, reusing `backtest_daily.py`'s `simulate_daily()`
+UNMODIFIED for each component (equal capital slice, own independent
+`RiskManager`/`PaperBroker`) via a new optional `dated_trades` side-channel
+parameter added to that function (default `None`, zero behavior change —
+2 new unit tests confirm) that records `(bar_date, pnl)` at the exact
+moment each trade closes, letting every component's trades be merged into
+one chronological, shared-capital equity curve afterward — a real,
+non-approximated combined result, not five independent numbers eyeballed
+side by side. (First attempt used `rsi2`/`^NSEI` per the Third entry's own
+headline instrument — surfaced a real, if secondary, finding: Nifty's
+absolute point-based ATR is too large for a small per-component capital
+slice to afford even one tradable unit at, not a real issue for the index
+alone at full capital but a reminder that any capital-SPLITTING scheme
+needs to check each component can still actually trade at its reduced
+allocation. Swapped to `RELIANCE.NS`, one of RSI-2's other real Third-entry
+survivors.)
+
+**Result: the combined portfolio underperforms the single best component
+on BOTH dimensions**, not just diluted return. Combined: +0.30%/year at
+4.1% max drawdown, walk-forward INCONSISTENT (in-sample +0.67%/yr,
+out-of-sample -0.44%/yr). `turtlesoup`/`AXISBANK.NS` ALONE at full capital
+(the same config already documented in the Twentieth entry): +1.71%/year
+at only 1.1% max drawdown — meaningfully BETTER return AND lower
+drawdown than the 5-way diversified combination.
+
+**Why diversification didn't help here**: two compounding reasons, both
+checkable directly from this project's own prior entries rather than
+speculation. First, correlation — all five components are long-biased
+directional strategies on Indian large-cap equities, which move together
+on broad market-wide days; genuine diversification benefit needs return
+streams that are actually uncorrelated, and these likely aren't enough.
+Second, and more simply: RSI-2's own edge (0.04-0.25%/year at realistic
+sizing, per the Third entry) is by far the thinnest of the five
+components, and equal-weighting means it drags the average down alongside
+MACD's similarly thin ~1.7%/year — diversification doesn't rescue a
+combination if some of the components contribute almost nothing to begin
+with, it just averages a strong contributor together with several weak
+ones.
+
+**Checked the obvious follow-up in the same session rather than leaving
+it as a suggestion**: re-ran with ONLY the three strongest components
+(both `threebar` survivors + `turtlesoup`/`AXISBANK.NS`, dropping RSI-2
+and MACD entirely). **Still worse than the single best component alone**:
++0.59%/year at 5.4% max drawdown, walk-forward still INCONSISTENT — an
+improvement over the 5-way mix's +0.30%/1.71% but nowhere near
+`turtlesoup`/`AXISBANK.NS` solo's +1.71%/year at 1.1% drawdown. Each
+component's own capital slice (₹33,749/33,543/38,646 from a ₹33,333
+starting slice each) shows roughly proportional, not amplified, scaling —
+no "free lunch" bonus from combining them, consistent with genuine
+positive correlation between all-long-biased NSE equity strategies rather
+than a data artifact of including the weaker components.
+
+**Net verdict**: thirty-second entry, and a clean, well-reasoned negative
+result for a genuinely untested question (portfolio combination, not
+signal stacking) rather than a repeat of ground already covered, confirmed
+robust to component selection rather than just one unfavorable mix. The
+lesson generalizes usefully: this project's real-but-thin survivors don't
+average up into something more substantial by simply running them
+together, even restricted to the best-known ones — a real diversification
+benefit needs genuinely uncorrelated return sources, and this project
+hasn't found enough of those outside the capital-blocked options line.
+Concentrating capital in the single best-trusted edge (currently
+`turtlesoup`/`AXISBANK.NS` or the `threebar` survivors at 1% risk) beats
+spreading it across several correlated, individually-thinner ones.

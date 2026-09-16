@@ -241,6 +241,20 @@ earnings-season clustering; rewritten to properly skip over-allocating
 signals) — a permanent improvement kept regardless of PEAD's own fate.
 See CLAUDE.md's "Thirtieth"/"Thirty-first" entries.
 
+`probe_portfolio_combo.py` — a genuinely different test: not a new
+signal, and not stacking signals into one trade (already found to hurt
+twice), but the standard portfolio-construction question this project had
+never asked — does combining several of its own already-validated
+real-but-thin survivors (RSI-2, both `threebar` survivors, MACD, Turtle
+Soup, each on its own instrument) produce a better combined return than
+any one alone? **No** — the 5-way combination returns 0.30%/year at 4.1%
+drawdown, worse on both dimensions than just running `turtlesoup`/
+`AXISBANK.NS` alone (1.71%/year at 1.1% drawdown). Re-tested with only
+the 3 strongest components (dropping RSI-2/MACD) — still worse than the
+single best one alone. These edges are correlated (all long-biased NSE
+equity strategies) and individually too thin for diversification to
+produce a free lunch. See CLAUDE.md's "Thirty-second" entry.
+
 ### Options premium selling (weekly Nifty iron condor) — real edge, wrong capital tier, and now real-data validated
 
 Not a daily-bar or intraday-candle strategy, so it doesn't fit either

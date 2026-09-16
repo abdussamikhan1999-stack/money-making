@@ -59,7 +59,7 @@ def simulate_daily(daily: list[dict], strategy, capital: float = 100_000.0, risk
                     max_drawdown_pct: float = 10.0, commission_per_trade: float = 0.0,
                     breakeven_atr_mult: float | None = None, trail_atr_mult: float | None = None,
                     breakeven_offset_atr_mult: float = 0.0, trail_offset_atr_mult: float = 0.5,
-                    vol_size_cap: bool = False,
+                    vol_size_cap: bool = False, dated_trades: list | None = None,
                     ) -> tuple[PaperBroker, RiskManager]:
     """`strategy` is any daily_strategy.py object implementing push(bar) /
     check_entry(close) / check_exit(close, side).
@@ -93,7 +93,13 @@ def simulate_daily(daily: list[dict], strategy, capital: float = 100_000.0, risk
     doesn't see coming - capping by the instrument's own ATR specifically
     catches that case without touching any entry/exit logic. Same
     current_atr()-gated strategy list as the profit-booking overlay above;
-    silently a no-op on strategies that don't expose it."""
+    silently a no-op on strategies that don't expose it.
+
+    dated_trades (default None, no behavior change): an optional list this
+    function appends (bar["date"], pnl) to at the exact moment each trade
+    closes - lets a caller merge multiple components' trades into one
+    chronological, shared-capital equity curve (see probe_portfolio_combo.py)
+    without duplicating this loop."""
     broker = PaperBroker(commission_per_trade=commission_per_trade)
     risk = RiskManager(capital=capital, risk_per_trade_pct=risk_per_trade_pct, max_drawdown_pct=max_drawdown_pct)
     current_side: Side | None = None
@@ -109,10 +115,14 @@ def simulate_daily(daily: list[dict], strategy, capital: float = 100_000.0, risk
                 pnl = broker.on_price(px)
                 if pnl is not None:
                     risk.record_trade(pnl)
+                    if dated_trades is not None:
+                        dated_trades.append((bar["date"], pnl))
                     current_side = None
             if broker.in_position and strategy.check_exit(bar["close"], current_side):
                 pnl = broker.close(bar["close"])
                 risk.record_trade(pnl)
+                if dated_trades is not None:
+                    dated_trades.append((bar["date"], pnl))
                 current_side = None
         elif not risk.trading_halted():
             signal = strategy.check_entry(bar["close"])

@@ -163,3 +163,27 @@ def test_vol_size_cap_off_by_default_keeps_stop_based_sizing():
     broker, risk = simulate_daily(bars, _FakeCurrentAtrStrategy(stop_distance=2, atr=10), capital=100_000)
     assert len(broker.trade_log) == 1
     assert broker.trade_log[0]["qty"] == 250  # uncapped, old behavior unchanged
+
+
+def test_dated_trades_records_the_bar_date_each_trade_closes():
+    bars = [
+        bar(1, 9.5, 10, 9, 9.5), bar(2, 9.5, 11, 9, 10), bar(3, 10, 10, 8, 9.5),
+        bar(4, 9.5, 13, 12, 12.5),  # long entry @ 12.5, stop = 8
+        bar(5, 12.5, 12.5, 7, 7.5),  # stopped out
+    ]
+    dated_trades = []
+    broker, risk = simulate_daily(bars, DonchianBreakoutStrategy(entry_period=3), capital=100_000,
+                                   dated_trades=dated_trades)
+    assert len(dated_trades) == 1
+    date, pnl = dated_trades[0]
+    assert date == bars[4]["date"]
+    assert pnl == broker.trade_log[0]["pnl"]
+
+
+def test_dated_trades_none_by_default_no_behavior_change():
+    bars = [
+        bar(1, 9.5, 10, 9, 9.5), bar(2, 9.5, 11, 9, 10), bar(3, 10, 10, 8, 9.5),
+        bar(4, 9.5, 13, 12, 12.5), bar(5, 12.5, 12.5, 7, 7.5),
+    ]
+    broker, risk = simulate_daily(bars, DonchianBreakoutStrategy(entry_period=3), capital=100_000)
+    assert len(broker.trade_log) == 1  # runs fine with no dated_trades list passed
