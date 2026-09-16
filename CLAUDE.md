@@ -2334,3 +2334,68 @@ hasn't found enough of those outside the capital-blocked options line.
 Concentrating capital in the single best-trusted edge (currently
 `turtlesoup`/`AXISBANK.NS` or the `threebar` survivors at 1% risk) beats
 spreading it across several correlated, individually-thinner ones.
+
+## Thirty-third: testing a different MARKET STRUCTURE, not another mechanism — this project's two most-tested strategies on genuinely small/mid-cap NSE stocks
+
+Every prior entry ran against large/mega-cap NSE names (the sector sweep's
+"39 stocks" and the momentum/low-vol universes were still large/mid-cap
+blue chips) — the most analyst-covered, algorithmically-traded, heavily
+arbitraged segment of the market. A genuinely different axis from a new
+indicator or a new instrument WITHIN the same segment: does the same
+already-validated mechanism (not a new signal) do better on a
+structurally LESS efficient slice of the market, where less institutional
+competition might leave more room for a real technical edge? Reused
+`turtlesoup` and `threebar` unmodified (this project's two best-known
+survivors — Turtle Soup's smoothest perturbation sweep, 3-bar breakout's
+strongest hit rate/sizing response) against a fresh 12-stock genuine
+small/mid-cap universe never used elsewhere in this project
+(`DEEPAKNTR.NS`, `CROMPTON.NS`, `RADICO.NS`, `APLAPOLLO.NS`,
+`JUBLPHARMA.NS`, `SYMPHONY.NS`, `VGUARD.NS`, `RATNAMANI.NS`,
+`PERSISTENT.NS`, `GRAPHITE.NS`, `ELGIEQUIP.NS`, `KAJARIACER.NS`).
+
+**Turtle Soup: 3/12 passed** (`DEEPAKNTR.NS`, `JUBLPHARMA.NS`,
+`ELGIEQUIP.NS`) — 25%, the IDENTICAL hit rate to its original large-cap
+screen (the Twentieth entry). Quarter-split on the three is reasonably
+stable (no dramatic decay), but magnitudes are thin (hundreds to low
+thousands of rupees per quarter on ₹100,000 capital) — no improvement
+over the large-cap result in either hit rate or magnitude.
+
+**3-bar breakout: only 2/12 passed** (`SYMPHONY.NS`, `KAJARIACER.NS`) —
+16.7%, WORSE than its large-cap screen's 6/12 (50%, the Twelfth entry).
+More strikingly, **5 of the 12 small/mid-cap instruments hit the 10%
+drawdown breaker outright** (`JUBLPHARMA.NS`, `VGUARD.NS`,
+`RATNAMANI.NS`, `PERSISTENT.NS`, `ELGIEQUIP.NS`) — this strategy's fixed
+R-multiple target and structural stop are considerably more prone to
+getting whipsawed on smaller-cap volatility than on the large-caps it was
+originally validated against. Less market efficiency didn't translate
+into more edge here; if anything, higher volatility hurt this specific
+strategy's risk control more than it helped find exploitable patterns.
+
+**`SYMPHONY.NS` individually is genuinely clean on quarter-split** — all
+4 quarters positive with remarkably consistent, similar magnitude each
+time (+2,832 / +3,751 / +2,523 / +3,699), better quarter-to-quarter
+stability than almost any other single-instrument survivor in this
+project. But two things keep it in the same "real but thin" bucket as
+everything else: perturbation is only partially smooth (`compression_atr_mult`
+0.5/0.75 pass, 0.25/1.0 fail — a soft middle zone, not a clean gradient;
+`target_r_multiple` 2.0/2.5/3.0 pass, 1.5 fails — cleaner), and **sizing
+does NOT help the way it did for the original large-cap 3-bar breakout
+survivors** — raising risk-per-trade from 0.5% to 1% immediately
+drawdown-halts the run (trade count collapsing from 180 to 102) instead
+of scaling return up, the "dilutes rather than compounds" pattern RSI-2
+and volume's `GC=F` showed, not the "sizing genuinely helps" pattern the
+large-cap `threebar` survivors had. Net magnitude at the only safe
+setting: **+12,413.60 over 10 years ≈ 1.18%/year** — thin.
+
+**Net verdict**: thirty-third entry, and a clean answer to a real
+question this project hadn't asked before (does market segment, not
+mechanism, explain the ceiling on everything found so far) — no. Turtle
+Soup reproduces its exact chance-level hit rate unchanged; 3-bar breakout
+gets meaningfully WORSE (lower hit rate, more drawdown-halts, no sizing
+lever). One individually clean survivor (`SYMPHONY.NS`) emerged, but with
+weaker perturbation robustness and no sizing response compared to this
+project's best large-cap results, landing in the same thin bucket rather
+than a breakthrough. This closes off "try a less-efficient market
+segment" as a productive direction for this project's two most-validated
+mechanisms specifically — the ceiling these strategies hit doesn't appear
+to be about which NSE stocks they're pointed at.

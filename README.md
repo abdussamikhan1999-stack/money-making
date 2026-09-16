@@ -255,6 +255,22 @@ single best one alone. These edges are correlated (all long-biased NSE
 equity strategies) and individually too thin for diversification to
 produce a free lunch. See CLAUDE.md's "Thirty-second" entry.
 
+Tested whether MARKET STRUCTURE, not mechanism, explains this project's
+ceiling — reused `turtlesoup` and `threebar` unmodified against a genuine
+small/mid-cap universe (12 stocks never used elsewhere here:
+`DEEPAKNTR.NS`, `CROMPTON.NS`, `RADICO.NS`, `APLAPOLLO.NS`,
+`JUBLPHARMA.NS`, `SYMPHONY.NS`, `VGUARD.NS`, `RATNAMANI.NS`,
+`PERSISTENT.NS`, `GRAPHITE.NS`, `ELGIEQUIP.NS`, `KAJARIACER.NS`), on the
+hypothesis that less-arbitraged stocks might leave more room for a
+technical edge. **No improvement** — Turtle Soup reproduces its exact
+25% hit rate unchanged; 3-bar breakout gets WORSE (16.7% vs its original
+50%, and 5/12 instruments hit the drawdown breaker outright — higher
+small-cap volatility hurt this strategy's risk control more than it
+helped). One clean individual survivor (`SYMPHONY.NS`, remarkably stable
+quarter-split) emerged but without the sizing response this project's
+best large-cap results have — thin, ~1.18%/year at the only safe
+setting. See CLAUDE.md's "Thirty-third" entry.
+
 ### Options premium selling (weekly Nifty iron condor) — real edge, wrong capital tier, and now real-data validated
 
 Not a daily-bar or intraday-candle strategy, so it doesn't fit either
