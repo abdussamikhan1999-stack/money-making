@@ -1440,3 +1440,78 @@ finds a tradable mean-reversion pattern. Not investigated further (no
 perturbation of exit_z/max_hold_days/commission attempted, since gross
 P&L near zero everywhere means no config is close to a pass) — this
 result is clean enough not to need it.
+
+## Twentieth: Turtle Soup (failed-breakout fade) — chance-level hit rate again, but the cleanest single-survivor perturbation sweep in the project
+
+A genuinely different premise from everything else in this file, not
+another instrument or parameter swap: Linda Raschke's "Turtle Soup"
+(Raschke & Connors, "Street Smarts") FADES a new N-day breakout instead of
+trading with it — the exact counter-trend inverse of
+`DonchianBreakoutStrategy`'s own entry trigger. Premise: a fresh N-day
+high/low is often a stop-hunt that fails to hold, not the start of a real
+trend, so buy a failed new low and sell a failed new high once price closes
+back inside the prior range.
+
+Implemented as `TurtleSoupStrategy` in `daily_strategy.py`
+(`--strategy turtlesoup` in `backtest_daily.py`) — ported straight into the
+tested architecture rather than a standalone probe, since it fits the
+shared `push`/`check_entry`/`check_exit` interface cleanly (checked one bar
+in arrears using only already-`push()`'d history, same no-lookahead
+convention as Donchian: at check time, `self._highs/_lows/_closes` hold
+everything through yesterday, and `prior_high`/`prior_low` are computed
+excluding yesterday itself via `highest(self._highs[:-1], channel_period)`).
+Same ATR-generalized stop/target convention as `ThreeBarBreakoutStrategy`
+(`stop_buffer_atr_mult`, `target_r_multiple`, fixed R-multiple exit) but a
+shorter default `max_hold_days` (5, not 20) to match Raschke's own
+short-holding-period rule. 8 new unit tests; full suite 110/110 green.
+**A real, pre-existing bug was also found and fixed while adding these
+tests**: four test function names in `tests/test_daily_strategy.py` were
+duplicated across different strategies' sections (Python keeps only the
+LAST definition of a duplicate name, so earlier same-named tests were
+silently never executing) — `test_no_signal_before_window_fills` was
+defined 3 times (Donchian/Squeeze/Volume, only Volume's ever ran) and 3 of
+my own new test names collided with `ThreeBarBreakoutStrategy`'s. All
+renamed to be unique; the true count of independent tests that actually
+execute is now verified, not just assumed from the "N passed" total.
+
+**Screening result: 3/12 passed** (both halves positive, no drawdown-halt,
+this file's actual standard — not just same-sign, which `^NSEBANK`,
+`TCS.NS`, `INFY.NS`, and `WIPRO.NS` also hit but both-NEGATIVE, a
+consistent loser rather than a pass) — `^NSEI`, `ITC.NS`, `AXISBANK.NS`. A
+25% hit rate, the same chance-level band as Squeeze (25%) and volume (30%).
+
+**Quarter-split separates the three** the same way it always has in this
+file: `^NSEI` and `ITC.NS` both have 2 of 4 quarters negative (though in
+both cases Q4, the most recent, is the strongest — no decay red flag,
+just noisier). `AXISBANK.NS` is the cleanest: **all 4 quarters positive**
+(+2,957 / +1,856 / +1,574 / +195), decelerating toward the most recent
+quarter but never negative.
+
+**`AXISBANK.NS`'s perturbation sweep is the smoothest single-survivor
+result in the entire project** — `channel_period` from 10 to 30 (5 values)
+and `target_r_multiple` from 1.0 to 3.0 (5 values) are BOTH positive on
+BOTH walk-forward halves at every single tested value, no cliffs anywhere.
+Notably this is the same instrument (`AXISBANK.NS`) that failed
+SuperTrend's perturbation sweep specifically for a single-point-fit cliff
+at its exact default `st_period` — a different mechanism on the same stock
+showing genuine robustness where another one showed curve-fit fragility is
+a useful confirmation that this isn't just "AXISBANK.NS is an easy stock to
+overfit to."
+
+**Sizing helps, but only up to a point, the same "1% is close to the
+safe ceiling" pattern as 3-bar breakout/Squeeze/SuperTrend**: 0.5%
+risk-per-trade gives 0.81%/year (0.6% max DD); 1% gives **1.71%/year**
+(1.1% DD) — genuine roughly-linear scaling. 2% breaks it (drawdown-halted
+at 11.7% DD, trade count collapsing from 69 to 13); 3% is also halted.
+
+**Net verdict**: twentieth mechanism, and — like SuperTrend before it —
+a chance-level (25%) initial hit rate with one instrument surviving every
+subsequent rigor check about as cleanly as this project's best individual
+results (RSI-2, 3-bar breakout). But the magnitude at the safe sizing tier
+(1.71%/year at 1% risk) is thin, in the same bucket as SuperTrend's `CL=F`
+and volume's `GC=F` rather than 3-bar breakout's stronger 2-4.6%/year — and
+per this file's own established standard (see the SuperTrend/Eighteenth
+entries), a single-instrument survivor from a chance-level sweep isn't
+independently confirmed until retested against more instruments of a
+similar kind. Not done in this session — flagged the same way IBS's and
+SuperTrend's lone survivors were, rather than claimed as "found."

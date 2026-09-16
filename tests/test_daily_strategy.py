@@ -1,6 +1,6 @@
 from daily_strategy import (
     DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, SqueezeMomentumStrategy,
-    VolumeConfirmationStrategy,
+    VolumeConfirmationStrategy, TurtleSoupStrategy,
 )
 from strategy import Side
 
@@ -11,7 +11,7 @@ def bar(high, low, close, open_=None, volume=0):
 
 # --- DonchianBreakoutStrategy ---
 
-def test_no_signal_before_window_fills():
+def test_no_signal_before_donchian_window_fills():
     s = DonchianBreakoutStrategy(entry_period=5)
     for h, l in [(10, 9), (11, 10), (10, 9), (11, 10)]:
         s.push(bar(h, l, l))
@@ -174,7 +174,7 @@ def test_no_signal_when_close_does_not_clear_both_priors():
     assert s.check_entry(close=100.25) is None  # between bar1 and bar2, clears neither
 
 
-def test_check_exit_true_once_target_is_reached():
+def test_threebar_check_exit_true_once_target_is_reached():
     s = _build_threebar_with_compression(bar1_close=100.2, bar2_close=100.3)
     sig = s.check_entry(close=105)
     # risk = 105 - 98 = 7; target = 105 + 2.5 * 7 = 122.5 (default target_r_multiple)
@@ -182,7 +182,7 @@ def test_check_exit_true_once_target_is_reached():
     assert s.check_exit(close=122.5, side=sig.side) is True
 
 
-def test_check_exit_true_after_max_hold_days_even_without_target():
+def test_threebar_check_exit_true_after_max_hold_days_even_without_target():
     s = ThreeBarBreakoutStrategy(atr_period=14, max_hold_days=3)
     for _ in range(13):
         s.push(bar(101, 99, 100))
@@ -198,7 +198,7 @@ def test_check_exit_true_after_max_hold_days_even_without_target():
     assert s.check_exit(close=106, side=sig.side) is True
 
 
-def test_reset_clears_state():
+def test_reset_clears_threebar_state():
     s = _build_threebar_with_compression(bar1_close=100.2, bar2_close=100.3)
     s.check_entry(close=105)
     s.reset()
@@ -225,7 +225,7 @@ def _feed_flat_then_breakout(s):
     return s.check_entry(close=110)
 
 
-def test_no_signal_before_window_fills():
+def test_no_signal_before_squeeze_window_fills():
     s = SqueezeMomentumStrategy(length=5)
     for _ in range(5):
         s.push(bar(101, 99, 100))
@@ -313,7 +313,7 @@ def _feed_bullish_days(s, n=4, start=105, step=5):
         price += step
 
 
-def test_no_signal_before_window_fills():
+def test_no_signal_before_volume_window_fills():
     s = VolumeConfirmationStrategy(cmf_period=3, obv_period=3, atr_period=3)
     _feed_bullish_days(s, n=3)  # needs obv_period+1=4 / atr_period+1=4, only 3 pushed
     assert s.check_entry(close=125) is None
@@ -387,3 +387,90 @@ def test_reset_clears_volume_state():
     assert sig is not None
     s.reset()
     assert s.check_entry(close=125) is None  # window emptied, needs refilling
+
+
+# --- TurtleSoupStrategy ---
+
+def _build_turtlesoup_with_failed_breakdown(channel_period=20, yesterday_low=94, yesterday_close=95):
+    """channel_period stable bars (high=101/low=99/close=100, TR=2 each vs
+    the prior stable close) fill the channel, then one more bar ("yesterday")
+    that closes below the prior 20-day low - the failed-breakdown setup a
+    subsequent check_entry() call can fade."""
+    s = TurtleSoupStrategy(channel_period=channel_period, atr_period=14)
+    for _ in range(channel_period):
+        s.push(bar(101, 99, 100))
+    s.push(bar(high=99, low=yesterday_low, close=yesterday_close))
+    return s
+
+
+def test_no_signal_before_channel_window_fills():
+    s = TurtleSoupStrategy(channel_period=20, atr_period=14)
+    for _ in range(15):
+        s.push(bar(101, 99, 100))
+    assert s.check_entry(close=95) is None
+
+
+def test_long_fade_when_yesterday_broke_the_low_and_today_closes_back_above_it():
+    s = _build_turtlesoup_with_failed_breakdown()
+    atr = s.current_atr()
+    sig = s.check_entry(close=99.5)  # back above prior_low (99)
+    assert sig is not None
+    assert sig.side is Side.LONG
+    assert sig.entry_price == 99.5
+    assert sig.stop_loss == 94 - 0.5 * atr  # yesterday's low, minus buffer
+
+
+def test_short_fade_when_yesterday_broke_the_high_and_today_closes_back_below_it():
+    s = TurtleSoupStrategy(channel_period=20, atr_period=14)
+    for _ in range(20):
+        s.push(bar(101, 99, 100))
+    s.push(bar(high=106, low=101, close=105))  # yesterday: closed above prior_high (101)
+    atr = s.current_atr()
+    sig = s.check_entry(close=100.5)  # back below prior_high (101)
+    assert sig is not None
+    assert sig.side is Side.SHORT
+    assert sig.entry_price == 100.5
+    assert sig.stop_loss == 106 + 0.5 * atr  # yesterday's high, plus buffer
+
+
+def test_no_signal_when_yesterday_did_not_break_the_channel():
+    s = TurtleSoupStrategy(channel_period=20, atr_period=14)
+    for _ in range(21):
+        s.push(bar(101, 99, 100))  # never broke out, nothing to fade
+    assert s.check_entry(close=100) is None
+
+
+def test_no_signal_when_todays_close_does_not_reclaim_the_broken_level():
+    s = _build_turtlesoup_with_failed_breakdown()
+    assert s.check_entry(close=96) is None  # still below prior_low (99), no failure confirmed yet
+
+
+def test_turtlesoup_check_exit_true_once_target_is_reached():
+    s = _build_turtlesoup_with_failed_breakdown()
+    atr = s.current_atr()
+    sig = s.check_entry(close=99.5)
+    stop = 94 - 0.5 * atr
+    risk = 99.5 - stop
+    target = 99.5 + 1.5 * risk  # default target_r_multiple
+    assert s.check_exit(close=target - 0.01, side=sig.side) is False
+    assert s.check_exit(close=target, side=sig.side) is True
+
+
+def test_turtlesoup_check_exit_true_after_max_hold_days_even_without_target():
+    s = TurtleSoupStrategy(channel_period=20, atr_period=14, max_hold_days=2)
+    for _ in range(20):
+        s.push(bar(101, 99, 100))
+    s.push(bar(high=99, low=94, close=95))
+    sig = s.check_entry(close=99.5)
+    assert sig is not None
+    s.push(bar(100, 98, 99.5))  # day 1 in trade, nowhere near target, not timed out
+    assert s.check_exit(close=99.5, side=sig.side) is False
+    s.push(bar(100, 98, 99.5))  # day 2 - hits max_hold_days
+    assert s.check_exit(close=99.5, side=sig.side) is True
+
+
+def test_reset_clears_turtlesoup_state():
+    s = _build_turtlesoup_with_failed_breakdown()
+    s.check_entry(close=99.5)
+    s.reset()
+    assert s.check_entry(close=99.5) is None  # window emptied, needs refilling

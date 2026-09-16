@@ -15,7 +15,7 @@ from paper_broker import PaperBroker
 from risk import RiskManager
 from daily_strategy import (
     DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, SqueezeMomentumStrategy,
-    VolumeConfirmationStrategy, Side,
+    VolumeConfirmationStrategy, TurtleSoupStrategy, Side,
 )
 from backtest import split_by_date, _report  # reuse: same date-splitting + reporting used for intraday backtests
 
@@ -37,6 +37,10 @@ STRATEGIES = {
     "volume": lambda args: VolumeConfirmationStrategy(
         cmf_period=args.cmf_period, obv_period=args.obv_period,
         stop_atr_multiple=args.volume_stop_atr_multiple, max_hold_days=args.volume_max_hold_days,
+    ),
+    "turtlesoup": lambda args: TurtleSoupStrategy(
+        channel_period=args.ts_channel_period, stop_buffer_atr_mult=args.ts_stop_buffer_atr_mult,
+        target_r_multiple=args.ts_target_r_multiple, max_hold_days=args.ts_max_hold_days,
     ),
 }
 
@@ -178,6 +182,11 @@ if __name__ == "__main__":
     parser.add_argument("--obv-period", type=int, default=20, help="[volume] windowed On-Balance Volume lookback")
     parser.add_argument("--volume-stop-atr-multiple", type=float, default=2.0, help="[volume] initial stop = N x ATR")
     parser.add_argument("--volume-max-hold-days", type=int, default=20, help="[volume] time-stop if signal never flips")
+
+    parser.add_argument("--ts-channel-period", type=int, default=20, help="[turtlesoup] N-day extreme that must fail")
+    parser.add_argument("--ts-stop-buffer-atr-mult", type=float, default=0.5, help="[turtlesoup] stop = N ATRs past the failed extreme")
+    parser.add_argument("--ts-target-r-multiple", type=float, default=1.5, help="[turtlesoup] fixed take-profit at N x risk")
+    parser.add_argument("--ts-max-hold-days", type=int, default=5, help="[turtlesoup] time-stop if neither hit")
     args = parser.parse_args()
 
     daily = fetch_daily_yfinance(args.symbol, args.period)

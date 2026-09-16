@@ -600,3 +600,114 @@ class VolumeConfirmationStrategy:
             self._in_trade = False
             return True
         return False
+
+
+@dataclass
+class TurtleSoupStrategy:
+    """"Turtle Soup" — Linda Raschke's failed-breakout fade (Raschke &
+    Connors, "Street Smarts"), the exact counter-trend INVERSE of
+    DonchianBreakoutStrategy above: bet that a new N-day extreme is a
+    stop-hunting false breakout that reverts, rather than that it's the
+    start of a real trend. Genuinely different premise from every other
+    strategy in this file — it fades precisely the signal Donchian and
+    SuperTrend trade WITH, the first strategy here built specifically to
+    exploit failed continuation instead of assuming continuation.
+
+    Original rule: price makes a new `channel_period`-day extreme (the
+    classic Turtle system's own entry trigger) but fails to hold it — the
+    very next bar closes back inside the prior range. That failure is the
+    signal: buy a failed new low, sell a failed new high, stop just beyond
+    the failed extreme, hold only a few days (Raschke's own rule is a very
+    short-term trade, unlike this file's other trend/momentum strategies).
+
+    Checked one bar in arrears using only push()'d history (no lookahead):
+    at entry-check time, `self._highs/_lows/_closes` hold everything
+    through YESTERDAY (today not yet pushed — same convention as every
+    other strategy here). `prior_high`/`prior_low` are the channel excluding
+    yesterday itself (`highest(self._highs[:-1], channel_period)`) — the
+    range yesterday's close needed to break to count as "a new extreme."
+    If yesterday's close broke that range and TODAY's close (the `close`
+    argument) reverses back inside it, that's the failed breakout being
+    faded.
+
+    stop_buffer_atr_mult / target_r_multiple / max_hold_days follow the
+    same ATR-generalization and fixed-R-target convention already applied
+    to ThreeBarBreakoutStrategy, for the same reason (no natural moving
+    exit condition exists for a fixed pattern-failure signal) — default
+    max_hold_days is shorter (5, not 20) to match Raschke's own short
+    holding period rather than this file's other strategies' longer ones.
+    """
+    channel_period: int = 20
+    stop_buffer_atr_mult: float = 0.5
+    target_r_multiple: float = 1.5
+    max_hold_days: int = 5
+    atr_period: int = 14
+
+    _highs: list[float] = field(default_factory=list, init=False)
+    _lows: list[float] = field(default_factory=list, init=False)
+    _closes: list[float] = field(default_factory=list, init=False)
+    _target: float | None = field(default=None, init=False)
+    _days_in_trade: int = field(default=0, init=False)
+
+    def reset(self) -> None:
+        self._highs = []
+        self._lows = []
+        self._closes = []
+        self._target = None
+        self._days_in_trade = 0
+
+    def push(self, bar: dict) -> None:
+        self._highs.append(bar["high"])
+        self._lows.append(bar["low"])
+        self._closes.append(bar["close"])
+        if self._target is not None:
+            self._days_in_trade += 1
+
+    def _current_atr(self) -> float | None:
+        n = self.atr_period + 1
+        if len(self._closes) < n:
+            return None
+        window = [{"high": h, "low": l, "close": c} for h, l, c in
+                  zip(self._highs[-n:], self._lows[-n:], self._closes[-n:])]
+        return average_true_range(window, period=self.atr_period)
+
+    def current_atr(self) -> float | None:
+        """Public wrapper, same purpose as ThreeBarBreakoutStrategy's."""
+        return self._current_atr()
+
+    def check_entry(self, close: float) -> Signal | None:
+        if len(self._closes) < self.channel_period + 1:
+            return None
+        atr = self._current_atr()
+        if atr is None or atr <= 0:
+            return None
+
+        prior_high = highest(self._highs[:-1], self.channel_period)
+        prior_low = lowest(self._lows[:-1], self.channel_period)
+        if prior_high is None or prior_low is None:
+            return None
+        yesterday_close = self._closes[-1]
+
+        if yesterday_close < prior_low and close > prior_low:
+            stop = self._lows[-1] - self.stop_buffer_atr_mult * atr
+            risk = close - stop
+            self._target = close + self.target_r_multiple * risk
+            self._days_in_trade = 0
+            return Signal(Side.LONG, close, stop, f"failed {self.channel_period}-day low, faded")
+
+        if yesterday_close > prior_high and close < prior_high:
+            stop = self._highs[-1] + self.stop_buffer_atr_mult * atr
+            risk = stop - close
+            self._target = close - self.target_r_multiple * risk
+            self._days_in_trade = 0
+            return Signal(Side.SHORT, close, stop, f"failed {self.channel_period}-day high, faded")
+
+        return None
+
+    def check_exit(self, close: float, side: Side) -> bool:
+        hit_target = (close >= self._target) if side == Side.LONG else (close <= self._target)
+        timed_out = self._days_in_trade >= self.max_hold_days
+        if hit_target or timed_out:
+            self._target = None
+            return True
+        return False

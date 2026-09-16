@@ -11,10 +11,11 @@ accredited financial specialist before risking real capital. Backtest and
 paper-trade thoroughly before ever running this live. You are solely
 responsible for any trades it places.
 
-## Daily-bar strategies (a second family, four mechanisms so far)
+## Daily-bar strategies (a second family, six mechanisms so far)
 
 `backtest_daily.py` backtests daily-bar strategies against years of data
-instead of intraday's 60-day cap, via `--strategy {donchian,rsi2,threebar,squeeze}`:
+instead of intraday's 60-day cap, via
+`--strategy {donchian,rsi2,threebar,squeeze,volume,turtlesoup}`:
 
 ```
 python backtest_daily.py --strategy donchian --symbol '^NSEI' --period 10y --walk-forward
@@ -22,6 +23,7 @@ python backtest_daily.py --strategy rsi2 --symbol RELIANCE.NS --period 10y --wal
 python backtest_daily.py --strategy threebar --symbol SBIN.NS --period 10y --walk-forward --commission-per-trade 20
 python backtest_daily.py --strategy squeeze --symbol INFY.NS --period 10y --walk-forward --commission-per-trade 20
 python backtest_daily.py --strategy volume --symbol GC=F --period 10y --walk-forward --commission-per-trade 20
+python backtest_daily.py --strategy turtlesoup --symbol AXISBANK.NS --period 10y --walk-forward --commission-per-trade 20
 ```
 
 **`donchian`** — the "Turtle Trading" entry rule (N-day high/low channel
@@ -102,6 +104,20 @@ doesn't rescue it**, though: unlike the 3-bar breakout or Squeeze, raising
 risk-per-trade just drawdown-halts the run instead of scaling the return,
 leaving `GC=F` stuck at ~1.30%/year — real but too thin, the same verdict
 as RSI-2. See CLAUDE.md's "Sixteenth" section for the full breakdown.
+
+**`turtlesoup`** — Linda Raschke's "Turtle Soup" failed-breakout fade: the
+exact counter-trend inverse of `donchian`'s own entry trigger (buy a failed
+new N-day low, sell a failed new N-day high, once price closes back inside
+the prior range). Screened on the same 12-instrument set: 3/12 passed
+walk-forward (`^NSEI`, `ITC.NS`, `AXISBANK.NS`) — 25%, chance-level again.
+`AXISBANK.NS` is clean on quarter-split (all 4 quarters positive) and has
+the smoothest single-survivor perturbation sweep in the whole project (10
+tested parameter values, all positive on both halves, no cliffs) —
+interesting since the same stock failed SuperTrend's own perturbation
+sweep on a single-point-fit cliff. Sizing helps up to 1% risk (1.71%/year,
+1.1% drawdown) then drawdown-halts at 2%+ — thin, same bucket as
+SuperTrend's `CL=F` and volume's `GC=F`, not confirmed beyond one
+instrument. See CLAUDE.md's "Twentieth" section for the full breakdown.
 
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
