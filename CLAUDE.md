@@ -1385,3 +1385,58 @@ sweep one instrument at a time. A genuinely different construction (not
 another instrument swap on an existing one) is the next useful step if
 continuing this project, per the same "no further instruments remain"
 conclusion the Donchian FX/MCX extension reached earlier.
+
+## Nineteenth: gold/silver ratio mean reversion — no gross edge at all, not even a cost-drag story
+
+A genuinely different construction per the Eighteenth entry's own
+conclusion, not another instrument swap on an existing mechanism: the
+gold/silver ratio, a real, widely-followed commodity pairs trade (unlike
+the equity pairs trading already killed on magnitude in the Fifth entry).
+Premise: gold and silver are economically linked (both precious/industrial
+hedges), so their PRICE RATIO should mean-revert even while either metal
+trends on its own — and both legs (`GC=F`, `SI=F`) have independently shown
+a real, sizing-responsive edge before in this project (IBS's gold survivor,
+SuperTrend's oil survivor), making the pair worth testing beyond each leg
+alone.
+
+Implemented as `probe_gold_silver_ratio.py`, standalone (same reasoning as
+every other probe here — no natural fit for `daily_strategy.py`'s
+single-instrument `check_entry(close)` interface). Method: `ratio =
+gold_close / silver_close`, z-scored over a rolling window (mean/stdev of
+the ratio itself — no OLS hedge-ratio regression needed since the ratio IS
+the spread, unlike the equity pairs trade's two-stock hedge fit); \|z\| >
+`entry_z` arms a trade (short gold/long silver if the ratio's too high,
+long gold/short silver if too low), exits at \|z\| < `exit_z` or a
+`max_hold_days` timeout. Equal notional both legs (not hedge-ratio-
+weighted) — matches how this specific ratio is actually traded in
+practice, not an equity-pairs-style regression fit.
+
+**Result: 0/18 parameter configs passed** (`window` in {20, 30, 40, 60, 90,
+120} x `entry_z` in {1.5, 2.0, 2.5}, all walk-forward both-halves-positive
+screens) — every single cell negative on BOTH halves, no sign flips at all
+(the cleanest possible negative — not even the "looks good on one half"
+pattern that at least suggests a signal worth investigating further).
+
+**The failure mode is different from, and more clean-cut than, every
+prior cost-driven failure in this file** (SI=F's silver scalping, the
+overnight-drift trade): those had a real, sometimes large, GROSS edge that
+transaction costs wiped out. Here the gross P&L itself is already
+negligible and mixed-sign across every config (e.g. `window=60,
+entry_z=2.0`: gross -200/+137 across the two halves) — commissions turn a
+roughly-zero gross result slightly negative, but there was no real gross
+edge being masked in the first place. The gold/silver ratio just doesn't
+move far enough, or predictably enough, for this mean-reversion
+construction to find anything, at any of the 18 tested parameter
+combinations.
+
+**Net verdict**: nineteenth mechanism, and the least ambiguous failure of
+the whole project — no cliff to investigate, no single surviving instrument
+to chase, no cost-drag story to try to fix with lower frequency, just a
+flat zero-edge result across the entire tested parameter grid. Both legs
+individually showing a thin-but-real edge before (gold via IBS, oil via
+SuperTrend) didn't imply their RATIO would too — confirms these are
+correlated but not so tightly co-integrated that a simple ratio z-score
+finds a tradable mean-reversion pattern. Not investigated further (no
+perturbation of exit_z/max_hold_days/commission attempted, since gross
+P&L near zero everywhere means no config is close to a pass) — this
+result is clean enough not to need it.

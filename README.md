@@ -142,6 +142,14 @@ passed**, confirming `CL=F` doesn't generalize within its own instrument
 class and was the lucky draw its chance-level screen already implied might
 exist. Closed; see CLAUDE.md's "Seventeenth"/"Eighteenth" entries.
 
+`probe_gold_silver_ratio.py` (gold/silver ratio mean reversion — a real,
+widely-followed commodity pairs trade, distinct from the equity pairs
+trading already tried) found **0/18 parameter configs** passing
+walk-forward, and unlike every prior cost-driven failure in this project
+(silver scalping, overnight-drift), the gross P&L itself is near zero
+across the whole grid — no real edge being masked by costs, just a flat
+result. See CLAUDE.md's "Nineteenth" entry.
+
 ### Options premium selling (weekly Nifty iron condor) — real edge, wrong capital tier, and now real-data validated
 
 Not a daily-bar or intraday-candle strategy, so it doesn't fit either
