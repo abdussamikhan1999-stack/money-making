@@ -1262,3 +1262,94 @@ together the way RSI-2's did, so there's no size-based lever to pull.
 Left as `--strategy volume` in the tested architecture since the code
 (indicators and strategy) is reusable and correctly tested, same treatment
 as Squeeze, even though it doesn't clear the bar to recommend trading it.
+
+## Seventeenth: SuperTrend (ATR ratchet-band trend-following) — one instrument clears every check, but it's a single survivor from a chance-level sweep
+
+Sourced from real open-source strategy CODE again (same standard as
+Squeeze/volume): `Nikhil-Adithyan/Algorithmic-Trading-with-SuperTrend-
+Indicator-in-Python` on GitHub, one of the most widely-forked/cited
+SuperTrend implementations, referenced across many algotrading writeups.
+Genuinely different construction from `DonchianBreakoutStrategy` (this
+project's other trend-follower): Donchian's channel is a FIXED N-day
+high/low; SuperTrend's band is a sticky RATCHET that only ever moves in
+the trend's favor until price actually crosses it — a smoother trailing
+stop rather than a hard rolling channel.
+
+Implemented as `probe_supertrend.py`, standalone rather than ported into
+`daily_strategy.py`'s architecture: the shared `check_entry(close)`
+interface only receives today's close, but SuperTrend's own band for day i
+is a function of day i's own high/low (that's how the indicator is
+actually defined and traded) — the same shape-mismatch reasoning already
+applied to IBS, gap-fill, momentum rotation, and pairs trading. Two
+adaptations from the source, both interpretation decisions:
+- **Plain/unsmoothed ATR** instead of the source's EWMA-smoothed one
+  (`tr.ewm(lookback).mean()`) — reuses the same simple rolling-average ATR
+  every other ATR-based strategy in this project already uses, rather than
+  adding a second smoothing method. The mechanism is the ratchet/flip band
+  structure, not the exact ATR smoothing.
+- **Bootstrap matches the reference's own actual behavior** (defaults to
+  downtrend on the first valid bar) rather than a "which side is price
+  already on" heuristic — that heuristic turned out to be a near-always-
+  true tautology on the very first bar and silently forced every series to
+  bootstrap "uptrend" regardless of real direction. Caught by a synthetic
+  all-down-days sanity check (not a pytest file — this project's probe
+  scripts don't get one, per existing convention) before trusting any real
+  backtest; worth remembering for any future incremental-state indicator
+  ported from a vectorized pandas reference.
+
+Exit is the trend flip itself (no separate exit rule needed, unlike RSI-2/
+Squeeze/IBS/volume) plus a `max_hold_days` safety cap; the entry's
+position-sizing stop is the active band value at entry time, the same
+structural-stop role Donchian's own channel plays.
+
+**Screening result: 4/12 passed walk-forward (both halves positive, no
+drawdown-halt)** — `HDFCBANK.NS`, `AXISBANK.NS`, `WIPRO.NS`, `CL=F`. A 33%
+hit rate, in the same chance-level band this project has repeatedly
+treated as inconclusive on its own (sector sweep 18%, Squeeze 25%, volume
+30%).
+
+**Quarter-split and perturbation eliminate three of the four**:
+- `HDFCBANK.NS`: 2 of 4 quarters negative, and every quarter's magnitude is
+  negligible either way (-0.08% to 0.54%/yr) — weak on both counts.
+- `WIPRO.NS`: the now-familiar recent-quarter-decay signature — Q4
+  (2024-2026) is **negative** (-0.96%/yr) despite 2 of the 3 prior quarters
+  being strongly positive.
+- `AXISBANK.NS`: quarter-split actually looks fine (3/4 positive, including
+  the most recent), but **`st_period` perturbation fails hard** — only the
+  exact default (10) has both walk-forward halves positive; 7, 14, and 20
+  all either lose outright or sign-flip between halves. This is the same
+  "peaks suspiciously close to the exact default" single-point-fit
+  signature this project has flagged as disqualifying before (Squeeze's
+  `length` sweep) — not real robustness.
+- `CL=F` (oil) is the one clean survivor: **quarter-split is all-positive**
+  (+0.30%, +0.81%, +0.67%, +0.97%/yr, Q4 the strongest — no decay), and
+  **perturbation is smooth on both parameters** (`st_period` 7/10/14 all
+  positive both halves, only the wide 20 goes negative on both — a soft
+  edge, not a cliff; `multiplier` 2.5 through 4.0 all positive both halves,
+  only the tight 2.0 fails).
+
+**Sizing genuinely helps on `CL=F`, the same property the 3-bar breakout
+and Squeeze have and RSI-2/volume-CMF-OBV don't**: 0.5% risk-per-trade
+gives 0.89%/year (1.9% max drawdown); 1% gives 1.87%/year (3.8% DD); 2%
+gives **3.78%/year at 7.4% DD** — a clean roughly-linear scaling, not
+dilution. 3% breaks it (drawdown-halted, negative) — 2% is the safe
+ceiling here, not a floor to push past, the same shape as every other
+"sizing helps" candidate in this project.
+
+**Net verdict**: seventeenth mechanism, and by the numbers on `CL=F`
+specifically — quarter-split, perturbation, AND sizing all behaving the
+way a genuine, tradable edge should — this is comparable in quality to the
+best individual results in this project (RSI-2, 3-bar breakout). But the
+context matters: it is **one surviving instrument out of twelve, from an
+initial screen already at the chance-level hit rate** (33%), with the
+other three "passers" eliminated by the exact checks (quarter-split,
+perturbation) that are supposed to separate real edges from noise. The
+same conclusion this project reached for IBS's lone gold survivor in the
+Thirteenth entry applies again here: a single instrument's internals
+looking clean is not strong independent confirmation when it emerged from
+a sweep whose overall hit rate doesn't clear the noise floor. Worth
+retesting with more Kite-tradable commodities/FX pairs specifically (the
+instrument class `CL=F` belongs to) before calling this "found" — flagged
+for a future session rather than ported into the tested `daily_strategy.py`
+architecture yet, same treatment IBS and gap-fill received while still
+unconfirmed.

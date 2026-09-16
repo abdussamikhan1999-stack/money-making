@@ -128,6 +128,17 @@ project on raw robustness, but real market pricing shows a much thinner
 edge than the earlier synthetic backtest implied, and it's separately
 blocked by a capital-tier problem regardless of pricing method.
 
+`probe_supertrend.py` (SuperTrend — a sticky ATR ratchet-band trend
+follower, reproducing a widely-cited open-source implementation) found
+4/12 instruments passing walk-forward, a chance-level 33% hit rate; three
+of the four fail quarter-split or perturbation (one, `AXISBANK.NS`, only
+works at the exact default parameter — a single-point-fit red flag). The
+one clean survivor, `CL=F` (oil), clears quarter-split, perturbation, AND
+sizing (2% risk reaches 3.78%/year at 7.4% drawdown, genuine scaling, not
+dilution) — comparable in quality to this project's best results, but
+still just one instrument out of a chance-level sweep. See CLAUDE.md's
+"Seventeenth" entry.
+
 ### Options premium selling (weekly Nifty iron condor) — real edge, wrong capital tier, and now real-data validated
 
 Not a daily-bar or intraday-candle strategy, so it doesn't fit either
