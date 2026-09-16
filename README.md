@@ -221,6 +221,21 @@ independent mechanism to hit this exact pattern in this exact recent
 window, which is itself the more interesting finding than any one
 instance. See CLAUDE.md's "Twenty-fourth" entry.
 
+`probe_pead.py` (Post-Earnings Announcement Drift — a real academic
+anomaly, event-driven rather than a continuous technical signal: buy a
+stock that beat earnings estimates and hold for weeks, short a miss)
+passed a 12-config walk-forward grid at every tested value — the
+strongest aggregate screen since options-selling — and survives quarter-
+split with no recent-quarter decay. But per-symbol breakdown shows it's
+concentrated in 3 of 20 stocks (`TATASTEEL.NS`/`SUNPHARMA.NS`/`ONGC.NS`,
+a 15% hit rate at/below this project's own chance-level threshold) —
+excluding just those 3 flips the whole result negative. A real
+capital-deployment bug was also caught and fixed along the way (the first
+version allowed 130% of capital "deployed" simultaneously during
+earnings season clustering; rewritten to properly skip signals rather
+than over-allocate). Flagged, not found — same treatment as IBS's/
+SuperTrend's lone survivors. See CLAUDE.md's "Thirtieth" entry.
+
 ### Options premium selling (weekly Nifty iron condor) — real edge, wrong capital tier, and now real-data validated
 
 Not a daily-bar or intraday-candle strategy, so it doesn't fit either

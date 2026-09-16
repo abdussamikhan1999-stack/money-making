@@ -2120,3 +2120,84 @@ project: `https://api.kite.trade/instruments` is a real, current, freely
 fetchable source of truth for WHICH contracts exist and their tick
 size/expiry/segment — genuinely useful, and something this project didn't
 know was available without authentication until this entry.
+
+## Thirtieth: Post-Earnings Announcement Drift (PEAD) — the strongest-looking aggregate screen since options-selling, but concentrated in a chance-level 3/20 subset once checked
+
+Per the user's specific request to keep testing NSE EQUITY strategies
+(sidesteps the whole capital-tier wall just closed out — Zerodha equity
+delivery is share-by-share, no fixed-lot problem). A real,
+decades-documented academic anomaly (Bernard & Thomas, 1989, replicated
+across many markets) and genuinely different in KIND from everything else
+in this project: EVENT-DRIVEN (a specific earnings date and surprise
+magnitude matter), not a continuous technical signal computed from price
+alone. Finding: stocks that beat earnings estimates keep drifting UP for
+weeks afterward (the market underreacts to the surprise on the day
+itself); misses keep drifting down.
+
+Data: yfinance's `Ticker.earnings_dates` gives real per-company quarterly
+EPS estimate/actual/surprise% — verified genuinely different across
+`RELIANCE.NS`/`TCS.NS`/`INFY.NS`/`HDFCBANK.NS` (not generic placeholder
+data), 479 real events across a 20-stock universe over ~6 years. Known
+data caveat: dates are reported in a US Eastern offset rather than IST, a
+real yfinance imprecision partly absorbed by reacting on the next trading
+day rather than the announcement day itself (same no-lookahead convention
+as every other strategy here).
+
+Implemented as `probe_pead.py`: enter LONG (beat) / SHORT (miss) when
+`|surprise%| >= surprise_threshold`, at the close of the first trading
+day on/after the earnings date, hold a FIXED `hold_days` (PEAD is
+measured as drift over a period in the literature, not a technical exit
+condition). **A real methodological bug was caught and fixed before
+trusting any result**: the first implementation sized each new signal as
+a fixed % of CURRENT capital with no cap on concurrent positions — since
+earnings cluster within each quarter's reporting season, checking showed
+up to 13 positions open simultaneously at the strategy's own defaults,
+130% of capital deployed at once, not a real account. Rewritten to
+process entries/exits in true chronological order (exits before entries
+on the same day, freeing capital first) and SKIP a signal outright if it
+would exceed 100% capital deployed, rather than silently over-allocating.
+
+**Initial screen at conservative defaults (5% surprise threshold, 20-day
+hold) was negative and inconsistent** — the same shape as most of this
+file's failures. But perturbation revealed a real, coherent pattern
+matching the literature itself (PEAD is specifically strongest for LARGE
+surprises over LONGER windows, not small ones over short ones): raising
+the threshold and lengthening the hold both pushed toward consistency,
+and **a 4x3 grid (`surprise_threshold` 10/15/20/25 x `hold_days`
+40/60/80) passed BOTH walk-forward halves at all 12 tested
+configurations** — the strongest aggregate screening result in this
+project since options-selling.
+
+**Deeper checks found the real story, at the representative
+`surprise_threshold=15`/`hold_days=60` config**: even under the
+corrected capital-constrained simulation, walk-forward is genuinely
+consistent (in-sample +1.94%/yr, out-of-sample +2.63%/yr, 113 trades, 52%
+win rate) and quarter-split shows **no recent-quarter decay** — all 4 real
+quarters positive (+5,115 / +570 / +5,835 / +2,124), matching this
+project's established "single-instrument mechanisms have been Q4-favorable"
+pattern rather than the broad-factor decay pattern. But per-symbol
+breakdown shows the result is **concentrated in 3 of 20 stocks**
+(`TATASTEEL.NS`, `SUNPHARMA.NS`, `ONGC.NS` — win rates 64%/90%/83% across
+14/10/12 trades each, genuinely distributed across many trades within
+each stock, not single lucky outliers) — **excluding just those 3 stocks
+flips the entire aggregate result negative** (-12,394 net, 41% win rate
+on the remaining 17 stocks' 83 trades). A 3/20 (15%) "real" hit rate is at
+or below this file's own established chance-level disqualifying threshold
+(sector sweep's 18%, Squeeze's 25%).
+
+**Net verdict**: thirtieth mechanism, and the clearest illustration yet in
+this project of why a positive AGGREGATE pooled-instrument screen isn't
+sufficient on its own — a result can pass walk-forward, quarter-split, AND
+a 12-config perturbation sweep simultaneously while still being driven by
+a chance-level subset of the instruments in the pool, something none of
+those three checks individually catch (they all operate on the pooled
+total, not per-instrument). Per this project's own established treatment
+of similar findings (IBS's lone `GC=F` survivor, SuperTrend's lone `CL=F`
+survivor before its own retest failed), the 3-stock PEAD pattern is
+flagged, not claimed as found — real internals (broadly distributed win
+rates, no single-trade dependency, no Q4 decay), but 3 survivors from a
+20-stock sweep isn't independently confirmed. The capital-constrained
+sizing fix is a genuine, reusable methodological improvement worth
+keeping regardless of PEAD's own fate — any future event-driven or
+multi-position strategy in this project should check concurrent capital
+deployment the same way, not just per-trade sizing in isolation.
