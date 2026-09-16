@@ -1899,3 +1899,65 @@ as unvalidated, not reported as a finding. The right next step, if
 continuing this line, is a lot-size-correct re-verification of the
 project's existing commodity "survivors" (`CL=F` SuperTrend, `GC=F`
 volume/IBS) before adding anything new on top of them.
+
+## Twenty-sixth: doing the lot-size check the Twenty-fifth entry recommended — gold's standard contract and oil (even Mini) are blocked, but gold's smallest denomination might not be
+
+Direct follow-up: checked whether `CL=F` (SuperTrend's oil survivor) and
+`GC=F` (IBS's and volume's gold survivors) correspond to a sensible number
+of real MCX contract lots, using each instrument's own mean 14-day ATR and
+IBS's `stop_atr_multiple=3.0` convention as a representative stop size.
+
+**A methodological point that mattered more than expected**: this
+calculation has to apply a REAL USD/INR conversion (`GC=F`/`CL=F` are
+USD-denominated global prices; MCX contracts settle in rupees), NOT this
+project's existing "treat the USD figure as if it were rupees" convention
+used throughout every prior GC=F/CL=F backtest (itself an already-flagged,
+deliberate simplification — see the SuperTrend entry's own docstring). The
+two give answers roughly 88x apart (at an assumed USDINR≈88, itself an
+approximation needing live verification) — skipping the real conversion
+would have been badly misleading here, in the optimistic direction.
+
+**Results** (mean ATR: gold $34.49/oz, oil $2.49/bbl; stop = 3×ATR;
+lot sizes are recalled/assumed figures needing verification against
+current live Kite/MCX contract specs, not independently confirmed):
+
+| Contract | Risk/lot | Capital needed @0.5% | @1% | @2% |
+|---|---|---|---|---|
+| Gold 1kg (standard) | ₹292,752 | ₹58,550,478 | ₹29,275,239 | ₹14,637,620 |
+| Gold 100g (Mini) | ₹29,275 | ₹5,855,048 | ₹2,927,524 | ₹1,463,762 |
+| Gold 8g (Guinea) | ₹2,342 | ₹468,404 | ₹234,202 | ₹117,101 |
+| **Gold 1g (Petal)** | **₹293** | **₹58,550** | **₹29,275** | **₹14,638** |
+| Oil 100bbl (standard) | ₹65,630 | ₹13,126,080 | ₹6,563,040 | ₹3,281,520 |
+| Oil 10bbl (Mini) | ₹6,563 | ₹1,312,608 | ₹656,304 | ₹328,152 |
+
+**Gold's standard and Mini contracts, and BOTH oil contract sizes (even
+Mini), are blocked at this project's target capital** — the same
+capital-tier wall options-selling and FX hit, at similar or larger
+magnitude. `CL=F`'s SuperTrend survivor specifically needs ₹328,152-
+1,312,608 even at the smallest real crude contract — not accessible at
+this project's stated ₹30,000-100,000 target under any tested risk
+setting.
+
+**Gold's smallest denomination (Petal, 1g) is the one exception**: at
+₹58,550/29,275/14,638 capital for 0.5%/1%/2% risk-per-trade respectively,
+this sits comfortably inside this project's target range — meaning IBS's
+and volume's `GC=F` survivors are NOT automatically disqualified by the
+capital-tier wall, unlike everything else checked in this entry and the
+prior one, PROVIDED Gold Petal contracts are actually listed, liquid, and
+tradable via Kite for the exact instrument these strategies traded (none
+of that is verified here — flagged explicitly, not assumed).
+
+**Net verdict**: twenty-sixth entry, and a genuinely mixed, more useful
+result than a blanket wall — most of this project's commodity/FX
+"survivors" (oil in both sizes, gold's larger contracts) join options and
+FX behind the same capital-tier wall once real currency conversion is
+applied properly. But gold specifically has an escape hatch the others
+don't: its smallest MCX denomination is granular enough that this
+project's low-capital framing might still apply to IBS's/volume's `GC=F`
+findings — the one place in this whole capital-tier investigation where
+the answer isn't simply "blocked." Confirming this needs a live check of
+Kite's actual currently-listed MCX gold contracts (which sizes exist,
+liquidity, whether `IBS`/`CMF+OBV` position sizes round to a sane number
+of Petal lots) — the concrete next step if this line is continued, and the
+only remaining open thread from the capital-tier question this project has
+now applied to every real "survivor" found so far.

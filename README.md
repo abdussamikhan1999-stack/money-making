@@ -445,7 +445,15 @@ cross-check it.
   striking-looking IBS-on-FX result that fell apart once checked: one real
   USDINR lot needs ~₹299,000 of capital to size safely within a 0.5%
   risk-per-trade standard, the same capital-tier wall that closed out this
-  project's options-selling line. This means every prior commodity/FX
-  "survivor" (`CL=F` SuperTrend, `GC=F` volume/IBS) is unverified against
-  real lot sizes and should not be trusted at face value until checked —
-  see CLAUDE.md's "Twenty-fifth" entry.
+  project's options-selling line. **Follow-up check on the actual gold/oil
+  survivors** (applying a real USD/INR conversion, not this project's
+  existing $-as-₹ simplification for GC=F/CL=F): oil is blocked at every
+  real MCX contract size (₹328k-1.3M needed even at the smallest Mini
+  contract), and gold's standard/Mini contracts are wildly infeasible
+  (₹1.4M-58M) — but gold's SMALLEST denomination (Petal, 1g) needs only
+  ₹14,638-58,550 depending on risk-per-trade, comfortably inside this
+  project's target range, IF that contract is actually listed/liquid/
+  tradable via Kite (not verified here). See CLAUDE.md's
+  "Twenty-fifth"/"Twenty-sixth" entries — gold's IBS/volume survivors are
+  the one open thread in this whole capital-tier question that isn't
+  simply "blocked."
