@@ -901,12 +901,27 @@ class BollingerBandsStrategy:
     (crossing back through the SMA) OR `max_hold_days` as this file's
     now-standard bounded-holding time-stop, since a genuinely trending
     (not reverting) move could otherwise never cross back.
-    """
+
+    Optional trend-strength REGIME filter (`trend_filter_lookback`, 0 =
+    disabled, the default - no behavior change): only take a band-touch
+    entry when the middle band itself hasn't moved much over the last
+    `trend_filter_lookback` days (`|sma_now - sma_earlier| <=
+    trend_filter_atr_mult x ATR`) - i.e. skip mean-reversion trades while
+    the market is genuinely trending, not range-bound. This is a
+    different KIND of addition from the two combinations this file has
+    already found HURT (the Eleventh entry's exit-side ATR overlay on
+    RSI-2; the Twenty-second entry's three-way AND-confirmed entry
+    signal): it's a single context/regime gate on ONE timing trigger, the
+    exact shape ConnorsRSI2Strategy's own trend filter already uses (and
+    which made RSI-2 this project's most robust single result) - not a
+    second independent directional signal stacked on top."""
     period: int = 20
     num_std: float = 2.0
     stop_atr_multiple: float = 2.0
     atr_period: int = 14
     max_hold_days: int = 10
+    trend_filter_lookback: int = 0  # 0 = disabled
+    trend_filter_atr_mult: float = 1.5
 
     _highs: list[float] = field(default_factory=list, init=False)
     _lows: list[float] = field(default_factory=list, init=False)
@@ -946,10 +961,20 @@ class BollingerBandsStrategy:
                   zip(self._highs[-n:], self._lows[-n:], self._closes[-n:])]
         return average_true_range(window, period=self.atr_period)
 
+    def _is_range_bound(self, middle: float, atr: float) -> bool:
+        if self.trend_filter_lookback <= 0:
+            return True
+        earlier = sma(self._closes[:-self.trend_filter_lookback], self.period)
+        if earlier is None:
+            return False  # not enough history to judge the regime yet - stay flat
+        return abs(middle - earlier) <= self.trend_filter_atr_mult * atr
+
     def check_entry(self, close: float) -> Signal | None:
         lower, middle, upper = self._bands()
         atr = self.current_atr()
         if lower is None or atr is None or atr <= 0:
+            return None
+        if not self._is_range_bound(middle, atr):
             return None
         if close < lower:
             self._in_trade = True

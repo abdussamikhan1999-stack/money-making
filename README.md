@@ -139,8 +139,15 @@ middle band. Screened on the same 12-instrument set: **0/12 passed** — the
 worst hit rate of any strategy in this project (below MACD's 16.7% and
 the sector sweep's 18% floor), with two instruments (`RELIANCE.NS`,
 `TCS.NS`) drawdown-halting outright. No perturbation needed given how
-uniform the failure is. See CLAUDE.md's "Twenty-seventh" section for the
-full breakdown.
+uniform the failure is. **A follow-up regime filter** (`--bb-trend-
+filter-lookback`/`--bb-trend-filter-atr-mult`, skip entries while the
+market is trending rather than range-bound — the same shape as RSI-2's
+own trend filter, which made RSI-2 this project's most robust result)
+didn't rescue it either — still 0/12 at the default setting, and 0/5 on a
+subset across 4 tightness values. RSI-2's filter works because its
+underlying signal is real; Bollinger's band-touch entry doesn't appear to
+be, filtered or not. See CLAUDE.md's "Twenty-seventh"/"Twenty-eighth"
+sections for the full breakdown.
 
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 

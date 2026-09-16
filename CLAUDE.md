@@ -2005,3 +2005,53 @@ doesn't — this result is a second independent data point suggesting
 naive band-touch mean reversion specifically needs more than this project
 has found to make it work on these instruments, not just this one
 construction.
+
+## Twenty-eighth: does a trend-strength REGIME filter rescue Bollinger Bands, the way it made RSI-2 this project's most robust result? No
+
+Direct follow-up on the Twenty-seventh entry's 0/12 washout, testing a
+specific, well-motivated hypothesis rather than moving straight to a new
+instrument or mechanism: RSI-2 (Third entry) is this project's most
+theoretically coherent, robust result specifically BECAUSE it pairs a
+mean-reversion trigger with a trend/regime filter ("only buy dips ABOVE
+the long-term trend"). Bollinger Bands has no such filter at all — maybe
+adding one rescues it the same way. Important distinction from the two
+combinations this project has already found HURT (Eleventh's exit-side
+ATR overlay, Twenty-second's three-way AND-confirmed entry): a single
+regime GATE on one timing trigger is structurally what RSI-2 already does
+successfully, not a second independent directional signal stacked on top.
+
+Added `trend_filter_lookback`/`trend_filter_atr_mult` to
+`BollingerBandsStrategy` (0 = disabled, no behavior change to the
+Twenty-seventh entry's own tests) — only takes a band-touch entry when the
+middle band itself hasn't drifted more than `trend_filter_atr_mult` x ATR
+over the last `trend_filter_lookback` days, i.e. skip mean-reversion
+trades while the market is genuinely trending rather than range-bound. 4
+new unit tests (filter disabled by default, allows entry when range-bound,
+blocks when trending, stays flat when there's not enough history to judge
+the regime yet); full suite 137/137 green.
+
+**Result: still 0/12 at the default filter tightness** (`--bb-trend-
+filter-lookback 20 --bb-trend-filter-atr-mult 1.5`) — same outcome as the
+unfiltered Twenty-seventh entry, though with a real secondary benefit:
+zero drawdown-halts this time (the unfiltered version halted 2 of 12,
+`RELIANCE.NS`/`TCS.NS`), so the filter is doing SOMETHING (avoiding the
+worst whipsaw periods), just not enough to create a net edge. **Checked
+4 tightness settings (0.5, 1.0, 1.5, 2.5) on a 5-instrument subset —
+0/5 passed at every single value tested**, not a default-parameter
+artifact.
+
+**Net verdict**: twenty-eighth entry, and a clean refutation of a
+specific, well-reasoned hypothesis rather than an unmotivated parameter
+sweep. RSI-2's trend filter works because RSI-2's own entry mechanism
+(2-period RSI extremes) is a REAL, robust signal that a regime mismatch
+was actively hurting; Bollinger Bands' band-touch entry doesn't appear to
+be a real signal on these instruments at all, filtered or not — there's
+no working core mechanism for a regime gate to protect. This is a useful
+general lesson beyond this one strategy: a context/regime filter can only
+rescue a technique that has a real edge underneath being masked by
+regime-inappropriate trades; it doesn't manufacture an edge that wasn't
+there. Worth remembering before adding a filter to any future weak
+candidate — check whether the RAW signal shows partial promise (a few
+genuinely clean instruments, a coherent theoretical story) before assuming
+a regime gate will help, the way it demonstrably did for RSI-2 and
+demonstrably didn't for Bollinger Bands.

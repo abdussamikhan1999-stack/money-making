@@ -629,3 +629,30 @@ def test_reset_clears_bollinger_state():
     s.check_entry(close=5)
     s.reset()
     assert s.check_entry(close=5) is None  # window emptied, needs refilling
+
+
+def test_trend_filter_disabled_by_default_fires_normally():
+    s = _build_bollinger()  # trend_filter_lookback=0 (default)
+    assert s.check_entry(close=5) is not None
+
+
+def test_trend_filter_allows_entry_when_range_bound():
+    s = BollingerBandsStrategy(period=4, atr_period=3, trend_filter_lookback=4, trend_filter_atr_mult=1.5)
+    for c in (8, 12, 8, 12, 8, 12, 8, 12):  # middle band unchanged over the lookback - range-bound
+        s.push(bar(c + 1, c - 1, c))
+    sig = s.check_entry(close=5)  # below lower band (6)
+    assert sig is not None
+
+
+def test_trend_filter_blocks_entry_when_trending():
+    s = BollingerBandsStrategy(period=4, atr_period=3, trend_filter_lookback=4, trend_filter_atr_mult=0.5)
+    for c in (0, 4, 0, 4, 8, 12, 8, 12):  # middle band moved from 2 to 10 - clearly trending
+        s.push(bar(c + 1, c - 1, c))
+    assert s.check_entry(close=5) is None  # would fire on bands alone, but the filter blocks it
+
+
+def test_trend_filter_stays_flat_when_not_enough_history_to_judge_regime():
+    s = BollingerBandsStrategy(period=4, atr_period=3, trend_filter_lookback=4, trend_filter_atr_mult=1.5)
+    for c in (8, 12, 8, 12):  # enough for the bands themselves, not the earlier-window comparison
+        s.push(bar(c + 1, c - 1, c))
+    assert s.check_entry(close=5) is None

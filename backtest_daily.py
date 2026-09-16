@@ -49,7 +49,8 @@ STRATEGIES = {
     ),
     "bollinger": lambda args: BollingerBandsStrategy(
         period=args.bb_period, num_std=args.bb_num_std, stop_atr_multiple=args.bb_stop_atr_multiple,
-        max_hold_days=args.bb_max_hold_days,
+        max_hold_days=args.bb_max_hold_days, trend_filter_lookback=args.bb_trend_filter_lookback,
+        trend_filter_atr_mult=args.bb_trend_filter_atr_mult,
     ),
 }
 
@@ -229,6 +230,11 @@ if __name__ == "__main__":
     parser.add_argument("--bb-num-std", type=float, default=2.0, help="[bollinger] band width in std devs")
     parser.add_argument("--bb-stop-atr-multiple", type=float, default=2.0, help="[bollinger] initial stop = N x ATR")
     parser.add_argument("--bb-max-hold-days", type=int, default=10, help="[bollinger] time-stop if never reverts")
+    parser.add_argument("--bb-trend-filter-lookback", type=int, default=0,
+                         help="[bollinger] 0=disabled; else skip entries while the middle band has moved "
+                              "more than --bb-trend-filter-atr-mult x ATR over this many days (regime gate)")
+    parser.add_argument("--bb-trend-filter-atr-mult", type=float, default=1.5,
+                         help="[bollinger] max middle-band drift (in ATRs) to still count as range-bound")
     args = parser.parse_args()
 
     daily = fetch_daily_yfinance(args.symbol, args.period)
