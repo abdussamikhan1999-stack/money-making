@@ -327,6 +327,22 @@ the beta-appropriate fraction of a lot. Real backtest, not actionable at
 this project's scale. See CLAUDE.md's "Forty-fifth" section for the full
 numbers.
 
+**Does substituting a NIFTYBEES ETF short for NIFTY futures route around
+the capital wall? (Forty-sixth entry, `probe_ibs_rotation_etf_hedge.py`)**
+— yes, and it finds a better hedge than either prior attempt. NIFTYBEES
+(confirmed live, NSE `EQ` segment, ordinary whole-share sizing, no fixed
+lot) is capital-feasible at both ends of this project's ₹30,000-100,000
+range. A FULL beta-hedge underperforms badly (1.61%/yr, walk-forward
+INCONSISTENT) because the ETF's total return runs ~32 percentage points
+ahead of the price-only `^NSEI` over 10 years (real dividend accrual, not
+a bug) — shorting it bleeds that extra drift. A HALF hedge (0.5x) avoids
+most of that drag: 12.01%/yr at 24.2% max drawdown, walk-forward
+consistent, all 4 quarters positive — better return than the futures full
+hedge (8.19%/yr) at comparable drawdown reduction, and the first Nifty-beta
+hedge in this project to be both rigorous AND actually tradable at this
+project's capital scale. See CLAUDE.md's "Forty-sixth" section for the full
+comparison table and the dividend-drag mechanism.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an

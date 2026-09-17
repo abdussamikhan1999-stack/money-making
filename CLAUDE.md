@@ -3455,3 +3455,99 @@ signal-quality reason: real edge, right construction, wrong capital tier.
 **The long-only construction (Thirty-eighth through Forty-first entries)
 remains this project's strongest, only currently-actionable finding.**
 No mechanism has yet cleared the bar to actually trade.
+
+## Forty-sixth: substituting a NIFTYBEES ETF short for NIFTY futures routes around the capital-tier wall — and finds a genuinely better result than either prior hedge attempt, at a HALF beta-hedge ratio
+
+Direct follow-up on the Forty-fifth entry's own close: that entry's NIFTY-
+futures beta hedge worked cleanly in backtest (drawdown 38.2%→25.5%,
+8.19%/yr, walk-forward consistent, all 4 quarters positive) but was
+blocked by the same capital-tier wall as every other Nifty derivative in
+this project — one 65-unit futures lot needs ~₹196,800 margin, 2-6.5x this
+project's ₹30,000-100,000 target capital. This entry substitutes the hedge
+INSTRUMENT, keeping the identical beta-sizing logic: `NIFTYBEES.NS`
+(Nippon India ETF Nifty 50 BEES), confirmed live via
+`https://api.kite.trade/instruments` — NSE, `EQ` segment, `lot_size=1`, an
+ordinary equity share rather than a fixed derivative lot. Unlike a futures
+lot, an ETF position can be sized to ANY whole-share quantity, so the
+hedge notional can match whatever capital actually allows.
+
+`probe_ibs_rotation_etf_hedge.py` reuses the Forty-fifth entry's exact
+beta-regression logic (`compute_beta` from `probe_ibs_rotation_hedged.py`,
+unchanged — beta=1.143, cross-checks identically since it's the same
+long-only strategy and NIFTY series) and the unmodified long-only stock
+picking (`rank_by_ibs`), adding a short `NIFTYBEES.NS` leg sized at
+`hedge_ratio x beta x capital`, rounded DOWN to whole shares (`math.floor`
+— the entire point of substituting the instrument). Same SLB/short-
+selling-not-modeled caveat the Forty-fourth/Forty-fifth entries already
+flagged for any month-long NSE cash-equity short applies here too, noted
+explicitly rather than assumed away.
+
+**Data check first, since an ETF is a real fund with its own listing
+history and drift, not a synthetic proxy**: `NIFTYBEES.NS` has 2,473 daily
+bars from 2016-09-19 through today, matching the 10y backtest window
+exactly (no truncation issue this time, unlike a risk this entry's own
+directive specifically flagged checking for). But it is NOT a pure 1:1
+price proxy for `^NSEI` — over the common window NIFTYBEES returned
++196.2% total vs. `^NSEI`'s +164.3%, a 31.9-percentage-point gap. This is
+a real, expected structural difference, not a data bug: `^NSEI` is a
+PRICE index (excludes dividends), while `NIFTYBEES` is a fund that
+actually holds the underlying 50 stocks and accrues their real dividend
+income into its NAV over time. **This matters directly for a SHORT
+hedge**: shorting the ETF means bleeding that extra dividend-driven
+appreciation on top of ordinary index moves, a drag a NIFTY futures short
+doesn't carry the same way.
+
+**Capital feasibility: this is the first Nifty-linked hedge in this
+project to clear the capital-tier wall outright.** At `NIFTYBEES.NS`'s
+live price (~₹265.84/share), a full beta-hedge at ₹30,000 capital needs
+128 whole shares (₹34,283 notional) — fully achievable; at ₹100,000
+capital, 429 shares. No fractional-lot problem anywhere in this project's
+target range, unlike every Nifty futures/options construction tried
+before it.
+
+**Backtest result confirms the dividend-drag prediction directly, and
+finds a genuinely better hedge ratio than either prior attempt**:
+
+| Construction | Full period | Max DD | Walk-forward | Quarters positive |
+|---|---|---|---|---|
+| Unhedged long-only (Thirty-ninth) | 22.12%/yr | 38.2% | consistent | 4/4 |
+| NIFTY-futures full hedge (Forty-fifth) | 8.19%/yr | 25.5% | consistent | 4/4 |
+| **NIFTYBEES full hedge (1.0x, this entry)** | **1.61%/yr** | 30.1% | **INCONSISTENT** (-0.81%/yr in-sample, +4.14%/yr out) | 2/4 (Q2 -3.43%, Q3 -0.76%) |
+| **NIFTYBEES half hedge (0.5x, this entry)** | **12.01%/yr** | **24.2%** | **consistent** (+11.93%/yr in-sample, +11.71%/yr out) | **4/4** (+13.14% / +10.47% / +8.46% / +14.90%/yr) |
+
+The FULL ETF hedge underperforms the futures full hedge badly (1.61%/yr
+vs. 8.19%/yr) and fails walk-forward/quarter-split outright — direct
+confirmation of the dividend-drag mechanism predicted above: over-hedging
+with an instrument that structurally drifts up faster than the raw index
+bleeds return on every month the short leg is open, and 10 years of that
+drag adds up to a lot more than the extra ~32pp gap alone would suggest
+once compounded monthly against a levered (beta=1.143) notional. The HALF
+hedge is a different, much better story: it keeps most of the drawdown
+reduction (24.2% vs. the futures full hedge's 25.5% — comparably good),
+returns MORE than the futures full hedge (12.01%/yr vs. 8.19%/yr), is
+walk-forward consistent, and is the first hedge construction in this
+project's history with all 4 quarters positive AND real capital
+feasibility at both ends of the target range simultaneously.
+
+**Net verdict**: forty-sixth entry, and — unlike the Forty-fourth entry's
+clean rejection — a genuinely positive, if unexpected, result: not "use
+more hedge for more safety" (the naive full-beta version this entry set
+out to test) but "a PARTIAL hedge, sized to route around the ETF's own
+dividend-drag drift, outperforms both the unhedged baseline's drawdown and
+the fully-hedged NIFTY-futures construction's return — and is the first
+Nifty-beta hedge in this project's history that's actually capital-
+feasible." The mechanism (ETF total-return drift vs. price-index-based
+beta sizing) is itself a reusable lesson: any future hedge or pairs
+construction using an ETF as an index proxy in this project should size
+against the ETF's OWN historical beta/volatility, not the underlying
+price index's, or deliberately under-hedge as done here. **Still not
+declared tradable** — the SLB/short-availability caveat remains unmodeled,
+and this is a hedge OVERLAY on the Thirty-eighth through Forty-first
+entries' long-only finding, not a new standalone strategy; the underlying
+survivorship-bias and forward-validation gaps already flagged for the
+base strategy still apply unchanged. **The long-only construction remains
+this project's primary, most rigorously corroborated finding** — this
+entry adds a real, capital-feasible, walk-forward-consistent risk-
+reduction option on top of it (half-hedge: keep ~54% of the return,
+cut drawdown by a third) rather than replacing it. No mechanism has yet
+cleared the bar to actually trade.
