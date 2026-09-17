@@ -158,7 +158,8 @@ def run(top_k=5, lookback=5, period="10y", capital=100_000.0, cost_pct=0.2, dp_c
               f"{qty} whole shares ({'FEASIBLE' if qty >= 1 else 'NOT FEASIBLE, price too high for this capital'})")
 
 
-def walk_forward(top_k=5, lookback=5, period="10y", capital=100_000.0, cost_pct=0.2, dp_charge=16.0):
+def walk_forward(top_k=5, lookback=5, period="10y", capital=100_000.0, cost_pct=0.2, dp_charge=16.0,
+                  hedge_ratio=1.0):
     series = build_wide_price_series(period)
     calendar_candles = fetch_calendar(period)
     etf_candles = fetch_etf_series(period)
@@ -169,16 +170,20 @@ def walk_forward(top_k=5, lookback=5, period="10y", capital=100_000.0, cost_pct=
     lo_rets = long_only_monthly_returns(rebalance_dates, series, top_k, lookback, cost_pct, dp_charge, capital)
     nifty_rets = nifty_monthly_returns(rebalance_dates, calendar_candles)
     beta = compute_beta(lo_rets, nifty_rets)
-    print(f"beta={beta:.3f}\n")
+    print(f"beta={beta:.3f}, hedge_ratio={hedge_ratio}\n")
 
     cutoff = len(rebalance_dates) // 2
+    halves = []
     for half_label, half_dates in [("In-sample  (first half)", rebalance_dates[:cutoff + 1]),
                                     ("Out-of-sample (2nd half)", rebalance_dates[cutoff:])]:
-        hedged = simulate_etf_hedged(half_dates, series, etf_candles, hedge_ratio=1.0, beta=beta, **kwargs)
+        hedged = simulate_etf_hedged(half_dates, series, etf_candles, hedge_ratio=hedge_ratio, beta=beta, **kwargs)
         _report(half_label, hedged, capital, years / 2)
+        halves.append(hedged)
+    return halves
 
 
-def quarter_split(top_k=5, lookback=5, period="10y", capital=100_000.0, cost_pct=0.2, dp_charge=16.0):
+def quarter_split(top_k=5, lookback=5, period="10y", capital=100_000.0, cost_pct=0.2, dp_charge=16.0,
+                   hedge_ratio=1.0):
     series = build_wide_price_series(period)
     calendar_candles = fetch_calendar(period)
     etf_candles = fetch_etf_series(period)
@@ -189,18 +194,63 @@ def quarter_split(top_k=5, lookback=5, period="10y", capital=100_000.0, cost_pct
     lo_rets = long_only_monthly_returns(rebalance_dates, series, top_k, lookback, cost_pct, dp_charge, capital)
     nifty_rets = nifty_monthly_returns(rebalance_dates, calendar_candles)
     beta = compute_beta(lo_rets, nifty_rets)
-    print(f"beta={beta:.3f}\n")
+    print(f"beta={beta:.3f}, hedge_ratio={hedge_ratio}\n")
 
     n = len(rebalance_dates)
     cuts = [0, n // 4, n // 2, 3 * n // 4, n - 1]
     results = []
     for i in range(4):
         chunk = rebalance_dates[cuts[i]:cuts[i + 1] + 1]
-        r = simulate_etf_hedged(chunk, series, etf_candles, hedge_ratio=1.0, beta=beta, **kwargs)
+        r = simulate_etf_hedged(chunk, series, etf_candles, hedge_ratio=hedge_ratio, beta=beta, **kwargs)
         results.append(r)
         _report(f"Q{i+1}", r, capital, years / 4)
     print(f"all 4 quarters positive: {all(r['total_net'] > 0 for r in results)}")
     return results
+
+
+def ratio_sweep(ratios, top_k=5, lookback=5, period="10y", capital=100_000.0, cost_pct=0.2, dp_charge=16.0):
+    """Forty-seventh entry: sweep the hedge ratio on a finer grid than the
+    Forty-sixth entry's single 0/0.5/1.0 test, checking 0.50 isn't a lucky
+    single point the way SuperTrend's st_period default was."""
+    series = build_wide_price_series(period)
+    calendar_candles = fetch_calendar(period)
+    etf_candles = fetch_etf_series(period)
+    rebalance_dates = month_end_dates(calendar_candles)
+    years = (rebalance_dates[-1] - rebalance_dates[0]).days / 365.25
+    kwargs = dict(top_k=top_k, lookback=lookback, capital=capital, cost_pct=cost_pct, dp_charge=dp_charge)
+
+    lo_rets = long_only_monthly_returns(rebalance_dates, series, top_k, lookback, cost_pct, dp_charge, capital)
+    nifty_rets = nifty_monthly_returns(rebalance_dates, calendar_candles)
+    beta = compute_beta(lo_rets, nifty_rets)
+    print(f"beta={beta:.3f}\n")
+    print(f"{'ratio':>6} {'return%/yr':>11} {'maxDD%':>8} {'WF halves (in/out)':>22} {'consistent':>11} {'quarters+':>10}")
+
+    n = len(rebalance_dates)
+    cuts = [0, n // 4, n // 2, 3 * n // 4, n - 1]
+    cutoff = n // 2
+    rows = []
+    for ratio in ratios:
+        full = simulate_etf_hedged(rebalance_dates, series, etf_candles, hedge_ratio=ratio, beta=beta, **kwargs)
+        ann = annualized_return_pct(full["final_capital"], capital, years)
+
+        in_s = simulate_etf_hedged(rebalance_dates[:cutoff + 1], series, etf_candles, hedge_ratio=ratio, beta=beta, **kwargs)
+        out_s = simulate_etf_hedged(rebalance_dates[cutoff:], series, etf_candles, hedge_ratio=ratio, beta=beta, **kwargs)
+        ann_in = annualized_return_pct(in_s["final_capital"], capital, years / 2)
+        ann_out = annualized_return_pct(out_s["final_capital"], capital, years / 2)
+        consistent = in_s["total_net"] > 0 and out_s["total_net"] > 0
+
+        quarters = []
+        for i in range(4):
+            chunk = rebalance_dates[cuts[i]:cuts[i + 1] + 1]
+            r = simulate_etf_hedged(chunk, series, etf_candles, hedge_ratio=ratio, beta=beta, **kwargs)
+            quarters.append(r["total_net"] > 0)
+        n_pos_q = sum(quarters)
+
+        print(f"{ratio:>6.3f} {ann:>10.2f}% {full['max_dd']:>7.1f}% "
+              f"{ann_in:>+8.2f}/{ann_out:>+8.2f}% {str(consistent):>11} {n_pos_q:>8}/4")
+        rows.append(dict(ratio=ratio, ann=ann, max_dd=full["max_dd"], ann_in=ann_in, ann_out=ann_out,
+                          consistent=consistent, n_pos_q=n_pos_q))
+    return rows
 
 
 if __name__ == "__main__":
@@ -213,14 +263,18 @@ if __name__ == "__main__":
     parser.add_argument("--dp-charge", type=float, default=16.0)
     parser.add_argument("--walk-forward", action="store_true")
     parser.add_argument("--quarter-split", action="store_true")
+    parser.add_argument("--hedge-ratio", type=float, default=1.0)
+    parser.add_argument("--ratio-sweep", action="store_true")
     args = parser.parse_args()
 
     kwargs = dict(top_k=args.top_k, lookback=args.lookback, capital=args.capital,
                   cost_pct=args.cost_pct, dp_charge=args.dp_charge, period=args.period)
 
-    if args.walk_forward:
-        walk_forward(**kwargs)
+    if args.ratio_sweep:
+        ratio_sweep([0.25, 0.375, 0.50, 0.625, 0.75], **kwargs)
+    elif args.walk_forward:
+        walk_forward(hedge_ratio=args.hedge_ratio, **kwargs)
     elif args.quarter_split:
-        quarter_split(**kwargs)
+        quarter_split(hedge_ratio=args.hedge_ratio, **kwargs)
     else:
         run(**kwargs)

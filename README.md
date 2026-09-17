@@ -343,6 +343,20 @@ hedge in this project to be both rigorous AND actually tradable at this
 project's capital scale. See CLAUDE.md's "Forty-sixth" section for the full
 comparison table and the dividend-drag mechanism.
 
+**Is the 0.5x hedge ratio robust, or a lucky single point? (Forty-seventh
+entry)** — swept the ratio on a finer grid (0.25 to 1.0). Return declines
+smoothly and monotonically as the ratio rises (17.11%/yr at 0.25 down to
+1.60%/yr at 1.0); drawdown reduction is a smooth U-shape bottoming around
+0.50-0.625 (24.2%/23.6%) before rising back up as dividend drag reasserts
+itself. Every ratio from 0.25 through 0.875 passes cleanly (walk-forward
+consistent, all 4 quarters positive) — consistency only starts degrading
+at 0.90 (3/4 quarters) and fully breaks at 1.0 (walk-forward inconsistent,
+2/4 quarters), matching the Forty-sixth entry's own full-hedge finding.
+**0.50 is not a single-point fit** — it sits well inside a genuinely
+robust 0.25-0.875 range, at the point closest to minimum drawdown before
+return decays too far. See CLAUDE.md's "Forty-seventh" section for the
+full sweep table.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an

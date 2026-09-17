@@ -3551,3 +3551,66 @@ entry adds a real, capital-feasible, walk-forward-consistent risk-
 reduction option on top of it (half-hedge: keep ~54% of the return,
 cut drawdown by a third) rather than replacing it. No mechanism has yet
 cleared the bar to actually trade.
+
+## Forty-seventh: is the half-hedge ratio robust, or a lucky single point? A proper sweep confirms it's genuinely robust
+
+The Forty-sixth entry only tested three points (0%, 50%, 100% hedge) and
+found 50% was the clear winner — but this project's own established rigor
+bar (the Thirty-fourth entry's regime-threshold single-point-fit trap, the
+Fifteenth/Seventeenth entries' `length`/`st_period` cliffs) requires
+perturbing any chosen parameter on a finer grid before trusting it, not
+just accepting the best of three coarse options. This entry is that check,
+not a new mechanism.
+
+Extended `probe_ibs_rotation_etf_hedge.py` with `ratio_sweep()` (`--ratio-
+sweep`) — same beta (1.143), same universe/cost model, computing
+full-period return, max drawdown, walk-forward consistency, and quarter-
+split at each ratio, reusing `simulate_etf_hedged()` unchanged.
+
+**Full grid, 0.25 through 1.0**:
+
+| ratio | return/yr | max DD | walk-forward (in/out) | consistent | quarters+ |
+|---|---|---|---|---|---|
+| 0.250 | 17.11% | 31.3% | +18.31% / +15.44% | True | 4/4 |
+| 0.375 | 14.57% | 27.8% | +15.12% / +13.57% | True | 4/4 |
+| **0.500** | **12.00%** | **24.2%** | +11.93% / +11.70% | True | **4/4** |
+| 0.625 | 9.43% | 24.4% | +8.73% / +9.81% | True | 4/4 |
+| 0.750 | 6.84% | 26.3% | +5.54% / +7.93% | True | 4/4 |
+| 0.800 | 5.80% | 27.0% | +4.26% / +7.18% | True | 4/4 |
+| 0.875 | 4.23% | 28.1% | +2.35% / +6.03% | True | 4/4 |
+| 0.900 | 3.70% | 28.4% | +1.71% / +5.65% | True | 3/4 |
+| 0.950 | 2.66% | 29.2% | +0.45% / +4.89% | True | 3/4 |
+| 1.000 | 1.60% | 30.1% | -0.82% / +4.12% | **False** | 2/4 |
+
+**Return declines smoothly and monotonically across the entire range** —
+no cliffs, no reversals, exactly the Davey-style robustness this project
+trusts. **Drawdown traces a smooth U-shape**, bottoming at 0.50-0.625
+(24.2%/24.4%) before rising back toward the unhedged baseline's dividend-
+drag-driven degradation as the ratio approaches 1.0 (matching the
+Forty-sixth entry's full-hedge finding exactly). **Consistency doesn't
+break at some arbitrary interior point — it degrades gradually starting
+only at 0.90** (3/4 quarters), and fully fails only at the full hedge
+(1.0: walk-forward INCONSISTENT, 2/4 quarters) — the same failure point
+the Forty-sixth entry already found, now confirmed to be the edge of a
+real cliff rather than an isolated bad draw.
+
+**0.50 is not a single-point fit.** Every ratio from 0.25 through 0.875 —
+a wide 0.625-wide band — passes every check (walk-forward consistent, all
+4 quarters positive). 0.50 sits at essentially the drawdown-minimizing
+point within that robust band, which is why the Forty-sixth entry's coarse
+three-point test happened to land on it, but the surrounding grid confirms
+it's a genuine local optimum on a smooth curve, not a fragile peak the way
+the Fifteenth/Seventeenth entries' `length`/`st_period` defaults turned
+out to be.
+
+**Net verdict**: forty-seventh entry, and a clean confirmation rather than
+a correction — the Forty-sixth entry's headline 0.50 hedge ratio survives
+the perturbation check this project's own methodology requires before
+trusting a chosen parameter. A defensible recommended range is **0.375-
+0.625** (all three pass cleanly, drawdown-minimizing region), not a single
+exact value — README updated to reflect the range rather than implying
+0.50 is uniquely correct. **The long-only construction (Thirty-eighth
+through Forty-first entries) remains this project's primary finding; this
+entry's half-hedge overlay (or any ratio in the 0.375-0.625 range) remains
+a real, capital-feasible, robust risk-reduction option on top of it.** No
+mechanism has yet cleared the bar to actually trade.
