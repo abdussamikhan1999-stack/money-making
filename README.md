@@ -270,6 +270,21 @@ previous month's picks to market and logs the next month's picks to
 hand-edit it**. First real record logged 2026-09-17. See CLAUDE.md's
 "Forty-first" section for the full writeup.
 
+**Does the recipe generalize beyond IBS? (Forty-second entry,
+`probe_rsi2_rotation.py`)** — tested whether the cross-sectional-monthly-
+rank SHAPE, not something IBS-specific, is what works, by swapping in
+Connors RSI(2) (this project's other well-known survivor) as the ranking
+signal on the same 52-stock universe. Walk-forward and quarter-split both
+pass at all 3 tested portfolio sizes (17.11%/15.43%/19.29%/yr at
+top_k=3/5/8, all 4 quarters positive at every size) — the recipe does
+produce a real, backtest-passing shape on a second signal. But the
+1,500-seed significance test is meaningfully weaker: only `top_k=8` clears
+conventional significance (p=0.025); `top_k=3`/`top_k=5` (p=0.198/0.285)
+don't, versus IBS rotation clearing all three (p=0.037/0.015/0.014).
+Partial generalization — IBS rotation remains the stronger, more
+rigorously corroborated finding. See CLAUDE.md's "Forty-second" section
+for the full breakdown.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an

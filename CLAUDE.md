@@ -3135,3 +3135,78 @@ win rate/return to what the backtest predicted — that comparison, not
 another backtest variant, is what will actually move this project's
 "no mechanism has yet cleared the bar to actually trade" verdict. Do
 not delete or hand-edit `paper_track_ibs_rotation_log.json`.
+
+## Forty-second: does the cross-sectional-rank RECIPE generalize beyond IBS? Partially — RSI-2 rotation passes backtest checks but is statistically weaker
+
+A generalization test, not a new mechanism: entries 38-41 found IBS's real
+edge only showed up once it was reshaped from a single-instrument daily
+trigger into a monthly cross-sectional rank across many names. Two
+structural reasons that reshaping could matter regardless of which signal
+drives it — cutting trade frequency ~20x (directly solving the cost-drag
+problem that killed the Thirty-seventh entry's overnight anomaly) and
+diversifying single-name risk across a basket (the reason every prior
+single-instrument survivor stayed "thin"). If the RECIPE itself is what
+works, not something specific to IBS, this project has probably been
+under-testing several already-real single-instrument signals by running
+them the old way (single-instrument, daily).
+
+Tested the obvious candidate: Connors RSI(2) (Third entry, this project's
+own most-cited single-instrument survivor), turned into the identical
+monthly cross-sectional rank shape as IBS rotation — rank the Thirty-ninth
+entry's 52-stock `WIDE_UNIVERSE` by trailing RSI(2) each month-end
+(`indicators.rsi(closes, period=2)`, the exact formula
+`ConnorsRSI2Strategy.check_entry()` already uses), go long the `top_k`
+most-oversold (lowest RSI(2)), equal-weight, monthly rebalance.
+Implemented as `probe_rsi2_rotation.py`, reusing
+`probe_ibs_rotation_widen.py`'s universe/price-fetch/calendar machinery and
+`probe_ibs_rotation_significance.py`'s random-control significance test
+unchanged — only the ranking function is new code, no new probe-script
+test per this project's established convention (probe scripts don't get
+one; `probe_ibs_rotation.py` itself doesn't either).
+
+**Walk-forward and quarter-split both pass, at all three tested portfolio
+sizes** — the same headline shape as IBS rotation: `top_k=3/5/8` are all
+walk-forward-consistent (both halves positive) and **all 4 quarters
+positive** at every size (Q4 2024-2026, the most recent window, positive
+in all three: 11.90%/5.91%/12.69%/yr respectively — no decay). Full-period
+annualized: 17.11%/yr (`top_k=3`), 15.43%/yr (`top_k=5`), 19.29%/yr
+(`top_k=8`) — real, comparable in shape to IBS rotation's own numbers,
+though noticeably lower in absolute magnitude than IBS rotation's 52-stock
+result (22.11%/yr at `top_k=5`).
+
+**The significance test is where the recipe stops generalizing cleanly.**
+Reran the exact 1,500-seed random-control methodology from the Thirty-ninth
+entry:
+
+| top_k | RSI-2 rotation actual | percentile | empirical p | z | (IBS rotation's own Thirty-ninth-entry p, for comparison) |
+|---|---|---|---|---|---|
+| 3 | ₹482,225 | 80.2 | 0.198 | 0.63 | 0.037 |
+| 5 | ₹417,665 | 71.5 | 0.285 | 0.43 | 0.015 |
+| 8 | ₹579,623 | 97.5 | 0.025 | 2.32 | 0.014 |
+
+Only `top_k=8` clears conventional significance (p<0.05); `top_k=3` and
+`top_k=5` — the two sizes IBS rotation cleared most convincingly — do
+**not**. This is a materially weaker statistical result than IBS rotation
+at the same universe, same seed count, same methodology, same portfolio
+sizes.
+
+**Net verdict**: the cross-sectional-monthly-rank recipe generalizes
+*partially*, not fully — it reliably produces a backtest-passing shape
+(walk-forward consistency, all-quarters-positive, no decay) on a second,
+genuinely different signal, which is itself informative: the shape isn't
+an IBS-only artifact. But it does NOT reproduce IBS's stronger, more
+consistent statistical significance against a random-portfolio control —
+IBS's specific same-day positional mean-reversion character appears to
+carry more real information than RSI(2)'s 2-day momentum-oscillator
+character does, once diversified into a monthly cross-sectional rank.
+Read together with the Twenty-second entry's finding that combining IBS
+and RSI-2 as an AND-confirmed entry made both worse: these are two
+genuinely different signals whose strengths don't simply transfer between
+constructions. **Not pursued further as a standalone strategy** — IBS
+rotation remains this project's strongest, most rigorously corroborated
+finding, and RSI-2 rotation's weaker significance at its own most natural
+portfolio sizes doesn't clear the bar this project already set with IBS.
+`probe_rsi2_rotation.py` stays a probe script, same treatment as every
+other unconfirmed cross-sectional variant tested here. **No mechanism has
+yet cleared the bar to actually trade** — IBS rotation (Thirty-eighth
+through Forty-first entries) remains the closest.
