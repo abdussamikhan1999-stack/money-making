@@ -58,6 +58,27 @@ def fetch_calendar(period: str) -> list[dict]:
     return fetch_candles("^NSEI", "1d", period)
 
 
+def latest_settled_date(calendar_candles: list[dict], now=None):
+    """The last date in calendar_candles whose daily bar is actually
+    FINAL, not a live/still-forming intraday candle. yfinance's "today"
+    1d bar keeps changing (high/low/close all move) while NSE cash
+    market is open (09:15-15:30 IST) -- ranking against it during market
+    hours makes two live-tracker runs minutes apart compute genuinely
+    different IBS scores for the same symbols, not just retry noise (see
+    entry 49, which mistook this for the Thirty-eighth entry's
+    already-documented missing-symbol retry variance before tracing it
+    to this). Used only by the live paper-trackers; backtests always run
+    on historical (already-settled) periods, so this never changes their
+    numbers."""
+    import datetime
+    if now is None:
+        now = datetime.datetime.now()
+    dates = [c["date"].date() for c in calendar_candles]
+    if dates and dates[-1] == now.date() and now.time() < datetime.time(15, 45):
+        return dates[-2] if len(dates) > 1 else None
+    return dates[-1] if dates else None
+
+
 def month_end_dates(calendar_candles: list[dict]) -> list:
     dates = [c["date"].date() for c in calendar_candles]
     ends = []

@@ -370,6 +370,17 @@ beta recomputed fresh each run rather than hardcoded. First record logged
 rerun monthly; neither should be hand-edited. See CLAUDE.md's
 "Forty-eighth" section for the full writeup.
 
+**Bug fix: live-tracker picks were nondeterministic during market hours
+(Forty-ninth entry)** — the Forty-eighth entry's writeup wrongly blamed
+the two trackers' same-day pick mismatch on generic "yfinance retry
+variance." The real cause: both trackers ran while NSE was still open,
+ranking against yfinance's still-forming "today" daily candle, whose
+high/low/close keep changing intraday — not a missing-symbol retry issue
+at all. Fixed with a shared `latest_settled_date()` guard in
+`probe_ibs_rotation.py`, used by both live trackers, that falls back to
+the prior trading day until 15:45 IST. See CLAUDE.md's "Forty-ninth"
+section for the full writeup.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an

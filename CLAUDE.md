@@ -3670,3 +3670,70 @@ forward return/drawdown against what its own backtest predicted — that
 comparison is what will actually move this project's "no mechanism has
 yet cleared the bar to actually trade" verdict, not another backtest
 variant. Do not delete or hand-edit either log.
+
+## Forty-ninth: the two live trackers' same-day pick mismatch wasn't retry noise — it was ranking against a still-forming intraday candle, fixed at the root
+
+The Forty-eighth entry noticed its hedged tracker logged `TCS.NS` where
+the Forty-first entry's unhedged tracker logged `BAJFINANCE.NS`, on the
+identical date, despite both explicitly sharing `rank_by_ibs()` — and
+waved it off as "the Thirty-eighth entry's already-documented intermittent
+yfinance retry variance" without actually checking. That documented
+phenomenon is real but different: `build_price_series()`/
+`build_wide_price_series()` occasionally drop a SYMBOL entirely after 3
+failed fetch retries, silently shrinking the eligible universe for that
+run. This entry traces the actual cause, since these two logs are this
+project's primary ongoing validation mechanism and need to be trusted.
+
+**Reproduced directly**: called `build_wide_price_series("1y")` and
+`rank_by_ibs()` twice in immediate succession — both runs agreed with
+each other (52/52 symbols fetched both times, identical IBS scores) and
+matched the HEDGED tracker's original picks (`TCS.NS` in, `BAJFINANCE.NS`
+out) — not the unhedged tracker's original log. `BAJFINANCE.NS`'s IBS
+score (0.325) isn't a near-tie at the rank-5/6 boundary either — 5th
+place (`MARUTI.NS`) sits at 0.260, a real gap, ruling out "two fetches
+landed on opposite sides of a genuine near-tie" as the explanation.
+
+**Root cause, confirmed against the actual session clock**: the machine's
+local time when this was investigated was 15:10 IST — NSE cash market
+closes 15:30 IST, so the market was still open. Comparing the three
+independent runs' own recorded values for `POWERGRID.NS` shows why:
+unhedged tracker's original log recorded `entry_ibs=0.0431`, the hedged
+tracker's log recorded `0.1298`, and this entry's own reproduction run
+(minutes later, market now closer to close) got `0.1094` — three
+meaningfully different IBS values for the same symbol, same calendar
+date, because yfinance's "today" 1d candle is still live and updating
+throughout the session (its close keeps moving as the session
+progresses, which directly changes IBS = (close-low)/(high-low)). Two
+scripts run at different wall-clock moments during market hours will
+legitimately compute different rankings from genuinely different,
+both-real intraday snapshots — not a bug in either script, and not a
+near-tie coin flip.
+
+**Fixed at the root, not per-caller**: added `latest_settled_date()` to
+`probe_ibs_rotation.py` (the module both trackers already import from) —
+returns the calendar's last date unchanged UNLESS that date is today AND
+it's before 15:45 IST (a 15-minute settlement buffer past NSE's 15:30
+close), in which case it falls back to the prior trading day. Both
+`paper_track_ibs_rotation.py` and `paper_track_ibs_rotation_hedged.py`
+now compute `as_of` through this guard instead of taking
+`fetch_calendar(...)[-1]["date"].date()` directly — one shared function,
+not two separate patches, so they can't independently drift on this again.
+Backtests are unaffected: they only ever pass historical (already-settled)
+periods, and 3 new unit tests confirm the guard is a no-op whenever the
+calendar's last bar isn't "today." Full suite: 170/170 green.
+
+**Deliberately not touched**: the two trackers' original 2026-09-17 log
+entries (logged before this fix, during market hours) are left exactly as
+they were written — per this project's own standing rule, forward-tracking
+logs are never edited or reinterpreted retroactively, even to fix a bug
+discovered right after logging. They'll self-correct through the normal
+monthly mark-to-market/re-pick cycle now that the guard is in place; no
+special-cased backfill was added.
+
+**Net verdict**: a real, previously-mischaracterized bug in the
+infrastructure meant to be this project's primary ongoing validation
+mechanism, now fixed at its root cause rather than accepted as noise. Not
+a finding about the IBS rotation strategy itself — the underlying
+Thirty-eighth through Forty-eighth entries' numbers are unaffected, since
+none of them ran during live market hours. **No mechanism has yet cleared
+the bar to actually trade.**

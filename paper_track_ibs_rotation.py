@@ -25,7 +25,7 @@ import json
 import os
 from datetime import date
 
-from probe_ibs_rotation import dates_closes_maps, rank_by_ibs, fetch_calendar
+from probe_ibs_rotation import dates_closes_maps, rank_by_ibs, fetch_calendar, latest_settled_date
 from probe_ibs_rotation_widen import WIDE_UNIVERSE, build_wide_price_series
 
 LOG_PATH = os.path.join(os.path.dirname(__file__), "paper_track_ibs_rotation_log.json")
@@ -78,7 +78,10 @@ def run() -> None:
     log = load_log()
     series = build_wide_price_series("1y")
     dates_map, closes_map = dates_closes_maps(series)
-    as_of = fetch_calendar("1y")[-1]["date"].date()
+    as_of = latest_settled_date(fetch_calendar("1y"))
+    if as_of is None:
+        print("No settled trading day available yet, aborting.")
+        return
     today_str = str(as_of)
 
     if log and log[-1]["exit"] is None:

@@ -1,6 +1,6 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 
-from probe_ibs_rotation import dates_closes_maps, rank_by_ibs, simulate
+from probe_ibs_rotation import dates_closes_maps, rank_by_ibs, simulate, latest_settled_date
 from paper_track_ibs_rotation import mark_to_market, CAPITAL, TOP_K, LOOKBACK
 
 
@@ -58,3 +58,30 @@ def test_mark_to_market_uses_same_cost_model_as_simulate():
 
     backtest = simulate([entry_date, exit_date], series, top_k=TOP_K, lookback=LOOKBACK, capital=CAPITAL)
     assert record["exit"]["net_pnl"] == round(backtest["total_net"], 2)
+
+
+def _calendar(*dates: date) -> list[dict]:
+    return [{"date": datetime.combine(d, datetime.min.time())} for d in dates]
+
+
+def test_latest_settled_date_drops_todays_still_forming_bar_during_market_hours():
+    """entry 49: yfinance's "today" 1d bar keeps changing while NSE is
+    open (09:15-15:30 IST), so two live-tracker runs minutes apart
+    computed different IBS scores from the same "shared" ranking code —
+    not the retry noise it was first assumed to be."""
+    cal = _calendar(date(2026, 9, 15), date(2026, 9, 16), date(2026, 9, 17))
+    mid_session = datetime.combine(date(2026, 9, 17), time(15, 10))
+    assert latest_settled_date(cal, now=mid_session) == date(2026, 9, 16)
+
+
+def test_latest_settled_date_uses_todays_bar_after_close():
+    cal = _calendar(date(2026, 9, 15), date(2026, 9, 16), date(2026, 9, 17))
+    after_close = datetime.combine(date(2026, 9, 17), time(16, 0))
+    assert latest_settled_date(cal, now=after_close) == date(2026, 9, 17)
+
+
+def test_latest_settled_date_unaffected_on_a_non_current_last_bar():
+    """Backtests always pass historical calendars whose last bar isn't
+    "today" — must return it unchanged regardless of wall-clock time."""
+    cal = _calendar(date(2020, 1, 1), date(2020, 1, 2))
+    assert latest_settled_date(cal, now=datetime.combine(date(2026, 9, 17), time(12, 0))) == date(2020, 1, 2)
