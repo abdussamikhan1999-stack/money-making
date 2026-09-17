@@ -168,6 +168,18 @@ risk (`TCS.NS` 1.31%/yr, `GC=F` 1.99%/yr) then drawdown-halts at 2% — real
 but thin, the same bucket as Turtle Soup/SuperTrend/MACD. See CLAUDE.md's
 "Thirty-fifth" section for the full breakdown.
 
+**Widen-and-check on `high52w` (Thirty-sixth entry, `probe_high52w_widen.py`)
+does NOT strengthen the above finding** — it reveals the original 40% hit
+rate was a 2-way-split artifact. On `probe_pead.py`'s existing 40-stock
+NSE large-cap universe, walk-forward alone still passes 15/40 (37.5%,
+looks like clean replication), but a full 4-way quarter-split — the same
+check that caught `AXISBANK.NS`'s hollow consistency above — leaves only
+2/15 (13%) with all 4 quarters positive: `TCS.NS` (reproduces its
+original numbers almost exactly) and one new name, `NESTLEIND.NS`. 2 of
+40 (5%) is at or below every chance-level band this project uses to
+disqualify a result. Closed the same way PEAD and SuperTrend's oil
+survivor were closed. See CLAUDE.md's "Thirty-sixth" section.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an

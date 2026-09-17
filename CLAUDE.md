@@ -2622,3 +2622,57 @@ established practice, 2 clean + 1 flagged out of 10 tested still isn't
 instruments pass (the same next step that confirmed SuperTrend's `CL=F`
 as a lucky draw and would need to be run here before trusting this
 further). **No mechanism has yet cleared the bar to actually trade.**
+
+## Thirty-sixth: 52-week-high widen-and-check — the exact retest the Thirty-fifth entry called for; true clean-survivor rate collapses to chance-level on a 40-stock universe
+
+The Thirty-fifth entry's own verdict named its next required step: retest
+`high52w` on more instruments before trusting a 2-clean-out-of-10 screen,
+the same discipline that caught PEAD's Thirtieth/Thirty-first entries
+(clean at 20 stocks, fell apart at 40) and confirmed SuperTrend's `CL=F`
+as a lucky draw. Reused `probe_pead.py`'s existing 40-stock NSE large-cap
+`UNIVERSE` directly (no reason to hand-roll a second one) and
+`backtest_daily.py`'s existing `simulate_daily`/`walk_forward_daily`/
+`STRATEGIES["high52w"]` unchanged, via a new thin driver
+(`probe_high52w_widen.py` — no new strategy logic, so no new unit tests,
+consistent with every other `probe_*.py` in this project). Same ₹20/
+round-trip commission and default params (`entry_threshold=0.95`,
+`lookback_period=252`) as the original screen.
+
+**Walk-forward alone looks like clean replication**: 15/40 (37.5%) passed
+— close to the original 10-stock screen's 40% hit rate, not the immediate
+reshuffle PEAD showed. `TCS.NS` passes again (in-sample +5,026/
+out-of-sample +1,438, both clearly positive).
+
+**Quarter-split is where it actually falls apart.** Running all 4 quarters
+on all 15 walk-forward passers (the same finer check that caught
+`AXISBANK.NS`'s hollow consistency in the original entry) leaves only
+**2 of 15 (13%) with all 4 quarters positive**: `TCS.NS` (+4,820/+1,477/
++451/+1,391 — reproduces the original entry's own finding almost exactly,
+small numeric drift only from the 10y data window rolling forward by a
+few days between runs) and a new name, `NESTLEIND.NS` (+2,181/+1,081/
++2,121/+133). Every other walk-forward passer — including several with
+strong-looking in-sample/out-of-sample numbers, e.g. `HCLTECH.NS`
+(+3,850/+710) or `BPCL.NS` (+175/+2,225) — has at least one negative
+quarter once split 4 ways: `AXISBANK.NS` reproduces its own original
+hollow-consistency numbers almost exactly (-556/-849/+1,631/-371, only
+Q3 positive), confirming that finding wasn't a fluke either.
+
+**2 clean survivors out of the full 40-stock universe is 5%** — at or
+below every chance-level band this project has used to disqualify a
+result (PEAD's real 3/20 was 15%, sector sweep 18%, Squeeze/Turtle Soup
+25%, volume 30%, SuperTrend 33%). The Thirty-fifth entry's headline 40%
+hit rate was a 2-way-split artifact: it measured how many instruments
+pass a coarse screen, not how many have a real, decay-resistant edge —
+the same distinction the quarter-split step exists to draw everywhere
+else in this file. `TCS.NS`'s numbers reproducing almost exactly across
+two independent runs rules out a code/data-fetch bug, but stability of
+one instrument's backtest is not evidence the underlying edge is real —
+it just means the measurement is reliable, same caveat already applied to
+SuperTrend's `CL=F` before its own retest closed it.
+
+**Net verdict**: this does NOT strengthen the Thirty-fifth entry's
+finding — it reveals the original screen overstated it. Closing
+`high52w` the same way PEAD and SuperTrend's oil survivor were closed:
+`TCS.NS`/`NESTLEIND.NS` are flagged as two individual lucky draws from a
+40-name sweep, not a corroborated mechanism. **No mechanism has yet
+cleared the bar to actually trade.**
