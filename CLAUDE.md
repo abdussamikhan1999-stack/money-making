@@ -2878,3 +2878,108 @@ cannot run is genuinely out-of-sample data that didn't exist when the
 backtest was written. **No mechanism has yet cleared the bar to actually
 trade** — this is the closest any mechanism in this project has come, not
 an exception to that standing verdict.
+
+## Thirty-ninth: stress-testing the IBS rotation finding — it survives widening, for the first time in this project's history
+
+Direct follow-up on the Thirty-eighth entry's own open questions, treated
+with the same discipline PEAD's Thirtieth/Thirty-first entries and
+52-week-high's Thirty-fifth/Thirty-sixth entries established: a
+promising cross-sectional result is not trusted until it's been widened,
+re-tested for significance more rigorously, and sanity-checked for real
+capital feasibility. Three checks, in order:
+
+**1. Widen the universe.** `probe_ibs_rotation_widen.py` combines the
+40-stock `probe_pead.py` `UNIVERSE` with the Thirty-third entry's 12-stock
+small/mid-cap universe (never combined before this entry) into a 52-stock
+set — a genuinely different, larger pool, not a resample of the same
+names. Re-ran the default config (`top_k=5, lookback=5`) plus 5 more
+parameter combinations (`top_k=3,lb=10`; `top_k=7,lb=1`; `top_k=10,lb=5`;
+`top_k=8,lb=5`; `top_k=3,lb=5`) with the exact same walk-forward +
+quarter-split checks used at 40 stocks.
+
+**Result: the finding gets STRONGER, not weaker, on the wider universe —
+the first time any promising cross-sectional result in this project's
+history has done that rather than collapsing.** Default config: full
+period 22.11%/yr at 38.2% max drawdown (up from 40-stock's 15.51%/yr),
+walk-forward both halves positive and consistent, **all 4 quarters
+positive** (Q1 24.97%, Q2 23.84%, Q3 17.87%, Q4 20.02%/yr — Q4 no longer
+even the weakest quarter, unlike the 40-stock run). **All 6 parameter
+configs tested have all 4 quarters positive** — the same "every config
+survives quarter-split" pattern the Thirty-eighth entry found at 40
+stocks, now confirmed at 52. Attribution: **52/52 stocks selected at
+least once, 38/52 (73%) individually net-positive** (vs. 40-stock's 75%
+— essentially unchanged breadth), and **top-3 concentration actually
+IMPROVED to 26.5%** (vs. 40-stock's 31.4%) — adding 12 new names diluted
+concentration further rather than revealing the edge was secretly
+concentrated in the original universe. The best individual contributor
+(`ELGIEQUIP.NS`, +73,954) is one of the newly-added small/mid-cap names,
+not a large-cap holdover — a positive sign the edge isn't an artifact
+specific to the original 40-stock selection.
+
+**2. Strengthen the significance test.** `probe_ibs_rotation_significance.py`
+reruns the Thirty-eighth entry's random-control check with 1,500 seeds
+(vs. the original 200) on the widened 52-stock universe, at three nearby
+portfolio sizes (`top_k=3, 5, 8`) rather than just the default 5, to check
+the statistical edge isn't itself a lucky parameter pick:
+
+| top_k | actual final capital | random mean (std) | percentile | empirical p | z |
+|---|---|---|---|---|---|
+| 3 | ₹771,423 | ₹360,162 (±192,839) | 96.3 | 0.0367 | 2.13 |
+| 5 | ₹731,663 | ₹358,469 (±135,626) | 98.5 | 0.0153 | 2.75 |
+| 8 | ₹619,936 | ₹346,709 (±99,995) | 98.6 | 0.0140 | 2.73 |
+
+**All three clear conventional significance** (p < 0.05; `top_k=5` and
+`top_k=8` clear p < 0.02) — a real change from the Thirty-eighth entry's
+own z≈1.06/p≈0.135 finding on the narrower universe. Both effects
+plausibly contribute: a bigger, more diversified stock pool shrinks the
+random-control's own variance (more names to draw from smooths out lucky/
+unlucky single-stock draws), and the actual strategy's edge itself grew
+on the wider universe (per check 1 above) — either alone would move the
+z-score up; here both moved the same direction together. This is now a
+properly powered test (1,500 draws, not 200) rather than a
+directionally-suggestive one.
+
+**3. Cost and capital sanity check.** Confirmed `probe_ibs_rotation.py`'s
+`simulate()` already includes this project's standard realistic equity
+cost model throughout (0.2% STT+stamp both legs + ~₹16 DP charge on the
+sell leg, the same zero-delivery-brokerage model momentum rotation and
+low-volatility established) — no shortcut in the reported numbers, no
+fix needed. Capital feasibility is genuinely mixed, not a clean pass: at
+the ₹100,000 capital this project's headline numbers use, `top_k=5` means
+₹20,000 notional per position, comfortably covering even the priciest
+name in the widened universe (`MARUTI.NS`, ~₹12,370/share). But at
+**₹30,000** — the LOW end of this project's own stated ₹30,000-100,000
+target range (README's "Ninth" reference) — `top_k=5` notional drops to
+only ₹6,000/position, which can't buy even ONE whole share of `MARUTI.NS`
+or several other names above ₹6,000 (`BAJAJ-AUTO.NS` ~₹11,475,
+`ULTRACEMCO.NS` ~₹10,808, `DIVISLAB.NS` ~₹9,307, `EICHERMOT.NS`
+~₹7,530) if any of them gets picked as a most-oversold name that month.
+This is NOT the same severity as the commodity/FX fixed-lot-size wall
+(Twenty-fifth/Twenty-sixth entries) that fully blocked those strategies —
+equities allow any whole-share quantity, so the fix is simply rounding
+down to whole shares (occasionally skipping an expensive pick or running
+with fewer than `top_k` names some months) rather than a hard capital
+floor — but it's a real, previously-unmodeled gap between this project's
+continuous-notional simulation and what a genuine ₹30,000 account could
+actually execute, and it should be fixed with real share-quantity
+rounding before paper-trading at the low end of this project's target
+capital range specifically. Not an issue at ₹100,000, which is what every
+number in this entry and the Thirty-eighth entry above uses.
+
+**Net verdict**: this is the first cross-sectional finding in this
+project's history to survive a genuine universe-widening test — a
+meaningfully different outcome from PEAD (fell apart), 52-week-high (fell
+apart), and every other "looked great, then widened" result here. Still
+not declared "ready to trade," consistent with this project's own
+standing bar (see the Thirty-eighth entry's own framing): survivorship
+bias in both universes (hand-picked today's well-known names, not a
+point-in-time historical constituent list) remains real and unresolved,
+and genuinely out-of-sample forward data — the one check no backtest can
+run — still hasn't been collected. **Recommended next step, now sharper
+than the Thirty-eighth entry's version**: paper-track this exact rule
+(top_k=5, lookback=5, monthly rebalance, 52-stock universe) forward in
+real time, with real whole-share position sizing fixed first if testing
+near the ₹30,000 end of this project's target capital range. **No
+mechanism has yet cleared the bar to actually trade** — this remains the
+closest any mechanism in this project has come, and is now more
+rigorously corroborated than before, not merely repeated.

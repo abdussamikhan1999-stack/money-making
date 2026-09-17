@@ -219,6 +219,23 @@ this rule forward before considering real capital. See CLAUDE.md's
 "Thirty-eighth" section for the full breakdown, including a calendar-tie
 reproducibility bug caught and fixed along the way.
 
+**Stress test (Thirty-ninth entry, `probe_ibs_rotation_widen.py` /
+`probe_ibs_rotation_significance.py`)** — widened the universe to 52 stocks
+(40 large-cap + 12 small/mid-cap) and the result got STRONGER, not
+weaker: 22.11%/yr at 38.2% drawdown, all 4 quarters positive across 6
+parameter configs, top-3 concentration improved to 26.5%. A 1,500-seed
+random-control test (up from 200) now clears conventional significance at
+three portfolio sizes (`top_k=3/5/8`: p=0.037/0.015/0.014). First
+cross-sectional finding in this project to survive widening rather than
+collapsing (PEAD and 52-week-high both fell apart on the same test). One
+real caveat found: at the LOW end of this project's ₹30,000-100,000
+target capital range, per-position notional (₹6,000 at ₹30,000 capital)
+can't buy a whole share of the priciest names — fine at ₹100,000, needs
+real share-rounding fixed before paper-trading near ₹30,000. Still not
+declared tradable — survivorship bias unresolved, genuine forward
+out-of-sample data still the one check no backtest can run. See
+CLAUDE.md's "Thirty-ninth" section for the full breakdown.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an
