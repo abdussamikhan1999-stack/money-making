@@ -2511,3 +2511,114 @@ candidate can reuse — just remember, per this entry, to perturb the
 regime thresholds themselves with the same suspicion applied to every
 other parameter before trusting a gate's result. **No mechanism has yet
 cleared the bar to actually trade.**
+
+## Thirty-fifth: 52-week-high proximity momentum (George & Hwang) — the best hit rate since 3-bar breakout, two genuinely clean survivors, still thin at safe sizing
+
+A real, decades-documented academic anomaly not yet tried here: George &
+Hwang, "The 52-Week High and Momentum Investing" (Journal of Finance,
+2004) — stocks trading NEAR their trailing 52-week high tend to keep
+outperforming. Genuinely different mechanism from everything else in this
+file, including this project's own channel-breakout strategy
+(`DonchianBreakoutStrategy`): Donchian trades a FRESH N-day extreme (today
+IS a new high); this is a continuous PROXIMITY signal (today is merely
+CLOSE to a recent high, needs no new extreme at all) — a much higher
+percentage of trading days qualify, by construction.
+
+Implemented as `FiftyTwoWeekHighStrategy` in `daily_strategy.py`
+(`--strategy high52w`), reusing `indicators.highest()`/`lowest()` directly
+(already present for Squeeze's/Turtle Soup's own channel calculations, no
+new indicator needed). Rule: `nearness = close / highest(closes,
+lookback_period)`; long when `nearness >= entry_threshold` (default 0.95,
+252-day lookback — the paper's own ~52-week window). Symmetric short side
+added (this project's own extension, not itself literature-backed, the
+same caveat already applied to IBS's/volume's short sides): short when
+`close / lowest(closes, lookback_period) <= 1/entry_threshold`. No natural
+structural stop (a proximity ratio implies none), so `stop_atr_multiple x
+ATR` (default 3.0), matching RSI-2/Squeeze/volume/MACD/Bollinger's
+convention. Exit when nearness fades back below `exit_threshold` (default
+0.85) or `max_hold_days` (60) times out. No-lookahead: highest/lowest
+computed from `self._closes` through yesterday, compared against `close`
+(today) — identical convention to Donchian/ThreeBarBreakout. 7 new unit
+tests; full suite 154/154 green.
+
+**Screening result: 4/10 tradable instruments passed** (both walk-forward
+halves positive, no drawdown-halt; ~5bps-equivalent ₹20/round-trip
+commission) — `^NSEI`, `TCS.NS`, `AXISBANK.NS`, `GC=F`, on the same
+12-instrument set used throughout this file
+(`^NSEI`/`^NSEBANK`/`RELIANCE.NS`/`TCS.NS`/`INFY.NS`/`HDFCBANK.NS`/
+`ITC.NS`/`SBIN.NS`/`AXISBANK.NS`/`WIPRO.NS`/`CL=F`/`GC=F`).
+**`^NSEBANK` produced zero trades and is excluded from the hit-rate
+denominator, not counted as a pass** — diagnosed directly, not assumed: at
+Bank Nifty's price level (tens of thousands of points) and the default
+3xATR stop, `risk.position_size()`'s `risk_amount / per_unit_risk`
+rounds down to 0 whole units at the standard 0.5% risk-per-trade on
+₹100,000 capital. This is the identical index-sizing artifact the
+Thirty-second entry already found and worked around (swapped `^NSEI` for
+`RELIANCE.NS` in the portfolio-combo test) — not a bug in this entry's
+code, confirmed by checking the strategy's own `check_entry()` in
+isolation (1,194 raw signals over 10 years, well above zero) before
+looking at the sizing layer. **40% (4/10) is meaningfully above the
+chance-level band this project has repeatedly used as a disqualifying
+signal** (sector sweep 18%, Squeeze 25%, Turtle Soup 25%, volume 30%,
+SuperTrend 33%, PEAD's real 3/20 15%) — the best hit rate since 3-bar
+breakout's 50% (Twelfth entry).
+
+**Quarter-split separates the four passers exactly the way this file's
+own screening standard exists to catch**:
+- **`AXISBANK.NS` fails outright** — 3 of 4 quarters negative
+  (-556/-849/-371, only Q3 positive) despite passing the 2-way
+  walk-forward screen cleanly. The exact "hollow consistency" pattern
+  this file has flagged before (Donchian's oil case, MACD's `AXISBANK.NS`
+  halt): a coarser 2-way split can miss decay a finer 4-way split catches.
+  Dropped from further consideration.
+- **`^NSEI` shows the now-familiar recent-quarter-decay signature** —
+  Q1-Q3 positive (+4/+3,667/+2,652), **Q4 (2024-2026, the most recent and
+  most relevant window) negative** (-1,515). Flagged, not disqualifying on
+  its own (a single-instrument mean-reversion-adjacent signal, not a
+  broad basket bet — see the Cross-mechanism synthesis entry), but
+  weaker evidence than the two clean survivors below.
+- **`TCS.NS` is genuinely clean** — all 4 quarters positive (+4,820 /
+  +1,477 / +790 / +1,162), decelerating but never negative, no decay red
+  flag at all.
+- **`GC=F` (gold) fits this project's established Q4-favorable pattern**
+  for single-instrument mechanisms — 2 of 4 quarters negative (-132,
+  -890) but **Q4 is the strongest by far** (+4,795), the same
+  "most-recent-quarter-is-best" shape already seen in IBS's/volume's gold
+  survivors and options-selling, not the "historic run now flat" pattern
+  that disqualified the broad basket bets.
+
+**Perturbation on the two survivors that matter (`TCS.NS`, `GC=F`), cross-
+checked against `^NSEI` for context, is the smoothest sweep in this
+project since 3-bar breakout**: `entry_threshold` (0.90/0.93/0.95/0.97)
+and `lookback_period` (126/189/252/378) are BOTH positive on BOTH
+walk-forward halves at every single tested value for `TCS.NS` and `GC=F`
+— 15 of 16 cells clean, the one exception being `TCS.NS` at
+`lookback_period=126` (out-of-sample flips to -1,557) which is itself
+informative: 126 days is only half the paper's own window, a real
+deviation from the tested mechanism, not a nearby nudge. `exit_threshold`
+(0.75/0.80/0.85/0.90) is flat/monotonic and all-positive on both
+instruments with no cliffs anywhere. This is real Davey-style robustness,
+not a single-point-fit artifact like the regime classifier's `threebar`
+result in the prior entry.
+
+**Sizing helps up to a point, the same "1% is near the safe ceiling"
+pattern as Turtle Soup/SuperTrend/MACD/Squeeze**: `TCS.NS` 0.5% risk gives
++5,802/10y (0.1% DD, ≈0.58%/yr); 1% gives **+13,102 (0.3% DD, ≈1.31%/yr)**
+— genuine roughly-linear scaling; 2% drawdown-halts (11.3% DD). `GC=F`
+0.5% gives +9,003 (0.5% DD, ≈0.90%/yr); 1% gives **+19,931 (0.9% DD,
+≈1.99%/yr)**; 2% also halts (10.3% DD).
+
+**Net verdict**: thirty-fifth mechanism, and by initial hit rate (40%,
+second only to 3-bar breakout's 50%) and perturbation smoothness (tied
+for the cleanest in this project) one of the strongest screening results
+found here — but the magnitude at safe sizing (1.3-2.0%/year) lands in
+the same "real but thin" bucket as Turtle Soup/SuperTrend/MACD, not a
+breakthrough past what this project has already found. Two genuinely
+clean survivors (`TCS.NS`, `GC=F`) rather than the usual lone-instrument
+flag makes this comparatively well-corroborated evidence within this
+project's own standard, but per the Eighteenth/Thirty-first entries'
+established practice, 2 clean + 1 flagged out of 10 tested still isn't
+"found" — it's the strongest candidate for a future retest-on-more-
+instruments pass (the same next step that confirmed SuperTrend's `CL=F`
+as a lucky draw and would need to be run here before trusting this
+further). **No mechanism has yet cleared the bar to actually trade.**

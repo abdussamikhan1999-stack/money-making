@@ -15,7 +15,8 @@ from paper_broker import PaperBroker
 from risk import RiskManager
 from daily_strategy import (
     DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, SqueezeMomentumStrategy,
-    VolumeConfirmationStrategy, TurtleSoupStrategy, MACDStrategy, BollingerBandsStrategy, Side,
+    VolumeConfirmationStrategy, TurtleSoupStrategy, MACDStrategy, BollingerBandsStrategy,
+    FiftyTwoWeekHighStrategy, Side,
 )
 from backtest import split_by_date, _report  # reuse: same date-splitting + reporting used for intraday backtests
 
@@ -51,6 +52,11 @@ STRATEGIES = {
         period=args.bb_period, num_std=args.bb_num_std, stop_atr_multiple=args.bb_stop_atr_multiple,
         max_hold_days=args.bb_max_hold_days, trend_filter_lookback=args.bb_trend_filter_lookback,
         trend_filter_atr_mult=args.bb_trend_filter_atr_mult,
+    ),
+    "high52w": lambda args: FiftyTwoWeekHighStrategy(
+        lookback_period=args.high52w_lookback, entry_threshold=args.high52w_entry_threshold,
+        exit_threshold=args.high52w_exit_threshold, stop_atr_multiple=args.high52w_stop_atr_multiple,
+        max_hold_days=args.high52w_max_hold_days,
     ),
 }
 
@@ -245,6 +251,14 @@ if __name__ == "__main__":
                               "more than --bb-trend-filter-atr-mult x ATR over this many days (regime gate)")
     parser.add_argument("--bb-trend-filter-atr-mult", type=float, default=1.5,
                          help="[bollinger] max middle-band drift (in ATRs) to still count as range-bound")
+
+    parser.add_argument("--high52w-lookback", type=int, default=252, help="[high52w] trailing high/low window in days")
+    parser.add_argument("--high52w-entry-threshold", type=float, default=0.95,
+                         help="[high52w] enter when close/trailing_high >= this (or close/trailing_low <= 1/this)")
+    parser.add_argument("--high52w-exit-threshold", type=float, default=0.85,
+                         help="[high52w] exit once nearness fades back below this")
+    parser.add_argument("--high52w-stop-atr-multiple", type=float, default=3.0, help="[high52w] initial stop = N x ATR")
+    parser.add_argument("--high52w-max-hold-days", type=int, default=60, help="[high52w] time-stop if nearness never fades")
     args = parser.parse_args()
 
     daily = fetch_daily_yfinance(args.symbol, args.period)

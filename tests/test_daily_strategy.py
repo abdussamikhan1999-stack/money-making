@@ -1,6 +1,7 @@
 from daily_strategy import (
     DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, SqueezeMomentumStrategy,
     VolumeConfirmationStrategy, TurtleSoupStrategy, MACDStrategy, BollingerBandsStrategy,
+    FiftyTwoWeekHighStrategy,
 )
 from strategy import Side
 
@@ -656,3 +657,71 @@ def test_trend_filter_stays_flat_when_not_enough_history_to_judge_regime():
     for c in (8, 12, 8, 12):  # enough for the bands themselves, not the earlier-window comparison
         s.push(bar(c + 1, c - 1, c))
     assert s.check_entry(close=5) is None
+
+
+# --- FiftyTwoWeekHighStrategy ---
+
+def _build_high52w(lookback=10):
+    s = FiftyTwoWeekHighStrategy(lookback_period=lookback, atr_period=3)
+    for c in range(10, 10 + lookback):  # closes 10..19 - trailing high=19, trailing low=10
+        s.push(bar(c + 1, c - 1, c))
+    return s
+
+
+def test_no_signal_before_high52w_window_fills():
+    s = FiftyTwoWeekHighStrategy(lookback_period=10, atr_period=3)
+    for c in range(10, 19):  # only 9 of 10 needed
+        s.push(bar(c + 1, c - 1, c))
+    assert s.check_entry(close=20) is None
+
+
+def test_long_entry_when_close_is_near_the_trailing_high():
+    s = _build_high52w()
+    atr = s.current_atr()
+    sig = s.check_entry(close=19)  # 19/19 = 1.0 >= default entry_threshold 0.95
+    assert sig is not None
+    assert sig.side is Side.LONG
+    assert sig.entry_price == 19
+    assert sig.stop_loss == 19 - 3.0 * atr  # default stop_atr_multiple=3.0
+
+
+def test_short_entry_when_close_is_near_the_trailing_low():
+    s = _build_high52w()
+    atr = s.current_atr()
+    sig = s.check_entry(close=10)  # 10/10 = 1.0 <= 1/0.95
+    assert sig is not None
+    assert sig.side is Side.SHORT
+    assert sig.entry_price == 10
+    assert sig.stop_loss == 10 + 3.0 * atr
+
+
+def test_no_signal_when_close_is_far_from_both_extremes():
+    s = _build_high52w()
+    assert s.check_entry(close=14.5) is None  # 14.5/19=0.76, 14.5/10=1.45 - neither threshold met
+
+
+def test_check_exit_true_once_nearness_fades():
+    s = _build_high52w()
+    sig = s.check_entry(close=19)
+    assert sig is not None
+    assert s.check_exit(close=17.1, side=sig.side) is False  # 17.1/19=0.90, not faded yet
+    assert s.check_exit(close=15.2, side=sig.side) is True  # 15.2/19=0.80 < exit_threshold 0.85
+
+
+def test_check_exit_true_after_max_hold_days_even_without_fading():
+    s = FiftyTwoWeekHighStrategy(lookback_period=4, atr_period=3, max_hold_days=2)
+    for c in (10, 11, 12, 13):
+        s.push(bar(c + 1, c - 1, c))
+    sig = s.check_entry(close=13)  # 13/13 = 1.0
+    assert sig is not None
+    s.push(bar(14, 12, 13))  # day 1 in trade, still near the high, not timed out
+    assert s.check_exit(close=13, side=sig.side) is False
+    s.push(bar(14, 12, 13))  # day 2 - hits max_hold_days
+    assert s.check_exit(close=13, side=sig.side) is True
+
+
+def test_reset_clears_high52w_state():
+    s = _build_high52w()
+    s.check_entry(close=19)
+    s.reset()
+    assert s.check_entry(close=19) is None  # window emptied, needs refilling

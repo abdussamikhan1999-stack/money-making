@@ -11,11 +11,11 @@ accredited financial specialist before risking real capital. Backtest and
 paper-trade thoroughly before ever running this live. You are solely
 responsible for any trades it places.
 
-## Daily-bar strategies (a second family, eight mechanisms so far)
+## Daily-bar strategies (a second family, nine mechanisms so far)
 
 `backtest_daily.py` backtests daily-bar strategies against years of data
 instead of intraday's 60-day cap, via
-`--strategy {donchian,rsi2,threebar,squeeze,volume,turtlesoup,macd,bollinger}`:
+`--strategy {donchian,rsi2,threebar,squeeze,volume,turtlesoup,macd,bollinger,high52w}`:
 
 ```
 python backtest_daily.py --strategy donchian --symbol '^NSEI' --period 10y --walk-forward
@@ -26,6 +26,7 @@ python backtest_daily.py --strategy volume --symbol GC=F --period 10y --walk-for
 python backtest_daily.py --strategy turtlesoup --symbol AXISBANK.NS --period 10y --walk-forward --commission-per-trade 20
 python backtest_daily.py --strategy macd --symbol TCS.NS --period 10y --walk-forward --commission-per-trade 20
 python backtest_daily.py --strategy bollinger --symbol RELIANCE.NS --period 10y --walk-forward --commission-per-trade 20
+python backtest_daily.py --strategy high52w --symbol TCS.NS --period 10y --walk-forward --commission-per-trade 20
 ```
 
 **`donchian`** — the "Turtle Trading" entry rule (N-day high/low channel
@@ -148,6 +149,24 @@ subset across 4 tightness values. RSI-2's filter works because its
 underlying signal is real; Bollinger's band-touch entry doesn't appear to
 be, filtered or not. See CLAUDE.md's "Twenty-seventh"/"Twenty-eighth"
 sections for the full breakdown.
+
+**`high52w`** — George & Hwang's 52-week-high proximity momentum (a real,
+decades-documented academic anomaly, Journal of Finance 2004): long when
+today's close is within 5% of its trailing 252-day high, not a fresh
+extreme like `donchian`, just NEAR a recent one. The best hit rate since
+3-bar breakout — 4/10 tradable instruments passed walk-forward
+(`^NSEI`, `TCS.NS`, `AXISBANK.NS`, `GC=F`; `^NSEBANK` excluded, it can't
+size even one unit at Bank Nifty's price level, a known index-sizing
+artifact, not a strategy failure). Quarter-split narrows this to two
+genuinely clean survivors (`TCS.NS`, `GC=F`) after dropping `AXISBANK.NS`
+(hollow consistency — 3 of 4 quarters actually negative) and flagging
+`^NSEI` (recent-quarter decay). Perturbation on the two survivors is the
+smoothest sweep in this project since 3-bar breakout — all-positive on
+both walk-forward halves across every tested `entry_threshold`/
+`lookback_period`/`exit_threshold` value bar one. Sizing helps up to 1%
+risk (`TCS.NS` 1.31%/yr, `GC=F` 1.99%/yr) then drawdown-halts at 2% — real
+but thin, the same bucket as Turtle Soup/SuperTrend/MACD. See CLAUDE.md's
+"Thirty-fifth" section for the full breakdown.
 
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 

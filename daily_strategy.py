@@ -1001,3 +1001,113 @@ class BollingerBandsStrategy:
             self._in_trade = False
             return True
         return False
+
+
+@dataclass
+class FiftyTwoWeekHighStrategy:
+    """52-week-high momentum (George & Hwang, "The 52-Week High and
+    Momentum Investing", Journal of Finance 2004): stocks trading near
+    their trailing 52-week high tend to keep outperforming - a widely
+    replicated academic anomaly. Genuinely different mechanism from
+    everything else in this file: not a fresh-extreme channel BREAKOUT
+    (DonchianBreakoutStrategy already covers new N-day highs/lows) but a
+    continuous PROXIMITY-to-high signal - price doesn't need to make a new
+    high today, just sit close to its recent one.
+
+    Rule: nearness = close / highest(closes, lookback_period). Long when
+    nearness >= entry_threshold (close within (1 - entry_threshold) of its
+    own trailing high). Symmetric short side (this project's own
+    extension, not itself literature-backed - same caveat already applied
+    to probe_ibs.py's/VolumeConfirmationStrategy's short sides): short
+    when close / lowest(closes, lookback_period) <= 1 / entry_threshold
+    (close within the same % distance above its trailing low).
+
+    lookback_period defaults to 252 - the paper's own ~52-trading-week
+    window. No natural structural stop exists (a proximity ratio implies
+    none), so the initial stop is stop_atr_multiple x ATR, the same
+    convention RSI-2/Squeeze/volume/MACD/Bollinger already use. Exit when
+    nearness fades back below exit_threshold (momentum has cooled) or
+    max_hold_days times out - this file's standard bounded-holding
+    convention.
+
+    No-lookahead: highest/lowest are computed from self._closes (every day
+    pushed through YESTERDAY - today not yet pushed) and compared against
+    `close` (today, the argument) - identical convention to Donchian and
+    ThreeBarBreakout.
+    """
+    lookback_period: int = 252
+    entry_threshold: float = 0.95
+    exit_threshold: float = 0.85
+    stop_atr_multiple: float = 3.0
+    max_hold_days: int = 60
+    atr_period: int = 14
+
+    _highs: list[float] = field(default_factory=list, init=False)
+    _lows: list[float] = field(default_factory=list, init=False)
+    _closes: list[float] = field(default_factory=list, init=False)
+    _in_trade: bool = field(default=False, init=False)
+    _days_in_trade: int = field(default=0, init=False)
+
+    def reset(self) -> None:
+        self._highs = []
+        self._lows = []
+        self._closes = []
+        self._in_trade = False
+        self._days_in_trade = 0
+
+    def push(self, bar: dict) -> None:
+        self._highs.append(bar["high"])
+        self._lows.append(bar["low"])
+        self._closes.append(bar["close"])
+        if self._in_trade:
+            self._days_in_trade += 1
+
+    def current_atr(self) -> float | None:
+        n = self.atr_period + 1
+        if len(self._closes) < n:
+            return None
+        window = [{"high": h, "low": l, "close": c} for h, l, c in
+                  zip(self._highs[-n:], self._lows[-n:], self._closes[-n:])]
+        return average_true_range(window, period=self.atr_period)
+
+    def check_entry(self, close: float) -> Signal | None:
+        if len(self._closes) < self.lookback_period:
+            return None
+        atr = self.current_atr()
+        if atr is None or atr <= 0:
+            return None
+
+        trailing_high = highest(self._closes, self.lookback_period)
+        trailing_low = lowest(self._closes, self.lookback_period)
+        if not trailing_high or not trailing_low:
+            return None
+
+        if close / trailing_high >= self.entry_threshold:
+            self._in_trade = True
+            self._days_in_trade = 0
+            return Signal(Side.LONG, close, close - self.stop_atr_multiple * atr,
+                          f"close {close:.2f} within {(1 - self.entry_threshold):.0%} of "
+                          f"{self.lookback_period}-day high {trailing_high:.2f}")
+        if close / trailing_low <= 1.0 / self.entry_threshold:
+            self._in_trade = True
+            self._days_in_trade = 0
+            return Signal(Side.SHORT, close, close + self.stop_atr_multiple * atr,
+                          f"close {close:.2f} within {(1 - self.entry_threshold):.0%} of "
+                          f"{self.lookback_period}-day low {trailing_low:.2f}")
+        return None
+
+    def check_exit(self, close: float, side: Side) -> bool:
+        timed_out = self._days_in_trade >= self.max_hold_days
+        trailing_high = highest(self._closes, self.lookback_period)
+        trailing_low = lowest(self._closes, self.lookback_period)
+
+        faded = False
+        if side == Side.LONG and trailing_high:
+            faded = close / trailing_high < self.exit_threshold
+        elif side == Side.SHORT and trailing_low:
+            faded = close / trailing_low > 1.0 / self.exit_threshold
+
+        if faded or timed_out:
+            self._in_trade = False
+            return True
+        return False
