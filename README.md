@@ -271,6 +271,20 @@ quarter-split) emerged but without the sizing response this project's
 best large-cap results have — thin, ~1.18%/year at the only safe
 setting. See CLAUDE.md's "Thirty-third" entry.
 
+`regime.py` (market-regime classifier: trend-vs-200-day-SMA crossed with a
+realized-volatility percentile rank, no lookahead) — the first entry to
+condition on market regime rather than test a new signal or instrument.
+Current `^NSEI` regime as of 2026-09-17: `down_low_vol`. Tested two
+hypotheses against this project's own 5 best-known survivors: (a) gating
+mean-reversion strategies to low-vol regimes and continuation strategies to
+high-vol regimes — no consistent improvement, and the one case that looked
+like a win (`threebar`/`SBIN.NS`'s drawdown dropping from 10.5% to 0.2%)
+turned out to only survive at the exact default regime threshold, the same
+single-point-fit red flag already seen with Squeeze/SuperTrend; (b)
+regime-based strategy SWITCHING (Turtle Soup gated to choppy regimes,
+Donchian to trending, on `AXISBANK.NS`) — nets ~flat, clearly worse than
+running Turtle Soup alone. See CLAUDE.md's "Thirty-fourth" entry.
+
 ### Options premium selling (weekly Nifty iron condor) — real edge, wrong capital tier, and now real-data validated
 
 Not a daily-bar or intraday-candle strategy, so it doesn't fit either

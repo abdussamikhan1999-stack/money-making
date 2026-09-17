@@ -2399,3 +2399,115 @@ than a breakthrough. This closes off "try a less-efficient market
 segment" as a productive direction for this project's two most-validated
 mechanisms specifically — the ceiling these strategies hit doesn't appear
 to be about which NSE stocks they're pointed at.
+
+## Thirty-fourth: a market-regime classifier — neither regime-filtering nor regime-switching beats what this project already found, but the best-looking filter result exposes a real single-point-fit trap
+
+The first entry to condition on MARKET REGIME rather than test a new
+signal, instrument, or portfolio construction. Every prior entry either
+ran a strategy unconditionally across its whole backtest window or
+combined several strategies simultaneously (Thirty-second) — nothing yet
+had asked "does this strategy's edge depend on the prevailing trend/
+volatility regime, and can regime awareness be turned into an
+improvement?"
+
+Built `regime.py`: a `RegimeClassifier` crossing TREND (today's close vs
+a trailing `trend_period`-day SMA — the identical convention
+`ConnorsRSI2Strategy`'s own trend filter already uses and this project has
+already validated) with VOLATILITY (today's realized-vol reading, ranked
+within its own trailing `vol_lookback`-day window — high/low by a median
+split), giving 4 buckets (`up_high_vol`, `up_low_vol`, `down_high_vol`,
+`down_low_vol`). No lookahead: `classify(close)` is called before
+`push(bar)` for that same day, exactly mirroring every `daily_strategy.py`
+strategy's own `check_entry(close)` convention. Deliberately reused only
+indicators already in `indicators.py` (`sma`, `stdev`) rather than adding
+ADX, an HMM regime-switcher, or any new dependency — this project has
+consistently favored boring, explainable indicators. Also added
+`RegimeGatedStrategy`, a thin wrapper that gates any existing strategy's
+`check_entry()` to a set of allowed regimes without modifying the wrapped
+strategy at all — a generalization of the Twenty-eighth entry's
+Bollinger-specific trend-drift gate into something reusable on any
+strategy in this project. 8 new unit tests; full suite 147/147 green.
+
+**Current market regime, checked directly rather than assumed**: `^NSEI`
+as of 2026-09-17 is **`down_low_vol`** — below its 200-day SMA, but with
+LOW realized volatility. Read as a quiet drift/consolidation below trend,
+not a panic decline.
+
+**Hypothesis (a) — regime FILTER**: a specific, motivated pairing, not a
+blind sweep — mean-reversion/counter-trend strategies (`rsi2`,
+`turtlesoup`) gated to LOW-vol regimes only (calm, range-bound conditions
+should favor reversion); continuation/breakout strategies (`threebar`,
+`macd`) gated to HIGH-vol regimes only (a compression breakout or a
+crossover should need volatility expansion to follow through). Applied to
+this project's own 5 best-known survivor pairs (`probe_portfolio_combo.py`'s
+`COMPONENTS`, reused directly rather than picking new instruments):
+`rsi2`/`RELIANCE.NS`, `threebar`/`SBIN.NS`, `threebar`/`HDFCBANK.NS`,
+`macd`/`TCS.NS`, `turtlesoup`/`AXISBANK.NS`.
+
+**Result: no consistent improvement, and the two "wins" are risk
+reduction, not return improvement**. `rsi2`/`RELIANCE.NS`: filtering
+halved both trades and P&L in lockstep (₹45.4 vs ₹45.3 per trade before/
+after) — no edge concentration in low-vol, just fewer trades.
+`macd`/`TCS.NS`: actively hurt — baseline +18,739 (2.6% DD) filtered to
+-5,527 (10.1% DD), and the filtered version's walk-forward is negative on
+BOTH halves. `threebar`/`HDFCBANK.NS`: also hurt (₹18.5/trade baseline
+down to ₹3.2/trade filtered, drawdown unchanged). Two looked like wins on
+drawdown alone — `threebar`/`SBIN.NS` (10.5%→0.2% DD at an unchanged
+₹178/trade) and `turtlesoup`/`AXISBANK.NS` (1.1%→0.2% DD, though per-trade
+edge dropped) — but even these are lower TOTAL return (fewer trades), not
+a better edge.
+
+**The best-looking case doesn't survive perturbing the regime thresholds
+themselves — the real finding of this entry**: per this project's own
+methodology, a regime boundary is itself a parameter and must be
+perturbed like any other. Swept `vol_period` (10/20/30/40) x
+`vol_lookback` (126/252/378) on `threebar`/`SBIN.NS`'s filtered result:
+**only `vol_period=20` — the exact default — avoids a drawdown-halt at
+every tested `vol_lookback`**; every other `vol_period` value
+drawdown-halts in 2 of 3 lookback settings and two cells flip net negative
+(`vol_period=30, vol_lookback=378`: -4,842; `vol_period=40,
+vol_lookback=252`: -975). This is the identical "peaks suspiciously close
+to the exact default" single-point-fit signature this project has already
+learned to distrust (Squeeze's `length` sweep, `AXISBANK.NS`'s SuperTrend
+`st_period` sweep) — the apparent drawdown improvement was curve-fit noise
+around one specific threshold value, not a real regime effect. (Quarter-
+split on the unperturbed default was itself mixed, for what it's worth: 2
+of 4 quarters negative, though Q4 2024-2026 — the most recent — was the
+*strongest*, no decay red flag; moot given the perturbation failure.)
+
+**Hypothesis (b) — regime SWITCH**: a genuinely different shape from the
+Thirty-second entry's simultaneous fixed-weight blend (found to hurt
+because its components were too correlated) — TEMPORAL allocation
+instead. On `AXISBANK.NS` (Turtle Soup's cleanest single survivor, the
+Twentieth entry), gated `TurtleSoupStrategy` to choppy/low-vol regimes and
+`DonchianBreakoutStrategy` (not previously tested on this stock) to
+trending/high-vol regimes, each on its own half-capital slice, merged
+chronologically via the same `dated_trades` pattern `probe_portfolio_
+combo.py` established.
+
+**Result: ~flat, 0.02%/year — clearly worse than running `turtlesoup`/
+`AXISBANK.NS` alone** (1.71%/year at 1.1% drawdown, the Twentieth/Thirty-
+second entries' own established number). The trending-gated Donchian leg
+was a net loser on its capital slice (₹47,766 final from a ₹50,000
+slice), dragging the combined result down to breakeven despite the
+choppy-gated Turtle Soup leg finishing positive (₹52,410). Same
+conclusion as the Thirty-second entry reached by a different route:
+combining this project's components — whether simultaneously (fixed
+weights) or temporally (regime-gated) — has twice now underperformed
+concentrating capital in the single best-trusted edge.
+
+**Net verdict**: thirty-fourth entry, and both regime hypotheses tested
+here are cleanly rejected, not just weakly disconfirmed — the filter
+hypothesis's one promising-looking case turned out to be exactly the kind
+of single-point parameter artifact this project's own perturbation
+discipline exists to catch, and the switching hypothesis reproduces the
+Thirty-second entry's "combining doesn't help" conclusion via an entirely
+different construction. Useful reusable infrastructure regardless of this
+particular null result: `regime.py`'s `RegimeClassifier`/`current_regime()`
+gives this project a real, no-lookahead answer to "what's the market doing
+right now" (currently: `down_low_vol` on `^NSEI`) for the first time, and
+`RegimeGatedStrategy` is a general-purpose gate any future strategy
+candidate can reuse — just remember, per this entry, to perturb the
+regime thresholds themselves with the same suspicion applied to every
+other parameter before trusting a gate's result. **No mechanism has yet
+cleared the bar to actually trade.**
