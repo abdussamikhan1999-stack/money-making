@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from backtest_daily import simulate_daily, walk_forward_daily
-from daily_strategy import DonchianBreakoutStrategy
+from daily_strategy import DonchianBreakoutStrategy, OvernightMomentumStrategy
 from strategy import Signal, Side
 
 
@@ -28,6 +28,24 @@ def test_simulate_daily_no_trade_when_price_stays_inside_channel():
     bars = [bar(d, 9.5, 10, 9, 9.5) for d in range(1, 10)]
     broker, risk = simulate_daily(bars, DonchianBreakoutStrategy(entry_period=3), capital=100_000)
     assert broker.trade_log == []
+
+
+def test_simulate_daily_overnight_strategy_exits_at_next_open_ignoring_intraday_low():
+    bars = [
+        bar(1, 100, 101, 99, 100),
+        bar(2, 101, 102, 100, 101),
+        bar(3, 102.01, 103, 101, 102.01),
+        bar(4, 103.0301, 104, 102, 103.0301),
+        bar(5, 104.06, 106, 103, 105),      # ~1% overnight gaps trailing -> LONG @ close=105
+        bar(6, 106.05, 106.5, 1, 106.05),   # exit bar: catastrophic low of 1 must be IGNORED - exit @ open
+    ]
+    strat = OvernightMomentumStrategy(lookback=3, atr_period=3, entry_threshold=0.005)
+    broker, risk = simulate_daily(bars, strat, capital=100_000)
+    assert len(broker.trade_log) == 1
+    trade = broker.trade_log[0]
+    assert trade["side"] == "LONG"
+    assert trade["entry"] == 105
+    assert trade["exit"] == 106.05  # next bar's OPEN, unaffected by that bar's low
 
 
 def test_simulate_daily_exits_via_shorter_channel_not_hard_stop():

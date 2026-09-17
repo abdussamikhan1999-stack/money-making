@@ -16,7 +16,7 @@ from risk import RiskManager
 from daily_strategy import (
     DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, SqueezeMomentumStrategy,
     VolumeConfirmationStrategy, TurtleSoupStrategy, MACDStrategy, BollingerBandsStrategy,
-    FiftyTwoWeekHighStrategy, Side,
+    FiftyTwoWeekHighStrategy, OvernightMomentumStrategy, Side,
 )
 from backtest import split_by_date, _report  # reuse: same date-splitting + reporting used for intraday backtests
 
@@ -57,6 +57,10 @@ STRATEGIES = {
         lookback_period=args.high52w_lookback, entry_threshold=args.high52w_entry_threshold,
         exit_threshold=args.high52w_exit_threshold, stop_atr_multiple=args.high52w_stop_atr_multiple,
         max_hold_days=args.high52w_max_hold_days,
+    ),
+    "overnight": lambda args: OvernightMomentumStrategy(
+        lookback=args.overnight_lookback, entry_threshold=args.overnight_entry_threshold,
+        stop_atr_multiple=args.overnight_stop_atr_multiple,
     ),
 }
 
@@ -110,12 +114,19 @@ def simulate_daily(daily: list[dict], strategy, capital: float = 100_000.0, risk
     risk = RiskManager(capital=capital, risk_per_trade_pct=risk_per_trade_pct, max_drawdown_pct=max_drawdown_pct)
     current_side: Side | None = None
 
+    exit_at_open = getattr(strategy, "exit_at_open", False)
+
     for bar in daily:
         if broker.in_position:
             # OHLC-order approximation of the day's path (open->high->low->close) -
             # same approach as backtest.py's intraday loop, so an intraday stop
             # breach isn't missed just because the close recovered above it.
-            for px in (bar["open"], bar["high"], bar["low"], bar["close"]):
+            # exit_at_open strategies (currently only OvernightMomentumStrategy)
+            # never hold past the open, so only the open itself can stop them out -
+            # checking high/low/close too would test a hold period the strategy
+            # never actually has.
+            prices = (bar["open"],) if exit_at_open else (bar["open"], bar["high"], bar["low"], bar["close"])
+            for px in prices:
                 if not broker.in_position:
                     break
                 pnl = broker.on_price(px)
@@ -124,8 +135,9 @@ def simulate_daily(daily: list[dict], strategy, capital: float = 100_000.0, risk
                     if dated_trades is not None:
                         dated_trades.append((bar["date"], pnl))
                     current_side = None
-            if broker.in_position and strategy.check_exit(bar["close"], current_side):
-                pnl = broker.close(bar["close"])
+            exit_price = bar["open"] if exit_at_open else bar["close"]
+            if broker.in_position and strategy.check_exit(exit_price, current_side):
+                pnl = broker.close(exit_price)
                 risk.record_trade(pnl)
                 if dated_trades is not None:
                     dated_trades.append((bar["date"], pnl))
@@ -259,6 +271,11 @@ if __name__ == "__main__":
                          help="[high52w] exit once nearness fades back below this")
     parser.add_argument("--high52w-stop-atr-multiple", type=float, default=3.0, help="[high52w] initial stop = N x ATR")
     parser.add_argument("--high52w-max-hold-days", type=int, default=60, help="[high52w] time-stop if nearness never fades")
+    # overnight params
+    parser.add_argument("--overnight-lookback", type=int, default=5, help="[overnight] trailing overnight-return window in days")
+    parser.add_argument("--overnight-entry-threshold", type=float, default=0.0015,
+                         help="[overnight] enter when |trailing avg overnight return| >= this")
+    parser.add_argument("--overnight-stop-atr-multiple", type=float, default=3.0, help="[overnight] initial stop = N x ATR")
     args = parser.parse_args()
 
     daily = fetch_daily_yfinance(args.symbol, args.period)

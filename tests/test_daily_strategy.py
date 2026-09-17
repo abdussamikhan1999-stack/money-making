@@ -1,7 +1,7 @@
 from daily_strategy import (
     DonchianBreakoutStrategy, ConnorsRSI2Strategy, ThreeBarBreakoutStrategy, SqueezeMomentumStrategy,
     VolumeConfirmationStrategy, TurtleSoupStrategy, MACDStrategy, BollingerBandsStrategy,
-    FiftyTwoWeekHighStrategy,
+    FiftyTwoWeekHighStrategy, OvernightMomentumStrategy,
 )
 from strategy import Side
 
@@ -725,3 +725,67 @@ def test_reset_clears_high52w_state():
     s.check_entry(close=19)
     s.reset()
     assert s.check_entry(close=19) is None  # window emptied, needs refilling
+
+
+# --- OvernightMomentumStrategy ---
+
+def _push_overnight_gaps(s, opens, closes):
+    """opens[i]/closes[i] pair as one day's bar; high/low padded +-1 for ATR."""
+    for o, c in zip(opens, closes):
+        s.push(bar(max(o, c) + 1, min(o, c) - 1, c, open_=o))
+
+
+def test_no_signal_before_overnight_window_fills():
+    s = OvernightMomentumStrategy(lookback=3, atr_period=3, entry_threshold=0.005)
+    _push_overnight_gaps(s, [100, 101, 102.01], [100, 101, 102.01])  # only 3 pushed, needs > lookback (3)
+    assert s.check_entry(close=103) is None
+
+
+def test_long_entry_when_trailing_overnight_return_is_positive():
+    s = OvernightMomentumStrategy(lookback=3, atr_period=3, entry_threshold=0.005)
+    # each open gaps up ~1% from the prior close
+    _push_overnight_gaps(s, [100, 101, 102.01, 103.0301], [100, 101, 102.01, 103.0301])
+    atr = s.current_atr()
+    sig = s.check_entry(close=105)
+    assert sig is not None
+    assert sig.side is Side.LONG
+    assert sig.entry_price == 105
+    assert sig.stop_loss == 105 - 3.0 * atr
+
+
+def test_short_entry_when_trailing_overnight_return_is_negative():
+    s = OvernightMomentumStrategy(lookback=3, atr_period=3, entry_threshold=0.005)
+    # each open gaps down ~1% from the prior close
+    _push_overnight_gaps(s, [100, 99, 98.01, 97.0299], [100, 99, 98.01, 97.0299])
+    atr = s.current_atr()
+    sig = s.check_entry(close=95)
+    assert sig is not None
+    assert sig.side is Side.SHORT
+    assert sig.entry_price == 95
+    assert sig.stop_loss == 95 + 3.0 * atr
+
+
+def test_no_signal_when_trailing_overnight_return_is_near_zero():
+    s = OvernightMomentumStrategy(lookback=3, atr_period=3, entry_threshold=0.005)
+    _push_overnight_gaps(s, [100, 100.05, 99.98, 100.02], [100, 100.05, 99.98, 100.02])
+    assert s.check_entry(close=100) is None  # well under the 0.5% threshold
+
+
+def test_check_exit_always_true_once_in_position():
+    s = OvernightMomentumStrategy(lookback=3, atr_period=3)
+    # exit_at_open means the engine, not this method, decides the exit PRICE -
+    # check_exit itself is unconditional since it's only ever called while
+    # a position is open and this strategy never holds past the next bar.
+    assert s.check_exit(close=999, side=Side.LONG) is True
+    assert s.check_exit(close=1, side=Side.SHORT) is True
+
+
+def test_exit_at_open_flag_is_set():
+    assert OvernightMomentumStrategy().exit_at_open is True
+
+
+def test_reset_clears_overnight_state():
+    s = OvernightMomentumStrategy(lookback=3, atr_period=3, entry_threshold=0.005)
+    _push_overnight_gaps(s, [100, 101, 102.01, 103.0301], [100, 101, 102.01, 103.0301])
+    s.reset()
+    assert s.check_entry(close=105) is None  # history emptied, needs refilling

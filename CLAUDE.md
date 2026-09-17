@@ -2676,3 +2676,85 @@ finding — it reveals the original screen overstated it. Closing
 `TCS.NS`/`NESTLEIND.NS` are flagged as two individual lucky draws from a
 40-name sweep, not a corroborated mechanism. **No mechanism has yet
 cleared the bar to actually trade.**
+
+## Thirty-seventh: the overnight-return anomaly — a real gross edge confirmed in the data, but structurally too small to survive any realistic cost, at every threshold tested
+
+A genuinely different mechanism from everything else in this file: the
+overnight-return literature (Lou, Polk & Skouras 2019, "A Tug of War:
+Overnight versus Intraday Expected Returns"; Cliff, Cooper & Gulen 2019,
+"There's No Place Like Home") documents that a large share of a stock's
+total return accrues overnight (yesterday's close → today's open), not
+intraday, and that the overnight component shows its own short-term
+persistence. Nothing in this project has ever decomposed a bar's return
+into its overnight vs. intraday pieces before.
+
+Implemented as `OvernightMomentumStrategy` in `daily_strategy.py`
+(`--strategy overnight`): `trailing_overnight` = mean of `(open_i /
+close_{i-1} - 1)` over the last `lookback` days (default 5), computed
+entirely from bars already pushed through **yesterday** — no same-day
+open is ever needed, so this strategy stays compatible with the existing
+`check_entry(close)` interface unchanged. Long when `trailing_overnight
+>= entry_threshold` (default 0.15%); short when `<= -entry_threshold`.
+Enters at TODAY's close, holds exactly one overnight leg, exits at
+TOMORROW's open — a single-bar hold, not a same-day swing.
+
+This is the first strategy in this file that needed an actual engine
+change, not just a new class: `simulate_daily()` always evaluated
+`check_exit()` against `bar["close"]` and stop-checked the full
+open→high→low→close path. An overnight-only strategy never holds past
+the open, so checking high/low/close for a stop would be testing a hold
+period the strategy doesn't have. Added one minimal, opt-in flag —
+`exit_at_open` on the strategy object (default `False`, so every existing
+strategy is byte-for-byte unchanged) — that makes `simulate_daily()`
+check only `bar["open"]` for a stop and exit at `bar["open"]` instead of
+`bar["close"]`. `OvernightMomentumStrategy.check_exit()` itself is
+trivially `return True` — the interface guarantees it's only called while
+a position is open, and this strategy never holds past the very next bar,
+so there is nothing to check. 8 new unit tests (7 on the strategy class in
+isolation, 1 engine-level test proving a catastrophic intraday low on the
+exit bar is correctly ignored — only the open matters); full suite
+162/162 green.
+
+**Screened on the full 40-stock universe from the start** (`probe_pead.py`'s
+`UNIVERSE`, `probe_overnight.py`) — the discipline the Thirty-fifth/
+Thirty-sixth entries just learned the hard way, rather than repeating the
+small-screen-then-widen cycle a third time. **0/40 passed walk-forward**,
+every single instrument net-negative on both halves, and trade counts
+were extremely high (~800-1,000 round trips over 10 years per name — the
+default 0.15% threshold on a 5-day average is loose enough to trigger on
+most days).
+
+**Before closing it as a flat failure like Bollinger Bands (Twenty-seventh
+entry, 0/12), checked whether this is "no edge" or "real edge, killed by
+cost"** — a distinction this project has drawn before (gold/silver ratio
+had no gross edge at all; several single-instrument survivors have real
+edges that are merely thin). Re-ran three names
+(`TCS.NS`/`RELIANCE.NS`/`ITC.NS`) at **zero commission**: all three came
+back clearly **gross-positive** on both walk-forward halves (`TCS.NS`
++2,223/+507; `RELIANCE.NS` +4,784/+2,120; `ITC.NS` +7,604/+2,990) — a
+real, reproducible gross edge, not noise.
+
+**Then swept `entry_threshold` from 0.003 to 0.05 with realistic ₹20/
+round-trip commission, on all three names, to see if raising the bar and
+cutting trade frequency could let the edge outrun the cost.** It doesn't,
+anywhere on the curve: losses shrink monotonically as the threshold
+rises (`TCS.NS`: -3,285/-4,548 at 0.3% → -754/-1,185 at 0.5% → -153/-379
+at 1.0%) but never cross into net-positive before trade count collapses
+toward zero (4 trades at 2%, 0 trades at 5%) — the same monotonic,
+cliff-free shape this project trusts for perturbation smoothness, just
+smoothly converging to zero rather than to a profit. Back-of-envelope
+confirms why: at the loosest default threshold, `TCS.NS`'s gross edge
+averages roughly ₹3-4 per trade — an order of magnitude below the ₹20
+round-trip cost already used throughout this file. This is not a
+threshold-tuning problem (unlike most of this project's "thin at safe
+sizing" survivors); the edge's *magnitude per trade* is intrinsically
+too small for retail-equivalent transaction costs, at every point tested.
+
+**Net verdict**: the overnight-return anomaly is real in this dataset —
+confirmed with a clean gross/net decomposition, not just asserted — but
+uneconomical to trade at any operating point on the threshold curve
+tested here. Closed for a different reason than any prior entry: not
+decay, not a lone-instrument fluke, not a capital-tier wall, but a gross
+edge too small relative to realistic per-trade costs to ever clear zero,
+no matter how the entry filter is tuned. **No mechanism has yet cleared
+the bar to actually trade.**

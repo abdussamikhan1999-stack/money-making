@@ -11,11 +11,11 @@ accredited financial specialist before risking real capital. Backtest and
 paper-trade thoroughly before ever running this live. You are solely
 responsible for any trades it places.
 
-## Daily-bar strategies (a second family, nine mechanisms so far)
+## Daily-bar strategies (a second family, ten mechanisms so far)
 
 `backtest_daily.py` backtests daily-bar strategies against years of data
 instead of intraday's 60-day cap, via
-`--strategy {donchian,rsi2,threebar,squeeze,volume,turtlesoup,macd,bollinger,high52w}`:
+`--strategy {donchian,rsi2,threebar,squeeze,volume,turtlesoup,macd,bollinger,high52w,overnight}`:
 
 ```
 python backtest_daily.py --strategy donchian --symbol '^NSEI' --period 10y --walk-forward
@@ -27,6 +27,7 @@ python backtest_daily.py --strategy turtlesoup --symbol AXISBANK.NS --period 10y
 python backtest_daily.py --strategy macd --symbol TCS.NS --period 10y --walk-forward --commission-per-trade 20
 python backtest_daily.py --strategy bollinger --symbol RELIANCE.NS --period 10y --walk-forward --commission-per-trade 20
 python backtest_daily.py --strategy high52w --symbol TCS.NS --period 10y --walk-forward --commission-per-trade 20
+python backtest_daily.py --strategy overnight --symbol TCS.NS --period 10y --walk-forward --commission-per-trade 20
 ```
 
 **`donchian`** — the "Turtle Trading" entry rule (N-day high/low channel
@@ -179,6 +180,25 @@ original numbers almost exactly) and one new name, `NESTLEIND.NS`. 2 of
 40 (5%) is at or below every chance-level band this project uses to
 disqualify a result. Closed the same way PEAD and SuperTrend's oil
 survivor were closed. See CLAUDE.md's "Thirty-sixth" section.
+
+**`overnight`** — the overnight-return anomaly (Lou, Polk & Skouras 2019;
+Cliff, Cooper & Gulen 2019): decomposes a bar's return into overnight
+(yesterday's close → today's open) vs. intraday pieces, something no
+other strategy here does. Enters at today's close on trailing overnight-
+return momentum, exits at TOMORROW's open — a genuine single-bar
+overnight-only hold, which needed one small opt-in engine flag
+(`exit_at_open`) in `simulate_daily()`, unchanged for every other
+strategy. Screened on the full 40-stock universe from the start (the
+lesson the two entries above just taught the hard way): **0/40 passed
+walk-forward**, net-negative everywhere at realistic cost. But a
+zero-commission recheck on 3 names came back clearly gross-positive, and
+sweeping the entry threshold to cut trade frequency shrinks the loss
+monotonically without ever crossing into profit — the gross edge is real
+but averages roughly ₹3-4/trade, an order of magnitude under the ₹20
+round-trip cost used throughout this project. Closed for a new reason:
+not decay, not a lone survivor, not a capital wall, but a real edge too
+small in magnitude to ever clear realistic transaction costs. See
+CLAUDE.md's "Thirty-seventh" section for the full breakdown.
 
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 

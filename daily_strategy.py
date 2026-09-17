@@ -1111,3 +1111,91 @@ class FiftyTwoWeekHighStrategy:
             self._in_trade = False
             return True
         return False
+
+
+@dataclass
+class OvernightMomentumStrategy:
+    """The overnight-return anomaly (Lou, Polk & Skouras 2019 "A Tug of
+    War"; Cliff, Cooper & Gulen 2019 "There's No Place Like Home": a large,
+    often majority, share of a stock's total return accrues overnight
+    (yesterday's close -> today's open), not intraday (today's open ->
+    today's close), and the overnight component shows its own short-term
+    persistence. Genuinely different mechanism from everything else in
+    this file - nothing else here decomposes a bar's return into its
+    overnight vs. intraday components.
+
+    Rule: trailing_overnight = mean of (open_i / close_{i-1} - 1) over the
+    last `lookback` days, using ONLY bars already pushed (i.e. through
+    YESTERDAY - no same-day open is ever needed, so this stays compatible
+    with check_entry(close)'s existing interface unchanged). Long when
+    trailing_overnight >= entry_threshold (positive overnight drift
+    persisting); short when <= -entry_threshold. Enters at TODAY's close
+    (the check_entry argument), holds exactly ONE overnight leg, exits at
+    TOMORROW's open - a single-bar hold, not a same-day swing.
+
+    check_exit() is trivial (always True) because the interface guarantees
+    it is only ever called while a position is open, and this strategy
+    never holds past the very next bar. The actual "exit at the next bar's
+    OPEN, not its close" behavior lives in backtest_daily.py's
+    simulate_daily(), gated on this class's exit_at_open=True flag (the
+    only strategy in this file that needs it) - see that function's
+    docstring for why the engine, not the strategy, owns that behavior.
+    """
+    lookback: int = 5
+    entry_threshold: float = 0.0015
+    stop_atr_multiple: float = 3.0
+    atr_period: int = 14
+    exit_at_open: bool = field(default=True, init=False)
+
+    _opens: list[float] = field(default_factory=list, init=False)
+    _highs: list[float] = field(default_factory=list, init=False)
+    _lows: list[float] = field(default_factory=list, init=False)
+    _closes: list[float] = field(default_factory=list, init=False)
+
+    def reset(self) -> None:
+        self._opens = []
+        self._highs = []
+        self._lows = []
+        self._closes = []
+
+    def push(self, bar: dict) -> None:
+        self._opens.append(bar["open"])
+        self._highs.append(bar["high"])
+        self._lows.append(bar["low"])
+        self._closes.append(bar["close"])
+
+    def current_atr(self) -> float | None:
+        n = self.atr_period + 1
+        if len(self._closes) < n:
+            return None
+        window = [{"high": h, "low": l, "close": c} for h, l, c in
+                  zip(self._highs[-n:], self._lows[-n:], self._closes[-n:])]
+        return average_true_range(window, period=self.atr_period)
+
+    def _trailing_overnight(self) -> float | None:
+        if len(self._opens) <= self.lookback:
+            return None
+        opens = self._opens[-self.lookback:]
+        prior_closes = self._closes[-self.lookback - 1:-1]
+        rets = [o / c - 1 for o, c in zip(opens, prior_closes) if c]
+        return sum(rets) / len(rets) if rets else None
+
+    def check_entry(self, close: float) -> Signal | None:
+        avg_on = self._trailing_overnight()
+        if avg_on is None:
+            return None
+        atr = self.current_atr()
+        if atr is None or atr <= 0:
+            return None
+        if avg_on >= self.entry_threshold:
+            return Signal(Side.LONG, close, close - self.stop_atr_multiple * atr,
+                          f"trailing {self.lookback}d overnight return {avg_on:.3%} "
+                          f">= {self.entry_threshold:.3%}")
+        if avg_on <= -self.entry_threshold:
+            return Signal(Side.SHORT, close, close + self.stop_atr_multiple * atr,
+                          f"trailing {self.lookback}d overnight return {avg_on:.3%} "
+                          f"<= {-self.entry_threshold:.3%}")
+        return None
+
+    def check_exit(self, close: float, side: Side) -> bool:
+        return True
