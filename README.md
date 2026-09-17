@@ -311,6 +311,22 @@ month-long short isn't directly executable in NSE cash equity anyway
 (needs SLB or futures, neither modeled) — see CLAUDE.md's "Forty-fourth"
 section for the full caveat and numbers.
 
+**Does a targeted NIFTY-futures beta hedge do better? (Forty-fifth entry,
+`probe_ibs_rotation_hedged.py`)** — the Forty-fourth entry's per-stock
+short leg fought IBS's real one-sided edge and lost. This instead leaves
+every stock pick untouched and only shorts NIFTY futures, sized to the
+long-only strategy's own regression beta (1.143, cross-checks against
+entry 44's 0.796 correlation). It works cleanly as a backtest: full hedge
+cuts drawdown 38.2%→25.5% while keeping a real 8.19%/yr return,
+walk-forward consistent, all 4 quarters positive. But NIFTY futures are
+blocked by the same capital-tier wall as every other Nifty derivative in
+this project (Sixth/Seventh/Ninth entries): one lot (65 units, confirmed
+live) needs ~₹196,800 margin at current NIFTY levels — 2-6.5x this
+project's whole ₹30,000-100,000 target capital range, before even sizing
+the beta-appropriate fraction of a lot. Real backtest, not actionable at
+this project's scale. See CLAUDE.md's "Forty-fifth" section for the full
+numbers.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an

@@ -3374,3 +3374,84 @@ assuming a mirror-image short leg will behave the same way the long leg
 does, rather than assuming standard long/short construction is a free
 risk-reduction lever. **No mechanism has yet cleared the bar to actually
 trade.**
+
+## Forty-fifth: a targeted NIFTY-futures beta hedge cuts drawdown cleanly in backtest — and is blocked by the exact same capital-tier wall this project already closed out for every other Nifty derivative
+
+The Forty-fourth entry's per-stock short leg fought IBS's real, one-sided
+edge and destroyed almost the entire return trying to hedge market beta.
+This entry tests a more targeted construction instead: leave every
+individual stock pick completely untouched (100% of the stock-picking
+edge intact) and hedge ONLY the portfolio's broad market-beta component,
+using a single short NIFTY futures position sized via a real OLS
+regression of the long-only strategy's own monthly returns against
+NIFTY's monthly returns (`statistics.linear_regression`, not just reusing
+the Forty-fourth entry's correlation number — beta and correlation are
+different statistics, and beta is what actually determines the right
+hedge notional).
+
+NIFTY futures are a genuinely different instrument class from the
+Forty-fourth entry's per-stock shorts: confirmed live and currently
+listed via `https://api.kite.trade/instruments` (the Twenty-ninth entry's
+no-auth-needed instrument master) — `NIFTY26SEPFUT`/`OCT`/`NOV`,
+`lot_size=65`, `NFO-FUT` segment — so this doesn't carry the Forty-fourth
+entry's unmodeled SLB/short-selling-availability caveat; index futures
+are a standard, directly shortable instrument.
+
+Implemented as `probe_ibs_rotation_hedged.py`: `simulate_hedged()` runs
+the unmodified long-only IBS rotation (`rank_by_ibs()`, reused directly
+from `probe_ibs_rotation.py`) for the stock-picking leg, then each month
+adds a short NIFTY notional position sized at `hedge_ratio x beta x
+current_capital`, marked to market against NIFTY's own realized monthly
+return, costed at 0.05% round-trip (this project's own established
+figure for index-futures STT/brokerage vs. equity delivery's 0.2%, from
+the "Sixth" entry). `lot_feasibility()` checks the resulting notional
+against a live-fetched NIFTY spot price and the confirmed 65-unit lot
+size for real capital feasibility, the same discipline every commodity/FX
+capital check in this project has applied since the Twenty-fifth entry.
+
+**Regression beta = 1.143** (long-only strategy moves slightly more than
+1:1 with NIFTY on average) — cross-checks cleanly against the
+Forty-fourth entry's own correlation figure (0.795 recomputed here vs.
+0.796 there, same data, same result, confirming no drift between the two
+entries' otherwise-independent implementations).
+
+**Backtest result: clean, and a real improvement in risk-adjusted terms**
+— full beta-hedge (hedge_ratio=1.0) cuts max drawdown from the long-only
+baseline's 38.2% to **25.5%** while keeping a real **8.19%/yr** return
+(vs. long-only's 22.11%/yr — a meaningful cost, but not the near-total
+destruction the Forty-fourth entry's per-stock short caused). A half
+hedge (0.5x) is a real, different point on the same tradeoff curve:
+15.52%/yr at 23.6% drawdown — notably, LOWER drawdown than the full hedge
+in this specific run, plausibly because a partial hedge avoids the full
+hedge's own added cost/overcorrection in some months; not investigated
+further since the feasibility check below closes the line regardless.
+**Walk-forward is consistent** (in-sample 5.50%/yr at 16.5% DD,
+out-of-sample 10.73%/yr at 14.8% DD, both positive) and **all 4 quarters
+are positive** (8.05% / 2.86% / 5.30% / 16.34%/yr, Q4 the strongest — no
+decay) at the full hedge ratio. This is a real, well-behaved backtest by
+every check this project applies.
+
+**But it's blocked by the identical capital-tier wall this project has
+already closed out for every other Nifty derivative (Sixth/Seventh/Ninth
+entries)**: at live-fetched NIFTY levels (~23,291), one 65-unit lot's
+notional is ~₹1,513,905, needing ~₹196,808 margin (13% SPAN+exposure, the
+standard index-futures figure) just to hold ONE lot — **2-6.5x this
+project's entire ₹30,000-100,000 target capital range**, before even
+getting to the beta-appropriate fraction of a lot the hedge actually
+calls for (0.08 lots at ₹100,000 capital — not tradable at any whole-lot
+granularity). This is the same wall, re-derived independently via a live
+API fetch rather than recalled figures, that already closed the iron
+condor (Seventh/Ninth entries) and the single-sided put credit spread —
+SEBI's market-wide minimum-contract-value floor applies to every Nifty
+derivative, hedge overlay included, not just the option-selling
+strategies that found it first.
+
+**Net verdict**: forty-fifth entry, and a genuinely different outcome
+from the Forty-fourth entry's blunt rejection — this hedge construction
+is mechanically sound and backtest-clean (unlike the per-stock short,
+which failed on its own merits before capital was even a question). It's
+closed for the same structural reason as options-selling, not for a
+signal-quality reason: real edge, right construction, wrong capital tier.
+**The long-only construction (Thirty-eighth through Forty-first entries)
+remains this project's strongest, only currently-actionable finding.**
+No mechanism has yet cleared the bar to actually trade.
