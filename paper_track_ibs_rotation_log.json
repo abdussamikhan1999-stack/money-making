@@ -1,0 +1,33 @@
+[
+  {
+    "date": "2026-09-17",
+    "picks": [
+      {
+        "symbol": "POWERGRID.NS",
+        "entry_price": 263.3500061035156,
+        "entry_ibs": 0.0431
+      },
+      {
+        "symbol": "RELIANCE.NS",
+        "entry_price": 1244.199951171875,
+        "entry_ibs": 0.1738
+      },
+      {
+        "symbol": "HINDUNILVR.NS",
+        "entry_price": 1951.9000244140625,
+        "entry_ibs": 0.2145
+      },
+      {
+        "symbol": "MARUTI.NS",
+        "entry_price": 12367.0,
+        "entry_ibs": 0.2509
+      },
+      {
+        "symbol": "BAJFINANCE.NS",
+        "entry_price": 1010.7000122070312,
+        "entry_ibs": 0.2814
+      }
+    ],
+    "exit": null
+  }
+]

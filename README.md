@@ -260,6 +260,16 @@ concentration figures are noisy at the single-run level. Still not
 declared tradable. See CLAUDE.md's "Fortieth" section for the full
 breakdown.
 
+**Forward paper-tracking (Forty-first entry, `paper_track_ibs_rotation.py`)**
+— every entry above recommended it and none had done it: real out-of-sample
+data no backtest can fabricate. Implements the Thirty-ninth entry's live
+rule exactly (`top_k=5, lookback=5`, monthly, the 52-stock `WIDE_UNIVERSE`,
+₹100,000 capital, standard cost model). Run it once a month; it marks the
+previous month's picks to market and logs the next month's picks to
+`paper_track_ibs_rotation_log.json`, an append-only record — **do not
+hand-edit it**. First real record logged 2026-09-17. See CLAUDE.md's
+"Forty-first" section for the full writeup.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an

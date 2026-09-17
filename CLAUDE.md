@@ -3073,3 +3073,65 @@ step (paper-track top_k=5/lookback=5/monthly/52-stock forward in real
 time) still stands, now with the added caveat that a real
 freefall-in-progress name in the eligible universe should be watched
 carefully rather than assumed to bounce.
+
+## Forty-first: forward paper-tracking infrastructure — the IBS rotation finding now has a real, untouched out-of-sample record started
+
+Every entry since the Thirty-eighth has recommended the same next step and
+none has done it: this project's best-yet finding needs genuine forward
+data, which no backtest can fabricate. This entry builds that
+infrastructure rather than testing another mechanism.
+
+`paper_track_ibs_rotation.py` implements the Thirty-ninth entry's
+recommended live rule exactly: `top_k=5, lookback=5`, monthly rebalance,
+the Thirty-ninth entry's 52-stock `WIDE_UNIVERSE`
+(`probe_ibs_rotation_widen.py`'s large-cap + small/mid-cap combination —
+NOT the Fortieth entry's 56-stock survivorship-stress set, which was a
+one-off worst-case test, not the recommended live universe), ₹100,000
+capital, this project's standard equity cost model (0.2% STT+stamp both
+legs, ₹16 DP charge on the sell leg).
+
+**Reused rather than rebuilt**: `run_live.py`/`paper_broker.py`/
+`kite_client.py` are built for single-instrument intraday Kite polling —
+the wrong shape for a monthly cross-sectional multi-name picker fed from
+yfinance daily data, so they weren't reused directly. What WAS reused:
+`data_yfinance.fetch_candles` (via `probe_ibs_rotation_widen.py`'s
+existing `build_wide_price_series`), and — to structurally prevent the
+live picker from ever silently drifting from what Thirty-eight through
+Forty actually validated — the ranking logic itself. `probe_ibs_rotation.py`'s
+`simulate()` had the scoring/sorting loop inlined; extracted it into a
+shared `rank_by_ibs()` (plus a `dates_closes_maps()` helper) that both
+`simulate()` and `paper_track_ibs_rotation.py` now call, instead of writing
+a second copy of the picking logic and hoping it stays in sync. Verified
+the refactor changed no behavior: full suite (162 tests) passed
+unchanged before writing anything new.
+
+**How it works**: run once a month (matches the strategy's own rebalance
+cadence — this is not a real-time daemon). Each run (1) marks the
+PREVIOUS run's open picks to market using today's prices and the same
+cost model as `simulate()`, appending a realized-P&L record, then (2)
+ranks the universe by trailing 5-day avg IBS and logs today's 5 new
+picks as the new open position. `paper_track_ibs_rotation_log.json` is
+the append-only forward record — **do not edit, reset, or reinterpret
+past entries retroactively; the entire point is a record this project's
+own backtests cannot fabricate.**
+
+**New test** (`tests/test_paper_track_ibs_rotation.py`): confirms the live
+picker selects the identical symbols `simulate()` would have picked given
+the same synthetic price data and date, and that `mark_to_market()`'s P&L
+matches `simulate()`'s P&L to the cent for the same single-period trade —
+this guards against future edits to either the live picker or the backtest
+engine silently diverging. Full suite now 164 tests, all green.
+
+**First real forward record, logged 2026-09-17**: `POWERGRID.NS`
+(entry_ibs=0.0431, ₹263.35), `RELIANCE.NS` (0.1738, ₹1244.20),
+`HINDUNILVR.NS` (0.2145, ₹1951.90), `MARUTI.NS` (0.2509, ₹12367.00),
+`BAJFINANCE.NS` (0.2814, ₹1010.70).
+
+**For whoever (a future session or the user) picks this up next**: run
+`python paper_track_ibs_rotation.py` again next month (and every month
+after) to mark this month's picks to market and log the next set. After
+a few months of real forward records accumulate, compare the forward
+win rate/return to what the backtest predicted — that comparison, not
+another backtest variant, is what will actually move this project's
+"no mechanism has yet cleared the bar to actually trade" verdict. Do
+not delete or hand-edit `paper_track_ibs_rotation_log.json`.

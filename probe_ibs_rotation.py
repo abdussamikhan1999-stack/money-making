@@ -83,10 +83,32 @@ def price_at_or_before(dates: list, closes: list, as_of):
     return closes[idx] if idx >= 0 else None
 
 
-def simulate(rebalance_dates: list, series: dict, top_k: int = 5, lookback: int = 5,
-             cost_pct: float = 0.2, dp_charge: float = 16.0, capital: float = 100_000.0):
+def dates_closes_maps(series: dict) -> tuple[dict, dict]:
     dates_map = {s: [c["date"].date() for c in cds] for s, cds in series.items()}
     closes_map = {s: [c["close"] for c in cds] for s, cds in series.items()}
+    return dates_map, closes_map
+
+
+def rank_by_ibs(series: dict, dates_map: dict, closes_map: dict, as_of, lookback: int,
+                 top_k: int) -> list[tuple[float, str, float]]:
+    """Most-oversold-first ranking (ascending avg IBS) as of a given date,
+    each entry (score, symbol, price_at_or_before(as_of)). Shared by
+    simulate() and paper_track_ibs_rotation.py so the live picker can never
+    silently drift from what was actually backtested."""
+    scored = []
+    for sym, candles in series.items():
+        score = avg_ibs(candles, dates_map[sym], as_of, lookback)
+        px = price_at_or_before(dates_map[sym], closes_map[sym], as_of)
+        if score is None or px is None:
+            continue
+        scored.append((score, sym, px))
+    scored.sort(key=lambda t: t[0])
+    return scored[:top_k]
+
+
+def simulate(rebalance_dates: list, series: dict, top_k: int = 5, lookback: int = 5,
+             cost_pct: float = 0.2, dp_charge: float = 16.0, capital: float = 100_000.0):
+    dates_map, closes_map = dates_closes_maps(series)
 
     capital_track = capital
     peak = capital
@@ -95,16 +117,10 @@ def simulate(rebalance_dates: list, series: dict, top_k: int = 5, lookback: int 
 
     for i in range(len(rebalance_dates) - 1):
         entry_date, exit_date = rebalance_dates[i], rebalance_dates[i + 1]
-        scores = []
-        for sym, candles in series.items():
-            score = avg_ibs(candles, dates_map[sym], entry_date, lookback)
-            entry_px = price_at_or_before(dates_map[sym], closes_map[sym], entry_date)
-            exit_px = price_at_or_before(dates_map[sym], closes_map[sym], exit_date)
-            if score is None or entry_px is None or exit_px is None:
-                continue
-            scores.append((score, sym, entry_px, exit_px))
-        scores.sort(key=lambda t: t[0])  # ascending: lowest IBS = most oversold first
-        picks = scores[:top_k]
+        picks = rank_by_ibs(series, dates_map, closes_map, entry_date, lookback, top_k)
+        picks = [(score, sym, entry_px, price_at_or_before(dates_map[sym], closes_map[sym], exit_date))
+                 for score, sym, entry_px in picks]
+        picks = [p for p in picks if p[3] is not None]
         if not picks:
             continue
         notional_each = capital_track / len(picks)
