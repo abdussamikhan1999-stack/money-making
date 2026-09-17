@@ -3210,3 +3210,81 @@ portfolio sizes doesn't clear the bar this project already set with IBS.
 other unconfirmed cross-sectional variant tested here. **No mechanism has
 yet cleared the bar to actually trade** — IBS rotation (Thirty-eighth
 through Forty-first entries) remains the closest.
+
+## Forty-third: completing the generalization survey — the cross-sectional-rank recipe fails cleanly on momentum/breakout signals, only mean-reversion signals carry over
+
+Direct completion of the Forty-second entry's question: IBS (Thirteenth)
+and RSI-2 (Third) are both mean-reversion signals, and both produced a
+real, backtest-passing shape once reshaped into the monthly cross-sectional
+rank recipe (though at different significance strength). This entry tests
+the other flavor of signal this project has found real-but-thin — 3-bar
+compression breakout (Twelfth entry, this project's best single-instrument
+hit rate, 50%) and Turtle Soup failed-breakout fade (Twentieth entry, the
+smoothest single-survivor perturbation sweep in this project) — to see
+whether the recipe is a mean-reversion-specific lever or a genuinely
+general one.
+
+Both strategies' own `check_entry()` needs a stock's OWN high/low at the
+decision point, not just closes (same shape-mismatch reasoning as every
+other probe here), so they're reimplemented as continuous monthly scores
+in a new `probe_breakout_rotation.py` rather than reusing
+`daily_strategy.py`'s interface — one file for both strategies (`--strategy
+threebar|turtlesoup`), consistent with this project's "fewer files" norm.
+Scores, both long-only (mirroring IBS/RSI-2 rotation's own long-only
+convention): **3-bar breakout** — bar1/bar2 compressed within
+`compression_atr_mult`xATR of each other (the source's own filter), bar3
+closing above both, scored as -(breakout size)/ATR (more negative =
+bigger breakout = ranked first); **Turtle Soup** — yesterday closed below
+the prior `channel_period`-day low (excluding yesterday itself, mirroring
+`TurtleSoupStrategy`'s own `lowest(self._lows[:-1], ...)`) and today
+closed back above it, scored as -(depth broken + recovery size)/ATR. Same
+52-stock `WIDE_UNIVERSE`, monthly rebalance, cost model, and walk-forward/
+quarter-split checks as every rotation variant since the Thirty-eighth
+entry. No new probe-script unit test, matching this project's established
+convention (`probe_ibs_rotation.py`/`probe_rsi2_rotation.py` don't have
+one either).
+
+**Both fail at the first check — walk-forward, not a later refinement.**
+At the default `top_k=5`: `threebar` rotation is **INCONSISTENT**
+(in-sample +22.68%/yr, out-of-sample **-3.63%/yr**) with Q3/Q4 both
+negative (Q4, the most recent, -4.07%/yr — a real decay signature, not
+just noise); `turtlesoup` rotation is also **INCONSISTENT** (in-sample
++19.41%/yr, out-of-sample -0.43%/yr) with Q3 negative. Per this entry's
+own instruction to stop at the first real crack rather than running the
+full checklist past a clear failure, quarter-split/perturbation/
+significance testing were not run at `top_k=5` for either — the walk-forward
+inconsistency alone is disqualifying by this project's own standing
+screen. Checked `top_k=3` and `top_k=8` as a quick robustness spot-check
+before closing (not a full perturbation grid, given the clarity of the
+failure): `top_k=8` is INCONSISTENT for both strategies too; `top_k=3` is
+technically same-sign both halves for both, but the out-of-sample half is
+barely above breakeven (`threebar` ₹102,481 from ₹100,000 over 5 years,
+`turtlesoup` ₹100,492) — essentially flat, not the kind of real,
+strongly-positive-both-halves result IBS/RSI-2 rotation produced at any
+tested size.
+
+**Net verdict**: the cross-sectional-monthly-rank recipe does NOT
+generalize to momentum/breakout-flavored signals the way it did (fully for
+IBS, partially for RSI-2) to mean-reversion-flavored ones — a clean,
+symmetric answer to the Forty-second entry's open strategic question.
+Read together with all four signals now tested under this recipe (IBS:
+strong pass; RSI-2: backtest-passing but weaker significance; 3-bar
+breakout and Turtle Soup: fail walk-forward outright), the likely
+mechanism is structural, not incidental: a mean-reversion signal picks
+"most oversold now" every month, which is well-defined for every eligible
+stock simultaneously (a genuine cross-sectional ranking); a
+breakout/continuation signal only fires on the specific subset of stocks
+actively breaking out that month, which is a much sparser, more
+regime-dependent condition to rank cross-sectionally, and concentrating a
+monthly portfolio in "whichever few names happen to be breaking out right
+now" behaves more like a chasing a directional basket bet (the shape this
+project's own Cross-mechanism synthesis entry already found decays in the
+most recent quarter) than like harvesting a stable cross-sectional
+mispricing. **This closes the generalization survey**: the recipe is a
+real, reusable lever specifically for this project's mean-reversion
+signals, not a universal fix for every thin single-instrument survivor.
+IBS rotation (Thirty-eighth through Forty-first entries) remains this
+project's strongest, most rigorously corroborated finding, and RSI-2
+rotation (Forty-second) its weaker second case. `probe_breakout_rotation.py`
+stays a probe script, same treatment as every other tested-and-rejected
+variant here. **No mechanism has yet cleared the bar to actually trade.**

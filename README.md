@@ -285,6 +285,17 @@ Partial generalization — IBS rotation remains the stronger, more
 rigorously corroborated finding. See CLAUDE.md's "Forty-second" section
 for the full breakdown.
 
+**Does the recipe generalize to momentum/breakout signals too? (Forty-third
+entry, `probe_breakout_rotation.py`)** — completed the survey with 3-bar
+compression breakout and Turtle Soup (this project's other two real-but-thin
+survivors) reshaped into the same monthly cross-sectional rank. Both fail
+outright at walk-forward (`threebar`: in-sample +22.68%/yr, out-of-sample
+-3.63%/yr; `turtlesoup`: +19.41%/yr in-sample, -0.43%/yr out-of-sample,
+both INCONSISTENT), unlike IBS/RSI-2 which both passed. The recipe works
+for this project's mean-reversion signals, not its momentum/breakout ones
+— see CLAUDE.md's "Forty-third" section for the likely structural reason
+why.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an
