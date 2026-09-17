@@ -236,6 +236,30 @@ declared tradable — survivorship bias unresolved, genuine forward
 out-of-sample data still the one check no backtest can run. See
 CLAUDE.md's "Thirty-ninth" section for the full breakdown.
 
+**Survivorship-bias stress test (Fortieth entry,
+`probe_ibs_rotation_survivorship.py`)** — a true point-in-time
+constituents fix isn't available (yfinance has no historical-membership
+API, and two real delistings, `DHFL.NS`/`RELCAPITAL.NS`, return zero rows
+— fully invisible, no fix possible). Partial check instead: added four
+other real NSE catastrophic collapses that never stopped trading
+(`JETAIRWAYS.NS`, `YESBANK.NS`, `RCOM.NS`, `PCJEWELLER.NS`, all -97% to
+-99% from peak) to the 52-stock universe (56 total) and reran everything.
+Result went UP, not down: 23.95%/yr, all 4 quarters positive, reproduced
+across 3 more configs. But three of the four blowups became **top-3
+contributors** (`PCJEWELLER.NS` the single best contributor in the whole
+universe), pushing concentration to 50.4% — because monthly rebalance
+means the strategy catches one-month bounces after a crash rather than
+holding through the full collapse. Reframes the risk: this edge is partly
+a high-volatility-mean-reversion harvest, not purely a diversified
+oversold-quality-stock pick — a stock in freefall when picked could just
+as easily keep falling. Also flagged: rerunning the identical default
+config produced a different concentration number (44.0% vs. 50.4%) run to
+run, consistent with this project's known intermittent yfinance retry
+behavior — the pass/fail quarter-split result held both times, but exact
+concentration figures are noisy at the single-run level. Still not
+declared tradable. See CLAUDE.md's "Fortieth" section for the full
+breakdown.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an

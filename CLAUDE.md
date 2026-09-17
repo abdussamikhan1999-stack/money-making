@@ -2983,3 +2983,93 @@ near the ₹30,000 end of this project's target capital range. **No
 mechanism has yet cleared the bar to actually trade** — this remains the
 closest any mechanism in this project has come, and is now more
 rigorously corroborated than before, not merely repeated.
+
+## Fortieth: survivorship-bias stress test on the IBS rotation finding — the strategy survives real historical blowups added to the universe, but the reason why raises a different concern
+
+Direct follow-up on the Thirty-eighth/Thirty-ninth entries' last open gap:
+`UNIVERSE` (`probe_pead.py`) and `SMALL_MID_CAP_UNIVERSE`
+(`probe_ibs_rotation_widen.py`) are both hand-picked using *today's*
+well-known large/mid-caps. Any stock that delisted, went bankrupt, or
+collapsed during the ~10y backtest window is invisible to them — a
+long-only equal-weight strategy tested only against companies that
+survived and (mostly) thrived is mechanically flattered versus what it
+would have actually faced running in real time.
+
+**What a true fix would need, and why it isn't available here**: a
+genuine point-in-time historical index-constituents list (which stocks
+were actually large/mid-cap on each date over the last 10 years),
+typically a paid data product. yfinance has no historical-membership API.
+Checked directly whether even the *individual stocks* are recoverable:
+`DHFL.NS` and `RELCAPITAL.NS` — two real 2019-2021 NSE large/mid-cap
+collapses (Dewan Housing Finance's IBC bankruptcy, Reliance Capital's
+resolution) — both return **zero rows** from yfinance. They are fully
+invisible to this project's data source; there is no free fix for those
+specific cases.
+
+**What partial check was possible**: four other real, equally famous NSE
+catastrophic collapses never stopped trading and so are still fully
+present in yfinance's history — confirmed via a direct pull before
+building anything: `JETAIRWAYS.NS` (grounded 2019, NCLT resolution, -98%
+from peak), `YESBANK.NS` (2020 near-collapse/RBI reconstruction, -97%),
+`RCOM.NS` (Reliance Communications insolvency, -99%), `PCJEWELLER.NS`
+(fraud-driven collapse, -99%). None were in either existing universe —
+added all four to the widened 52-stock set (56 total,
+`probe_ibs_rotation_survivorship.py`) as a real, non-synthetic worst-case
+stress test: does the IBS-oversold ranking mechanically buy into these
+falling knives, and how much does that erode the Thirty-ninth entry's
+numbers?
+
+**Result: it doesn't erode them — the headline number went UP, not
+down.** Default config (`top_k=5, lookback=5`) on the 56-stock stress
+universe: 23.95%/yr (vs. the 52-stock universe's 22.11%/yr), walk-forward
+consistent across both halves, **all 4 quarters positive** (20.7% /
+20.5% / 32.3% / 21.0%/yr). Reproduced across 3 more parameter configs
+(`top_k=3,lb=10`; `top_k=7,lb=1`; `top_k=10,lb=5`) — all 4 quarters
+positive at every one, same pattern the Thirty-eighth/Thirty-ninth
+entries established.
+
+**But the reason why is the actual finding, and it's a different concern
+than expected**: at the default config, `PCJEWELLER.NS` was the single
+best contributor in the entire 56-stock universe (+232,941, more than any
+large-cap name), `RCOM.NS` was 2nd (+91,234), `YESBANK.NS` was 3rd
+(+65,476) — three of the four inserted catastrophic collapses became
+**top-3 contributors**, pushing top-3 concentration UP to 50.4% (worse
+than the Thirty-ninth entry's 26.5% at 52 stocks, and worse even than the
+Thirty-eighth entry's original 31.4% at 40). The mechanism: monthly
+rebalance means the strategy never holds through a full collapse — it
+buys a one-month bounce after a deep drawdown and exits before the next
+leg down, repeatedly, and a stock in freefall generates exactly this
+setup on a recurring basis. `JETAIRWAYS.NS` was the only inserted
+blowup that stayed net-negative, and only modestly (-9,979 to -15,980
+depending on config).
+
+This means the finding isn't "survivorship bias doesn't matter here" —
+it's **"this strategy's edge is partly a high-volatility-mean-reversion
+harvest, not purely a diversified quality-oversold-stock-pick edge,"**
+and that changes the honest risk read going forward: a stock in freefall
+*during the exact month it's picked* could just as easily continue
+straight down instead of bouncing, and nothing in this backtest window
+proves the bounce-after-crash pattern will keep recurring at the same
+rate going forward. **Also noted, not fully resolved**: re-running the
+identical default config produced a materially different top-3 share
+(44.0% on one run, 50.4% on a rerun) — consistent with the Thirty-eighth
+entry's own documented intermittent yfinance "possibly delisted" retry
+behavior silently changing which bars get fetched run-to-run; the
+headline all-4-quarters-positive result held in both runs, but the exact
+concentration number should be read as noisy at the single-run level, not
+a precise figure.
+
+**Net verdict**: the strategy passed the survivorship-bias stress test on
+its headline numbers (return, drawdown-consistency, quarter-split) — the
+first result in this project's history to survive this specific check —
+but the mechanism behind that pass reveals a real, previously-unflagged
+concentration risk in catastrophic-collapse bounces that a point-in-time
+survivorship fix alone would not have caught. Neither DHFL nor
+RELCAPITAL-style *fully-erased* names could be tested at all (no data
+exists for them anywhere in this project's stack), so this remains a
+partial, not complete, survivorship check. **No mechanism has yet cleared
+the bar to actually trade.** The Thirty-ninth entry's recommended next
+step (paper-track top_k=5/lookback=5/monthly/52-stock forward in real
+time) still stands, now with the added caveat that a real
+freefall-in-progress name in the eligible universe should be watched
+carefully rather than assumed to bounce.
