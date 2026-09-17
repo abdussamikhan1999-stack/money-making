@@ -3288,3 +3288,89 @@ project's strongest, most rigorously corroborated finding, and RSI-2
 rotation (Forty-second) its weaker second case. `probe_breakout_rotation.py`
 stays a probe script, same treatment as every other tested-and-rejected
 variant here. **No mechanism has yet cleared the bar to actually trade.**
+
+## Forty-fourth: does a short leg cut the long-only IBS rotation's drawdown? No — it destroys almost the entire return, because IBS's real edge is one-sided
+
+A well-motivated extension of this project's best-yet finding, not a blind
+new-mechanism search: the Thirty-ninth entry's long-only IBS rotation
+carries a 38.2% max drawdown on the 52-stock widened universe, and a
+meaningful chunk of that is plausibly just NIFTY beta — the entire
+long-only basket falls together in a market-wide selloff regardless of
+how well the IBS ranking is picking within it. Standard long/short
+construction: short the `top_k` most-OVERBOUGHT names (highest trailing
+IBS) alongside the existing long leg (most-oversold, lowest IBS), same
+monthly rebalance, capital split evenly between the two legs.
+
+**Real-world caveat, stated up front because it matters for how to read
+every number below**: NSE cash-equity short selling cannot be held
+overnight — a real retail account must square off a short position the
+SAME DAY. A month-long short, as modeled here, isn't directly executable
+in the cash market at all without Securities Lending & Borrowing (SLB, its
+own eligibility/approval/cost process — not modeled) or single-stock
+futures (which reintroduce this project's own already-closed fixed-lot
+capital-tier wall from the Twenty-fifth/Twenty-sixth entries). The short
+leg is costed with the same symmetric round-trip cost model as the long
+leg for a clean comparison, but no SLB borrow fee or availability
+constraint is modeled. Every long/short number in this entry is a
+theoretical hedge-shape check, not a directly tradable retail
+construction the way this project's long-only numbers are — worth
+knowing regardless of how the hedge itself performed, and it performed
+badly enough that the caveat ends up moot in practice.
+
+**Result: the hedge works exactly as intended on risk, and that's the
+problem.** `probe_ibs_rotation_longshort.py`, same 52-stock `WIDE_UNIVERSE`,
+same cost model, `top_k=5, lookback=5`, run in the same session against
+the same data fetch as the long-only baseline for a clean side-by-side:
+
+| | Long-only (Thirty-ninth's construction) | Long/short (this entry) |
+|---|---|---|
+| Full-period annualized | 22.12%/yr | **-0.19%/yr** |
+| Max drawdown | 38.2% | 33.5% |
+| NIFTY monthly-return correlation | 0.796 | **0.044** |
+| Walk-forward | consistent, both halves positive | **INCONSISTENT** (in-sample -4.35%/yr, out-of-sample +4.65%/yr) |
+
+The short leg did hedge out market beta almost completely (correlation to
+NIFTY drops from 0.80 to essentially zero) — but drawdown barely moved
+(38.2% → 33.5%, nowhere near proportional to how much beta was removed),
+and full-period return collapsed from a strong positive to a small
+negative. Isolated the short leg's own P&L directly: on a fixed
+half-capital notional (uncompounded, for a clean read), the long leg made
++₹106,274 over 10 years while the short leg made **-₹101,639** — almost an
+exact offset. The short leg's own win rate was 38.3% (120 months) — the
+"most overbought" names kept RISING in 61.7% of months, not reverting.
+
+**Why, and what it means for this project's understanding of the IBS
+signal itself**: this isn't a hedging-construction problem (equal-capital
+dollar-neutral is the standard, simplest version, and it was implemented
+correctly — the correlation number proves the hedge mechanics worked).
+It's that IBS's real edge, at least in this cross-sectional monthly
+construction, is **one-sided** — "most oversold" genuinely predicts
+above-average forward returns (the long leg, already established across
+entries 38-41), but "most overbought" does NOT reliably predict
+below-average forward returns; if anything the overbought names show mild
+continued momentum. This is consistent with, not contradictory to, the
+published IBS literature the Thirteenth entry originally cited — the
+documented academic edge for IBS has always been specifically the
+long/oversold side, and every "symmetric short side" added anywhere in
+this project (IBS's original single-instrument version, volume's CMF+OBV,
+52-week-high, this rotation's own daily-trigger ancestor) has been
+explicitly flagged throughout this file as this project's own extension,
+never itself literature-backed. This is the first time that flagged
+extension was actually tested at scale and shown to be a real net drag,
+not just an unconfirmed assumption.
+
+**Net verdict**: forty-fourth entry, and a clean, decisive rejection of a
+well-motivated hypothesis — adding a short leg to hedge the long-only IBS
+rotation's market exposure does not produce a better risk-adjusted
+strategy; it trades nearly all of the return for a smaller-than-expected
+drawdown improvement, because the short side isn't a real mirror-image
+signal. **The long-only construction (Thirty-eighth through Forty-first
+entries) remains this project's strongest finding, unmodified by this
+result** — this entry rules out one specific improvement path rather than
+changing that verdict. Worth remembering for any future attempt to
+"long/short-ify" one of this project's other real survivors: check
+whether the published/established edge is actually symmetric before
+assuming a mirror-image short leg will behave the same way the long leg
+does, rather than assuming standard long/short construction is a free
+risk-reduction lever. **No mechanism has yet cleared the bar to actually
+trade.**

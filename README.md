@@ -296,6 +296,21 @@ for this project's mean-reversion signals, not its momentum/breakout ones
 — see CLAUDE.md's "Forty-third" section for the likely structural reason
 why.
 
+**Does adding a short leg cut the long-only version's drawdown? (Forty-fourth
+entry, `probe_ibs_rotation_longshort.py`)** — tested whether shorting the
+most-OVERBOUGHT names by the same IBS rank (mirroring the long side's
+most-oversold picks) hedges out the long-only version's NIFTY beta and
+cuts its 38.2% max drawdown. It does cut correlation to NIFTY sharply
+(0.796 → 0.044) and drawdown modestly (38.2% → 33.5%) — but at the cost of
+destroying nearly the entire return (22.12%/yr long-only → -0.19%/yr
+long/short, walk-forward INCONSISTENT). The short leg alone lost money on
+its own (61.7% of months the "overbought" names kept rising rather than
+reverting), almost exactly offsetting the long leg's gain — IBS's real
+edge is one-sided, not a symmetric mean-reversion signal. Also flagged: a
+month-long short isn't directly executable in NSE cash equity anyway
+(needs SLB or futures, neither modeled) — see CLAUDE.md's "Forty-fourth"
+section for the full caveat and numbers.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an
