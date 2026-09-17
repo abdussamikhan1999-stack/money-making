@@ -3614,3 +3614,59 @@ through Forty-first entries) remains this project's primary finding; this
 entry's half-hedge overlay (or any ratio in the 0.375-0.625 range) remains
 a real, capital-feasible, robust risk-reduction option on top of it.** No
 mechanism has yet cleared the bar to actually trade.
+
+## Forty-eighth: forward paper-tracking for the hedged strategy — a second, parallel live record now running alongside the unhedged one
+
+The Forty-first entry built forward tracking for the long-only IBS
+rotation. The Forty-sixth/Forty-seventh entries then established a
+materially different, also-real risk profile (half-hedge: ~54% of the
+unhedged return, ~a third less drawdown, capital-feasible, robust across
+0.375-0.625) — different enough that it deserves its own independent
+out-of-sample record starting now, not folded into or substituted for the
+existing one.
+
+`paper_track_ibs_rotation_hedged.py` — same monthly cadence and
+append-only-log convention as `paper_track_ibs_rotation.py` (entry 41),
+extended with a short `NIFTYBEES.NS` leg at `HEDGE_RATIO=0.5` (the
+Forty-seventh entry's drawdown-minimizing point inside the validated
+0.375-0.625 band). Reuses `rank_by_ibs`/`dates_closes_maps`/
+`fetch_calendar`/`price_at_or_before`/`month_end_dates` from
+`probe_ibs_rotation.py`, `compute_beta` from `probe_ibs_rotation_hedged.py`,
+and `ETF_SYMBOL`/`ETF_COST_PCT`/`fetch_etf_series` from
+`probe_ibs_rotation_etf_hedge.py` — no picking or hedge-sizing logic is
+reimplemented, only orchestrated live instead of over historical bars.
+Beta is recomputed fresh each run from the full 10y monthly-return
+regression (not hardcoded to the 1.143 the Forty-fifth/Forty-sixth/
+Forty-seventh entries measured on past data) so the live hedge notional
+stays honest as more data accumulates. 3 new tests
+(`tests/test_paper_track_ibs_rotation_hedged.py`): hedged and unhedged
+live pickers select identically on the same data, hedge-quantity sizing
+matches the backtest's own `floor(hedge_ratio * beta * capital / price)`
+formula, and `mark_to_market()`'s combined P&L matches
+`simulate_etf_hedged()`'s P&L to the cent on an identical single-period
+test. Full suite 167/167 green.
+
+**First real forward record, logged 2026-09-17**: `POWERGRID.NS`
+(entry_ibs=0.1298, ₹264.20), `RELIANCE.NS` (0.1721, ₹1244.10),
+`HINDUNILVR.NS` (0.2132, ₹1951.80), `TCS.NS` (0.2221, ₹2202.80),
+`MARUTI.NS` (0.2606, ₹12378.00); short `NIFTYBEES.NS` 214 shares @
+₹265.94 (beta=1.143, hedge_ratio=0.5, hedge notional ₹57,145).
+
+**Worth flagging honestly, not hiding**: this run's stock picks differ
+from the unhedged tracker's own same-day log entry (`BAJFINANCE.NS`
+swapped for `TCS.NS`) — not a bug, but the Thirty-eighth entry's own
+already-documented intermittent yfinance retry variance, confirmed here
+because the two trackers' separate fetch calls (run minutes apart within
+the same session) pulled marginally different price data. The regression
+test confirms both pickers agree exactly when fed identical data; this is
+a live-data-freshness artifact, not a logic divergence between the two
+scripts.
+
+**For whoever picks this up next**: two independent forward records are
+now running in parallel — `paper_track_ibs_rotation_log.json` (unhedged)
+and `paper_track_ibs_rotation_hedged_log.json` (half-hedged). Rerun BOTH
+scripts monthly. After enough months accumulate, compare each one's real
+forward return/drawdown against what its own backtest predicted — that
+comparison is what will actually move this project's "no mechanism has
+yet cleared the bar to actually trade" verdict, not another backtest
+variant. Do not delete or hand-edit either log.

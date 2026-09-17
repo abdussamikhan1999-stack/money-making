@@ -357,6 +357,19 @@ robust 0.25-0.875 range, at the point closest to minimum drawdown before
 return decays too far. See CLAUDE.md's "Forty-seventh" section for the
 full sweep table.
 
+**Forward paper-tracking for the hedged strategy (Forty-eighth entry,
+`paper_track_ibs_rotation_hedged.py`)** — a second, parallel live record
+alongside the Forty-first entry's unhedged tracker, since the half-hedge
+(entries 46-47) is a materially different, also-real risk profile worth
+its own out-of-sample record. Same monthly cadence, same picks as the
+unhedged tracker, plus a short `NIFTYBEES.NS` leg at `hedge_ratio=0.5`,
+beta recomputed fresh each run rather than hardcoded. First record logged
+2026-09-17. **Two independent forward logs now run in parallel** —
+`paper_track_ibs_rotation_log.json` (unhedged) and
+`paper_track_ibs_rotation_hedged_log.json` (half-hedged) — both should be
+rerun monthly; neither should be hand-edited. See CLAUDE.md's
+"Forty-eighth" section for the full writeup.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an

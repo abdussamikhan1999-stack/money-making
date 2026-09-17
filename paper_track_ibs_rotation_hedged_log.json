@@ -1,0 +1,40 @@
+[
+  {
+    "date": "2026-09-17",
+    "beta": 1.1429,
+    "hedge_ratio": 0.5,
+    "picks": [
+      {
+        "symbol": "POWERGRID.NS",
+        "entry_price": 264.20001220703125,
+        "entry_ibs": 0.1298
+      },
+      {
+        "symbol": "RELIANCE.NS",
+        "entry_price": 1244.0999755859375,
+        "entry_ibs": 0.1721
+      },
+      {
+        "symbol": "HINDUNILVR.NS",
+        "entry_price": 1951.800048828125,
+        "entry_ibs": 0.2132
+      },
+      {
+        "symbol": "TCS.NS",
+        "entry_price": 2202.800048828125,
+        "entry_ibs": 0.2221
+      },
+      {
+        "symbol": "MARUTI.NS",
+        "entry_price": 12378.0,
+        "entry_ibs": 0.2606
+      }
+    ],
+    "etf_hedge": {
+      "symbol": "NIFTYBEES.NS",
+      "qty": 214,
+      "entry_price": 265.94000244140625
+    },
+    "exit": null
+  }
+]
