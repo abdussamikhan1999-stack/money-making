@@ -2758,3 +2758,123 @@ decay, not a lone-instrument fluke, not a capital-tier wall, but a gross
 edge too small relative to realistic per-trade costs to ever clear zero,
 no matter how the entry filter is tuned. **No mechanism has yet cleared
 the bar to actually trade.**
+
+## Thirty-eighth: monthly cross-sectional IBS rotation — the strongest result in the project's history, but a random-control check keeps it short of "proven"
+
+The originally-planned mechanism for this entry was classic 12-1 skip-month
+cross-sectional momentum (Jegadeesh & Titman) — abandoned before
+implementation once a CLAUDE.md check showed the Fourth entry already
+tested this project's own 6-1 monthly-rebalanced cross-sectional momentum
+variant and it decayed to a Q4 loss; a 12-month lookback is the same
+basket-wide-directional shape, not a genuinely different mechanism.
+Sector-index rotation was considered next and also ruled out on a data
+check: only `^CNXIT`/`^CNXPHARMA`/`^NSEBANK` return more than one day of
+history via yfinance, too few sectors to rotate across.
+
+What got built instead: the Thirteenth entry's Internal Bar Strength
+signal (`(close-low)/(high-low)`, real but thin as a single-instrument
+daily trigger — one gold survivor at a 12.5% hit rate), turned into a
+**monthly cross-sectional rank** across the 40-stock `probe_pead.py`
+`UNIVERSE`: at each month-end, rank all 40 names by their trailing 5-day
+average IBS, go long the 5 most-oversold (lowest IBS), equal-weighted,
+hold one month, rebalance. `probe_ibs_rotation.py`. Reuses momentum
+rotation's zero-delivery-brokerage equity cost model (0.2% STT+stamp both
+legs, ~₹16 DP charge on the sell leg). No new dependency; `internal_bar_strength`
+already lived in `indicators.py`.
+
+**A real bug caught mid-investigation, worth recording**: the first
+version picked the trading-day calendar as `max(series.values(), key=len)`
+— "whichever of the 40 stocks has the most bars." Several stocks tie on
+bar count, so this silently tie-broke on dict iteration order, and a
+transient yfinance failure on any one name (several "possibly delisted"
+warnings appeared mid-session on names that plainly aren't, e.g.
+`SUNPHARMA.NS`/`TATASTEEL.NS` — an intermittent fetch problem under rapid
+repeat calls, not a data-provider fact) could silently swap which stock's
+calendar got used, shifting month-end dates and changing results
+run-to-run — caught because a walk-forward run and a quarter-split run on
+the *same default parameters* disagreed with each other. Fixed at the
+root: `fetch_calendar()` now always pulls `^NSEI` specifically as the
+trading-day source (confirmed reliable 10y history earlier in this
+project), and `build_price_series()` retries a failed per-stock fetch up
+to 3 times. Reproducibility verified afterward (two `simulate()` calls on
+the same in-memory series, same params, return byte-identical results).
+
+**Default (`top_k=5, lookback=5`) screening**: full 10y period, 15.51%/yr
+at 26.6% max drawdown, 63% of months net-positive. Walk-forward: both
+halves positive (24.41%/yr in-sample, 6.65%/yr out-of-sample) —
+decelerating but consistent. **Quarter-split (the check that killed the
+Thirty-fifth/Thirty-sixth and Fourth entries): all 4 quarters positive**
+(Q1 19.23%, Q2 29.47%, Q3 8.37%, Q4 4.79%/yr) — Q4 is the weakest quarter
+here, a real deceleration worth flagging honestly, but still positive,
+unlike momentum rotation's Q4 (-7.1%) or PEAD/52-week-high's collapse.
+**Re-ran quarter-split on 4 more parameter combinations** (`top_k=3,lb=10`;
+`top_k=7,lb=1`; `top_k=10,lb=5`; `top_k=3,lb=1`) — **every single one had
+all 4 quarters positive**, Q4 ranging 1.30% to 21.45%/yr depending on
+config. **Perturbation**: 16/16 `top_k`×`lookback` cells (3/5/7/10 ×
+1/3/5/10 days) positive on both walk-forward halves — the smoothest sweep
+in this project's history, no cliffs.
+
+**Attribution check (this project's PEAD lesson — a "broad" result can
+still be 2-3 names in disguise)**: all 40 universe stocks got selected at
+least once across 120 months; **30/40 (75%) were individually net-positive
+contributors**; the top-3 contributors' combined share of total net P&L
+was only 31.4%. Far broader than any prior "survivor" in this project
+(PEAD's 3/20, IBS's 1/8, SuperTrend's 1/9) — this is not a lone-name or
+small-cluster fluke.
+
+**Beats its benchmarks on both return and drawdown**: `^NSEI` buy-and-hold
+over the identical window returned 10.21%/yr at 38.4% max drawdown; an
+equal-weight, monthly-rebalanced buy-and-hold of the full 40-stock
+universe (isolating whether the edge is really "pick oversold names" vs.
+just "hold this particular universe") returned only 5.86%/yr at 37.1%
+drawdown — *worse* than the index, meaning the universe itself carries no
+free lunch and the IBS ranking is doing real work on top of it.
+
+**The check no prior entry in this project has run, and the reason this
+isn't declared a clean win**: is 15.51%/yr distinguishable from luck, or
+is picking *any* 5 stocks a month from this universe roughly this good
+in a rising market? Simulated 200 seeds of a random-5-stocks-per-month
+control (same rebalance mechanics, same costs, same eligible universe):
+mean final capital ₹311,901 (std ₹103,252) vs. the actual IBS strategy's
+₹420,847 — **86.5th percentile, z ≈ 1.06**. Directionally real and
+persistent (return AND drawdown both beat the random-control median;
+drawdown alone beats 86% of random draws), but a z-score of ~1.06 is not
+classically significant (one draw among the 200 random seeds — ₹464,802 —
+actually beat the real strategy outright). The consistency across 5
+parameter configs' quarter-splits and the 16/16 perturbation sweep are
+more persuasive on their own than this single distributional check, but
+none of that changes what the random-control test itself shows: real, but
+not an overwhelming statistical outlier.
+
+**Unresolved, flagged not fixed (same caveat the Fourth entry raised and
+never closed)**: `UNIVERSE` is hand-picked using *today's* well-known
+large/mid-caps, not a point-in-time historical constituents list — a real
+survivorship-bias risk with no free fix available (same unresolved gap as
+momentum rotation's).
+
+**Net verdict**: the best-looking result in this project's 38-entry
+history by every check applied — cleanest quarter-split (positive at
+every quarter, across 5 different parameter configs), smoothest
+perturbation sweep, broadest attribution (75% of names contribute
+positively, no concentration), and it beats both the index and an
+equal-weight-universe control on return and drawdown. Still short of
+"proven": the random-control z-score is modest (~1.06), survivorship bias
+in the universe selection is real and unresolved, and this project's own
+standard (see the framing after PEAD/52-week-high) is that a real,
+repeated pattern is a stronger foundation than any single backtest number
+— which is exactly what quarter-split-across-5-configs and the
+perturbation sweep provide here, more thoroughly than any prior entry.
+**Not ported into `daily_strategy.py`'s tested single-instrument
+architecture** — this is a portfolio-level, cross-sectional strategy with
+a genuinely different execution shape (monthly full reallocation across
+multiple concurrent names, not a single-instrument entry/exit), so it
+stays a probe script, same treatment as momentum rotation and PEAD.
+**Recommended next step, not yet done**: before this is anywhere close to
+a "trade real money" decision, paper-track this specific rule (top_k=5,
+lookback=5, monthly rebalance) forward in real time — every prior "best
+result yet" in this project (options selling, PEAD, 52-week-high) fell
+apart on a check run AFTER it looked good, and the one check this entry
+cannot run is genuinely out-of-sample data that didn't exist when the
+backtest was written. **No mechanism has yet cleared the bar to actually
+trade** — this is the closest any mechanism in this project has come, not
+an exception to that standing verdict.

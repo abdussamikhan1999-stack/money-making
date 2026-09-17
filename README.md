@@ -200,6 +200,25 @@ not decay, not a lone survivor, not a capital wall, but a real edge too
 small in magnitude to ever clear realistic transaction costs. See
 CLAUDE.md's "Thirty-seventh" section for the full breakdown.
 
+**Monthly cross-sectional IBS rotation (Thirty-eighth entry,
+`probe_ibs_rotation.py`)** — the strongest result in this project's
+history: ranks all 40 universe stocks by trailing 5-day average IBS each
+month-end, goes long the 5 most-oversold, equal-weighted, rebalanced
+monthly. Full period 15.51%/yr at 26.6% drawdown vs. `^NSEI`'s 10.21%/yr
+at 38.4% — beats the benchmark on both axes. Walk-forward positive both
+halves; **quarter-split all 4 quarters positive, reproduced across 5
+different parameter configs**; 16/16 perturbation cells positive, no
+cliffs; 30/40 stocks individually net-positive with only 31% concentration
+in the top 3 (far broader than any prior survivor here). A 200-seed
+random-5-stock control check — the first of its kind in this project —
+shows the result at the 86.5th percentile (z≈1.06): real and persistent,
+but not an overwhelming statistical outlier. Stays a probe script (not
+ported into `daily_strategy.py`'s single-instrument architecture — this is
+portfolio-level, not single-instrument). Recommended next step: paper-track
+this rule forward before considering real capital. See CLAUDE.md's
+"Thirty-eighth" section for the full breakdown, including a calendar-tie
+reproducibility bug caught and fixed along the way.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an
