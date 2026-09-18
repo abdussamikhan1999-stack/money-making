@@ -3903,7 +3903,15 @@ day each, as of 2026-09-17) before revisiting tradability — no backtest
 refinement substitutes for that. No mechanism has yet cleared the bar to
 actually trade.
 
-## Fifty-second: closing the council review's slippage gap — the finding survives, at every level tested, but the reason why is itself a caveat worth stating plainly
+## Fifty-second: adding a slippage cost term to the IBS rotation backtest — robust to slippage MAGNITUDE under a symmetric assumption, but this specific check cannot rule out the asymmetric risk the council review actually raised
+
+Correction to this entry's own original heading, per a follow-up adversarial
+review (two judges, statistical-adequacy and implementation-correctness):
+the first version of this section led with "the finding survives, at every
+level tested" — true of the number, but read on its own it overclaims
+relative to the caveat below, which is the entry's actual main finding, not
+a footnote to it. Re-headed for that reason; the body and numbers are
+unchanged.
 
 Direct closure of the first of the Fifty-first entry's two concrete asks
 ("add a real slippage/spread cost term before trusting the return
@@ -3996,7 +4004,12 @@ fills than an average stock, not just any fills being worse than the
 model). The Fifty-first entry's OTHER flagged item (report significance
 against a multiple-comparisons-corrected threshold across the ~25+
 internal configs and 50+ mechanisms tried) remains open, untouched by
-this entry. **The long-only IBS rotation (Thirty-eighth through
+this entry. Also flagged, not fixed: `slippage_pct` was added only to the
+backtest/significance probes — `paper_track_ibs_rotation.py` and
+`paper_track_ibs_rotation_hedged.py` still run a zero-slippage cost model,
+so the two live forward records are not yet consistent with this entry's
+own more conservative backtest assumptions. **The long-only IBS rotation
+(Thirty-eighth through
 Forty-first entries) remains this project's primary finding, now with one
 more rigor check closed in its favor — not yet enough to call it
 tradable.** No mechanism has yet cleared the bar to actually trade.
