@@ -4013,3 +4013,96 @@ own more conservative backtest assumptions. **The long-only IBS rotation
 Forty-first entries) remains this project's primary finding, now with one
 more rigor check closed in its favor — not yet enough to call it
 tradable.** No mechanism has yet cleared the bar to actually trade.
+
+## Fifty-third: closing the multiple-comparisons gap — none of this project's reported significance survives correction once the real search family is counted
+
+Direct closure of the Fifty-first entry's other still-open ask ("report
+significance against a multiple-comparisons-corrected threshold, not a raw
+single-config p-value"). Every p-value this project has ever reported
+(Thirty-ninth, Forty-second, Fiftieth, Fifty-second entries) was computed
+and read in isolation, with no accounting for how many hypotheses were
+actually evaluated with that exact methodology before one of them got
+reported as "significant."
+
+Added `multiple_comparisons.py`: `bonferroni()` (family-wise, strict —
+alpha/m) and `benjamini_hochberg()` (false-discovery-rate, the standard,
+less punishing choice for an exploratory sweep like this project's),
+applied side by side since neither alone is "the" right answer for an
+after-the-fact research audit. An assert-based self-check (a p-value far
+below the corrected threshold must survive both procedures; one far above
+must survive neither, at any family size) stands in for a pytest file, this
+project's established convention for a script that isn't itself a backtest.
+
+**Two honestly different family definitions, not one**, because the right
+denominator is itself ambiguous and picking only one would smuggle a
+conclusion in by the choice of scope:
+
+- **Narrow (m=3)**: exactly the 3 portfolio sizes
+  `probe_ibs_rotation_significance.py`'s own docstring says it exists to
+  check ("the edge isn't itself a lucky parameter pick") — the Thirty-ninth
+  entry's own stated scope, nothing broader.
+- **Broad (m=7)**: every p-value this project's `--significance` check has
+  EVER been run against, across every cross-sectional candidate that
+  methodology was applied to while searching for something to report — IBS
+  rotation's own 3 sizes, RSI-2 rotation's 3 sizes (Forty-second entry), and
+  the IBS+low-vol composite (Fiftieth entry) — not just the one that
+  eventually got kept. This is the family the Fifty-first entry's council
+  review actually objected to being ignored.
+
+All 7 p-values re-derived fresh in one sitting (2026-09-18, `--n-seeds
+1500`, same data snapshot) rather than quoting the individually-logged
+numbers scattered across three different sessions' CLAUDE.md entries — the
+Fortieth/Forty-eighth entries already documented that yfinance's per-symbol
+retry behavior can shift results slightly run-to-run, so mixing numbers
+from different sessions would be its own small methodological sin. The
+rerun reproduced the Thirty-ninth entry's own numbers almost exactly
+(top_k=5: p=0.0160 vs. the original 0.0153; top_k=8: p=0.0140 vs. 0.0140
+exactly; top_k=3: p=0.0367 vs. 0.0367 exactly) — the measurement itself is
+stable, only the correction applied to it is new.
+
+**Narrow family (m=3, Bonferroni threshold 0.01667)**: `top_k=5`
+(p=0.0160) and `top_k=8` (p=0.0140) both still clear it; `top_k=3`
+(p=0.0367) does not. Under Benjamini-Hochberg at the same m=3, all three
+survive (the FDR procedure's own step-up rule licenses this once the
+largest p-value, 0.0367, clears its own rank-3 critical value of
+3/3 x 0.05 = 0.05). Read narrowly — did IBS rotation's own portfolio-size
+sweep find a real effect and not a lucky size? — the answer is still
+"mostly yes," largely unchanged from the Thirty-ninth entry's own
+uncorrected read.
+
+**Broad family (m=7, Bonferroni threshold 0.00714)**: **zero of the seven
+p-values survive**, under EITHER Bonferroni or Benjamini-Hochberg. Even
+IBS rotation's own best case (`top_k=8`, p=0.0140) is roughly double the
+Bonferroni-corrected threshold, and BH's step-up rule never finds a rank
+where the sorted p-values dip below their own critical line (rank 1's own
+p=0.0140 already exceeds its critical value of 1/7 x 0.05 = 0.00714, which
+is enough on its own to zero out the whole procedure, since BH requires at
+least the smallest p-value to clear rank 1's threshold before any larger
+rank can be included).
+
+**Net verdict**: this is exactly the "harder verdict" the Fifty-first
+entry's council review said this project's own caution understated, now
+made concrete and quantitative rather than qualitative. Read the narrowest
+possible way (just the 3 configs the original significance test says it
+was checking), IBS rotation's finding is still standing after correction.
+Read the way an honest account of this project's actual search process
+requires (every candidate that specific methodology was tried against),
+none of it clears a corrected bar — not IBS rotation, not RSI-2 rotation,
+not the composite. This doesn't newly disprove IBS rotation any more than
+the Fifty-first entry's review did; it quantifies exactly how much of the
+"real, corroborated" framing was riding on which family the reader assumes
+is being tested, which is precisely the gap the council review flagged and
+this project had not yet closed. **Deliberately not extended to the
+project's full 50+-mechanism search**: those were overwhelmingly screened
+by walk-forward/quarter-split hit rate, not by this random-control p-value
+methodology, so most have no p-value to correct in the first place — a
+Bonferroni-style correction can only be applied to the family of tests that
+actually produced a p-value, not asserted as a single deflated number
+across every mechanism this project has ever tried. **The long-only IBS
+rotation (Thirty-eighth through Forty-first entries) remains this
+project's primary finding — now with both of the Fifty-first entry's
+concrete asks closed (slippage in the Fifty-second entry, multiple
+comparisons here), and a more precisely quantified, still-real gap between
+"survives its own narrow check" and "survives an honest accounting of the
+search that produced it."** No mechanism has yet cleared the bar to
+actually trade.

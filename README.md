@@ -422,6 +422,22 @@ slippage, which this symmetric test can't detect). One of two flagged
 gaps closed; the multiple-comparisons-correction ask remains open. See
 CLAUDE.md's "Fifty-second" section for the full breakdown.
 
+**Closing the multiple-comparisons gap (Fifty-third entry,
+`multiple_comparisons.py`)** — applied Bonferroni and Benjamini-Hochberg
+corrections to every p-value this project's `--significance` random-control
+check has ever produced (7 total: IBS rotation's 3 portfolio sizes, RSI-2
+rotation's 3, the IBS+low-vol composite's 1), all re-derived fresh in one
+sitting for a consistent snapshot. Read narrowly (just IBS rotation's own
+3-size sweep, m=3), `top_k=5`/`top_k=8` still clear Bonferroni and all 3
+clear Benjamini-Hochberg. Read as the honest family of everything actually
+tried with this methodology (m=7), **zero of the seven p-values survive
+either correction** — even IBS rotation's own best case misses the
+Bonferroni-corrected threshold by roughly 2x. Both of the Fifty-first
+entry's concrete asks are now closed (slippage, multiple comparisons); the
+gap between "survives its own narrow check" and "survives an honest
+accounting of the search that produced it" is now quantified, not just
+flagged. See CLAUDE.md's "Fifty-third" section for the full breakdown.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an
