@@ -4070,6 +4070,26 @@ sweep find a real effect and not a lucky size? — the answer is still
 "mostly yes," largely unchanged from the Thirty-ninth entry's own
 uncorrected read.
 
+**But m=3 is not the honest narrow family — the Fifty-first entry already
+told us what is, and this section originally failed to check its own
+work against it.** A follow-up adversarial review of this entry (two
+judges) caught the asymmetry directly: the Fifty-first entry's own text
+already states the real internal search was "~25+ internal parameter/
+universe variants tried within the IBS-rotation line itself" (the
+top_k x lookback grid in the Thirty-eighth entry, +6 more widening the
+Thirty-ninth, +3 more in the Fortieth) before the reported config was
+settled on — not 3. Re-run at **m=25** (Bonferroni threshold 0.002,
+`multiple_comparisons.py`'s new `IBS_INTERNAL_SEARCH_FAMILY_SIZE`; BH
+isn't computable at this m since the other ~22 variants were never each
+assigned a p-value, only a config choice): **IBS rotation's own best
+p-value (0.0140) fails outright** — roughly 7x above the corrected
+threshold. The "narrow family still stands" framing this section
+originally led with was itself the cherry-picked half, not the broad
+family's harsher conclusion — swapping in a friendlier, smaller m for the
+"favorable" side of the comparison while treating m=7 as the rigorous
+"broad" one. Corrected here rather than left standing next to the m=7
+result as if the two were equally representative.
+
 **Broad family (m=7, Bonferroni threshold 0.00714)**: **zero of the seven
 p-values survive**, under EITHER Bonferroni or Benjamini-Hochberg. Even
 IBS rotation's own best case (`top_k=8`, p=0.0140) is roughly double the
@@ -4081,18 +4101,23 @@ least the smallest p-value to clear rank 1's threshold before any larger
 rank can be included).
 
 **Net verdict**: this is exactly the "harder verdict" the Fifty-first
-entry's council review said this project's own caution understated, now
-made concrete and quantitative rather than qualitative. Read the narrowest
-possible way (just the 3 configs the original significance test says it
-was checking), IBS rotation's finding is still standing after correction.
-Read the way an honest account of this project's actual search process
-requires (every candidate that specific methodology was tried against),
-none of it clears a corrected bar — not IBS rotation, not RSI-2 rotation,
-not the composite. This doesn't newly disprove IBS rotation any more than
-the Fifty-first entry's review did; it quantifies exactly how much of the
-"real, corroborated" framing was riding on which family the reader assumes
-is being tested, which is precisely the gap the council review flagged and
-this project had not yet closed. **Deliberately not extended to the
+entry's council review said this project's own caution understated, and
+it turns out to be harder than this entry's own first pass initially
+credited, too. The ONLY reading under which IBS rotation's significance
+survives is the artificially narrow m=3 (just its own 3 portfolio sizes)
+— and that reading doesn't actually match this project's real search
+process, per the Fifty-first entry's own already-established count of
+~25 internal variants tried within this exact line. At that honestly-scoped
+m=25, IBS rotation's own best p-value fails outright, by roughly 7x.
+Combined with the m=7 broad-family result (also zero survivors), there is
+now no family-size scoping — narrow-and-honest, or broad-and-inclusive —
+under which this project's flagship finding clears a corrected
+significance bar. This doesn't newly disprove IBS rotation as a real
+effect (a Bonferroni/BH correction bounds false-discovery risk under
+formal search-space accounting, it doesn't prove the null); it means the
+specific "p<0.05, corroborated" claim this project has repeated since the
+Thirty-ninth entry should be retired, not requalified with a favorable
+family size. **Deliberately not extended to the
 project's full 50+-mechanism search**: those were overwhelmingly screened
 by walk-forward/quarter-split hit rate, not by this random-control p-value
 methodology, so most have no p-value to correct in the first place — a
@@ -4100,9 +4125,12 @@ Bonferroni-style correction can only be applied to the family of tests that
 actually produced a p-value, not asserted as a single deflated number
 across every mechanism this project has ever tried. **The long-only IBS
 rotation (Thirty-eighth through Forty-first entries) remains this
-project's primary finding — now with both of the Fifty-first entry's
-concrete asks closed (slippage in the Fifty-second entry, multiple
-comparisons here), and a more precisely quantified, still-real gap between
-"survives its own narrow check" and "survives an honest accounting of the
-search that produced it."** No mechanism has yet cleared the bar to
+project's primary finding by every OTHER check (walk-forward, quarter-split,
+widening, survivorship stress, slippage robustness) — now with both of the
+Fifty-first entry's concrete asks closed (slippage in the Fifty-second entry, multiple
+comparisons here), and a precisely quantified answer to "does the reported
+significance survive correction": no, under every honestly-scoped family
+size tested (m=7 broad, m=25 narrow-but-real) — only the artificially
+narrow m=3 reading (which undercounts this project's own already-documented
+search) still passes.** No mechanism has yet cleared the bar to
 actually trade.

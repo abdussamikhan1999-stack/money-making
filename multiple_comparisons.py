@@ -22,10 +22,18 @@ one sitting is more honest than mixing numbers from different sessions.
 import argparse
 
 
-def bonferroni(pvalues, alpha=0.05):
+def bonferroni(pvalues, alpha=0.05, m=None):
     """Corrected significance threshold: alpha / m. A p-value survives if
-    it's at or below this threshold."""
-    m = len(pvalues)
+    it's at or below this threshold. m defaults to len(pvalues) but can be
+    overridden to correct a single reported p-value against a LARGER search
+    family than the p-values actually listed here - needed for an internal
+    parameter sweep whose other members were never individually assigned a
+    p-value, only a config choice. Bonferroni only needs the family size and
+    the one p being tested, unlike Benjamini-Hochberg below, which needs the
+    full ranked list and so can't be computed at a family size larger than
+    the p-values actually on hand."""
+    if m is None:
+        m = len(pvalues)
     threshold = alpha / m
     return threshold, [p <= threshold for _, p in pvalues]
 
@@ -45,17 +53,23 @@ def benjamini_hochberg(pvalues, alpha=0.05):
     return [i in survivors for i in range(m)]
 
 
-def report(pvalues, alpha=0.05):
-    m = len(pvalues)
-    bonf_threshold, bonf_pass = bonferroni(pvalues, alpha)
-    bh_pass = benjamini_hochberg(pvalues, alpha)
-    print(f"family size m={m}, alpha={alpha}")
+def report(pvalues, alpha=0.05, m=None):
+    """m=None: family size is len(pvalues), both Bonferroni and BH computed
+    normally. m=<explicit int larger than len(pvalues)>: correcting a single
+    p-value (or a handful) against a bigger family than is actually listed -
+    BH is skipped and printed as "n/a", since it needs the full ranked list
+    of all m p-values, not just the ones on hand."""
+    bonf_threshold, bonf_pass = bonferroni(pvalues, alpha, m)
+    bh_computable = m is None or m == len(pvalues)
+    bh_pass = benjamini_hochberg(pvalues, alpha) if bh_computable else [None] * len(pvalues)
+    print(f"family size m={m if m is not None else len(pvalues)}, alpha={alpha}")
     print(f"Bonferroni-corrected threshold: {bonf_threshold:.5f} "
           f"(vs. uncorrected {alpha})")
-    print(f"{'label':45s} {'raw p':>8s} {'bonferroni':>11s} {'BH (FDR)':>9s}")
+    print(f"{'label':55s} {'raw p':>8s} {'bonferroni':>11s} {'BH (FDR)':>9s}")
     for (label, p), bp, hp in zip(pvalues, bonf_pass, bh_pass):
-        print(f"{label:45s} {p:8.4f} {'PASS' if bp else 'fail':>11s} "
-              f"{'PASS' if hp else 'fail':>9s}")
+        bh_str = "n/a" if hp is None else ("PASS" if hp else "fail")
+        print(f"{label:55s} {p:8.4f} {'PASS' if bp else 'fail':>11s} "
+              f"{bh_str:>9s}")
     return bonf_pass, bh_pass
 
 
@@ -88,6 +102,19 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("IBS+low-vol composite vol_w=0.5,top_k=5 (Fiftieth)", 0.3633),
 ]
 
+# The Fifty-first entry's OWN internal-search family, not a new number
+# invented here: that entry's own text states "~25+ internal parameter/
+# universe variants tried within the IBS-rotation line itself" before the
+# reported config was settled on (the top_k x lookback grid in the
+# Thirty-eighth entry, +6 more widening the Thirty-ninth, +3 more in the
+# Fortieth). Only IBS rotation's own best p-value can be checked against
+# this family size - the other ~22 variants were never individually
+# assigned a p-value, only a config choice, so Bonferroni (which only
+# needs the count and the one p being tested) applies but BH (which needs
+# every p-value in the family) does not.
+IBS_INTERNAL_SEARCH_FAMILY_SIZE = 25
+IBS_ROTATION_BEST_P = min(p for _, p in IBS_ROTATION_PVALUES)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -107,3 +134,8 @@ if __name__ == "__main__":
     print("\n--- broad family: every candidate this project ever ran the ---")
     print("--- --significance check against, IBS included             ---")
     report(ALL_SIGNIFICANCE_TESTS_PVALUES, args.alpha)
+    print("\n--- internal-search family (m=25, per the Fifty-first entry's ---")
+    print("--- own count) - Bonferroni only, BH needs the full ranked    ---")
+    print("--- list which isn't available at this family size            ---")
+    report([("IBS rotation best p across top_k=3/5/8", IBS_ROTATION_BEST_P)],
+           args.alpha, m=IBS_INTERNAL_SEARCH_FAMILY_SIZE)
