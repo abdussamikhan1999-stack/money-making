@@ -60,8 +60,9 @@ def build_wide_price_series(period: str, retries: int = 3):
 
 def simulate_wide(rebalance_dates, series, top_k=5, lookback=5,
                    cost_pct=0.2, dp_charge=16.0, capital=100_000.0, track_picks=False,
-                   slippage_pct=0.0):
-    """Same mechanics as probe_ibs_rotation.simulate(), extended to
+                   slippage_pct=0.0, whole_shares=False):
+    """Same mechanics as probe_ibs_rotation.simulate() (including its
+    whole_shares option, see that function's docstring), extended to
     optionally track which symbol was picked each month (for attribution)."""
     dates_map = {s: [c["date"].date() for c in cds] for s, cds in series.items()}
     closes_map = {s: [c["close"] for c in cds] for s, cds in series.items()}
@@ -88,21 +89,32 @@ def simulate_wide(rebalance_dates, series, top_k=5, lookback=5,
             continue
         notional_each = capital_track / len(picks)
         month_pnl = 0.0
+        active = 0
         for _, sym, entry_px, exit_px in picks:
             fill_entry = entry_px * (1 + slippage_pct / 100)
             fill_exit = exit_px * (1 - slippage_pct / 100)
+            if whole_shares:
+                shares = int(notional_each // fill_entry)
+                if shares == 0:
+                    continue
+                notional = shares * fill_entry
+            else:
+                notional = notional_each
             ret = (fill_exit - fill_entry) / fill_entry
-            gross = notional_each * ret
-            cost = notional_each * (cost_pct / 100) * 2 + dp_charge
+            gross = notional * ret
+            cost = notional * (cost_pct / 100) * 2 + dp_charge
             trade_pnl = gross - cost
             month_pnl += trade_pnl
+            active += 1
             if track_picks:
                 per_symbol_pnl[sym] = per_symbol_pnl.get(sym, 0.0) + trade_pnl
+        if active == 0:
+            continue
         capital_track += month_pnl
         peak = max(peak, capital_track)
         dd = (peak - capital_track) / peak * 100 if peak > 0 else 0.0
         max_dd = max(max_dd, dd)
-        months.append(dict(date=entry_date, pnl=month_pnl, n=len(picks)))
+        months.append(dict(date=entry_date, pnl=month_pnl, n=active))
 
     total_net = sum(m["pnl"] for m in months)
     wins = sum(1 for m in months if m["pnl"] > 0)
@@ -113,14 +125,16 @@ def simulate_wide(rebalance_dates, series, top_k=5, lookback=5,
     return result
 
 
-def widen_check(top_k=5, lookback=5, period="10y", capital=100_000.0, slippage_pct=0.0):
+def widen_check(top_k=5, lookback=5, period="10y", capital=100_000.0, slippage_pct=0.0,
+                 whole_shares=False):
     print(f"Widened universe: {len(WIDE_UNIVERSE)} stocks "
           f"({len(LARGE_CAP_UNIVERSE)} large-cap + {len(SMALL_MID_CAP_UNIVERSE)} small/mid-cap)")
     series = build_wide_price_series(period)
     rebalance_dates = month_end_dates(fetch_calendar(period))
     years = (rebalance_dates[-1] - rebalance_dates[0]).days / 365.25
 
-    kwargs = dict(top_k=top_k, lookback=lookback, capital=capital, slippage_pct=slippage_pct)
+    kwargs = dict(top_k=top_k, lookback=lookback, capital=capital, slippage_pct=slippage_pct,
+                  whole_shares=whole_shares)
 
     # Walk-forward
     cutoff = len(rebalance_dates) // 2
@@ -166,6 +180,7 @@ if __name__ == "__main__":
     parser.add_argument("--lookback", type=int, default=5)
     parser.add_argument("--capital", type=float, default=100_000.0)
     parser.add_argument("--slippage-pct", type=float, default=0.0)
+    parser.add_argument("--whole-shares", action="store_true")
     args = parser.parse_args()
     widen_check(top_k=args.top_k, lookback=args.lookback, capital=args.capital,
-                slippage_pct=args.slippage_pct)
+                slippage_pct=args.slippage_pct, whole_shares=args.whole_shares)
