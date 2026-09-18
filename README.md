@@ -441,6 +441,29 @@ project's repeated "p<0.05, corroborated" framing since the Thirty-ninth
 entry should be read as retired, not requalified. See CLAUDE.md's
 "Fifty-third" section for the full breakdown.
 
+**Amihud illiquidity rotation, tested and rejected (Fifty-fourth entry,
+`probe_amihud_rotation.py`)** — the same monthly cross-sectional rotation
+shape as IBS rotation, but with a genuinely different KIND of signal: a
+real, well-cited academic liquidity-risk-premium factor (Amihud, 2002),
+ranking stocks by trailing 21-day mean `|daily return| / dollar volume`
+and going long the most ILLIQUID names each month, not a momentum,
+mean-reversion, or volatility signal. Full-period return (18.4%/yr at
+47.4% DD) and walk-forward (consistent, both halves positive across all
+12 tested lookback x top_k configs) look superficially fine, but two
+checks this project's own methodology exists to catch both fail here:
+only 12 of the 52-stock universe are EVER selected (the small/mid-cap
+subset, whose average dollar volume is ~5.5x lower than the large-cap
+40 — confirmed directly, not assumed), with the top 3 contributors
+carrying 67% of total P&L; and the 1,500-seed significance test is weak
+and inconsistent across portfolio sizes (`top_k=3` p=0.59, indistinguishable
+from random; `top_k=5` p=0.10; `top_k=8` p=0.037, the only one that clears
+even an UNCORRECTED 0.05 bar), failing even Amihud's own narrowest
+possible 3-config family under Bonferroni correction. Read together: this
+implementation isn't harvesting a genuine month-to-month liquidity-risk
+rotation, it's closer to a near-static tilt toward the same dozen
+small/mid-cap names, dressed up as a cross-sectional rank. See CLAUDE.md's
+"Fifty-fourth" entry for the full breakdown.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an

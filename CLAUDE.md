@@ -4134,3 +4134,124 @@ size tested (m=7 broad, m=25 narrow-but-real) — only the artificially
 narrow m=3 reading (which undercounts this project's own already-documented
 search) still passes.** No mechanism has yet cleared the bar to
 actually trade.
+
+## Fifty-fourth: Amihud (2002) illiquidity rotation — a genuinely different KIND of factor, and a clean rejection on concentration and significance, not decay
+
+Per the maintainer's explicit direction after the Fifty-third entry
+retired IBS rotation's significance claim: search for a NEW, genuinely
+different candidate rather than keep hardening the existing one. Every
+mechanism tried so far in this project is momentum (Fourth, Thirty-fifth),
+mean-reversion (IBS, RSI-2, Bollinger, Turtle Soup), a volatility factor
+(low-vol, Twenty-fourth), or volume-CONFIRMATION (CMF+OBV, Sixteenth) —
+none is a liquidity-risk-premium factor. Amihud, "Illiquidity and stock
+returns: cross-section and time-series effects" (Journal of Financial
+Markets, 2002), one of the most-cited factors in empirical asset pricing:
+stocks that are harder to trade without moving the price (high
+price-impact-per-rupee-of-volume) earn a return premium compensating
+investors for illiquidity risk.
+
+Added `indicators.amihud_illiq()` (5 new unit tests) — mean daily
+`|return| / dollar_volume` over a trailing window, needing `period + 1`
+candles (each day's return needs the prior day's close, the "+1"
+requirement `on_balance_volume` already has but `internal_bar_strength`
+doesn't). Skips a day with non-positive volume or prior close (an index
+symbol, or a genuine no-trade day) the same defensive way
+`chaikin_money_flow` already does — moot for this entry specifically
+since `WIDE_UNIVERSE` (`probe_ibs_rotation_widen.py`) contains no index
+symbols, `^NSEI` is only ever used as the trading-day calendar via
+`fetch_calendar()`, never as a tradable pick.
+
+Implemented as `probe_amihud_rotation.py`, reusing every piece of
+entries 38-53's scaffolding unchanged: `WIDE_UNIVERSE`,
+`build_wide_price_series` (candle dicts already carry `volume` — no new
+fetch pathway needed, per the Sixteenth entry's CMF/OBV precedent),
+`fetch_calendar`, `month_end_dates`, `price_at_or_before`, and the same
+STT+stamp+DP+slippage cost model. Only the ranking direction is new:
+`rank_by_illiq()` sorts DESCENDING (long the most illiquid), the opposite
+of `rank_by_ibs()`'s ascending most-oversold-first sort, since Amihud's
+published direction is "more illiquid = more compensated," not
+mean-reversion.
+
+**Full-period and walk-forward look fine on their own**: 18.42%/yr at
+47.4% max drawdown (`top_k=5, lookback=21`, the standard config), both
+walk-forward halves positive (29.37%/in-sample, 7.82%/out-of-sample,
+CONSISTENT). A 12-config perturbation sweep (`lookback` 10/21/42/63 x
+`top_k` 3/5/8) is walk-forward-consistent in all 12 cells — no sign
+flips anywhere.
+
+**Quarter-split is a real but partial pass, and Q4 is consistently thin
+at every config**: `top_k=5`/`top_k=8` have all 4 quarters positive at
+every lookback tested (6/12 configs), but `top_k=3` has a NEGATIVE Q4 at
+every single lookback tested (10/21/42/63 days: -9,414/-20,919/-24,357/
+-19,883) — a real, config-dependent decay signature, not noise. Even
+where Q4 stays positive, it's the weakest quarter by a wide margin in
+every passing config (e.g. `lookback=21, top_k=5`: Q1-Q3 net 67,720/
+113,373/43,282 vs. Q4's 904) — the same recent-quarter deceleration this
+project's Cross-mechanism synthesis entry already associates with
+basket-wide directional bets, worth flagging even though it doesn't
+outright fail here.
+
+**Attribution reveals the real problem, and it's mechanistic, not a
+data artifact**: only **12 of the 52-stock universe are EVER selected**
+across 119 months at the standard config — the exact same 12 names as
+the Thirty-third entry's small/mid-cap universe, 10/12 individually
+net-positive, but **top-3 contributors carry 67.0% of total net P&L**
+(`ELGIEQUIP.NS`, `RATNAMANI.NS`, `GRAPHITE.NS`). Checked the mechanism
+directly rather than assuming it: mean 60-day dollar volume is
+**Rs 5.29B for the large-cap 40 vs. Rs 959M for the small/mid-cap 12 —
+a 5.5x gap**. Since ILLIQ ranks descending by price-impact-per-rupee-of-
+volume across the WHOLE mixed-cap universe every month, the small/mid-cap
+names structurally sit at the top of the illiquidity ranking almost every
+single month regardless of any genuine month-to-month liquidity dynamics
+— this isn't harvesting a rotating cross-sectional signal the way IBS
+rotation demonstrably does (52/52 stocks selected at least once, 73%
+individually positive, Thirty-ninth entry); it's a near-static tilt
+toward the same dozen smaller-cap names, dressed up as a monthly
+rotation. A cleaner implementation would rank ILLIQ within market-cap
+buckets or standardize by each stock's own historical ILLIQ range — not
+attempted here, since the significance result below closes the line
+regardless.
+
+**Significance (1,500-seed random-control, same methodology as
+`probe_ibs_rotation_significance.py`) is weak and inconsistent across
+portfolio sizes, unlike IBS rotation's consistent p=0.014-0.037 across
+top_k=3/5/8**: `top_k=3` p=0.590 (worse than random — z=-0.41), `top_k=5`
+p=0.105 (misses even an uncorrected 0.05 bar), `top_k=8` p=0.037 (the
+only one that clears an uncorrected bar, barely). Checked against
+`multiple_comparisons.py`'s Bonferroni correction at Amihud's own
+narrowest possible family (m=3, just its own 3 portfolio sizes, the same
+generous scoping the Fifty-third entry used for IBS's narrow reading):
+**0/3 survive** — even the friendliest possible reading fails outright,
+unlike IBS rotation which had 2/3 survive at this same narrow scoping.
+Added Amihud's 3 p-values to `multiple_comparisons.py`'s
+`ALL_SIGNIFICANCE_TESTS_PVALUES` broad family (now m=10, up from m=7) for
+future honest accounting — this doesn't change the broad-family verdict
+(already 0/7, now 0/10), but keeps the running count of every candidate
+this methodology has been applied to accurate, per the Fifty-third
+entry's own established practice of not asserting a single deflated
+p-value across every mechanism ever tried, only across the family that
+actually produced one.
+
+**Net verdict: rejected, and for a genuinely different reason than most
+prior rejections in this project.** Not decay (Donchian/BTC, momentum
+rotation, low-vol), not a lone-instrument-from-a-chance-level-sweep (IBS's
+original single-instrument gold survivor, SuperTrend's oil), not a
+capital-tier wall (options, commodities/FX), and not cost-drag (overnight
+anomaly) — this fails because the specific ranking construction, applied
+naively across a mixed-market-cap universe, collapses into a near-static
+small-cap tilt rather than a genuine month-to-month cross-sectional
+rotation, and that tilt's statistical significance doesn't clear even the
+most generous scoping available. A real, well-cited academic factor,
+correctly implemented per its published definition, still doesn't
+reproduce as a usable edge on this project's universe and
+infrastructure — a useful negative data point for how many of this
+project's real academic-factor attempts (momentum, low-vol, now Amihud)
+have failed for THREE different structural reasons (recent-quarter decay,
+recent-quarter decay again, and now concentration/significance) rather
+than one recurring pattern. `probe_amihud_rotation.py` stays a probe
+script, no adversarial council review run (per this project's own
+convention, reserved for genuinely promising results — this one fails
+cleanly enough on its own checks not to need one). **The long-only IBS
+rotation (Thirty-eighth through Forty-first entries) remains this
+project's sole standing finding; 54 mechanisms tested, no mechanism has
+yet cleared the bar to actually trade.**

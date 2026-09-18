@@ -100,6 +100,11 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("RSI-2 rotation top_k=5 (Forty-second)", 0.2840),
     ("RSI-2 rotation top_k=8 (Forty-second)", 0.0240),
     ("IBS+low-vol composite vol_w=0.5,top_k=5 (Fiftieth)", 0.3633),
+    # Amihud illiquidity rotation (Fifty-fourth entry), 1,500-seed rerun,
+    # same universe/methodology, lookback=21 days.
+    ("Amihud illiquidity rotation top_k=3 (Fifty-fourth)", 0.5900),
+    ("Amihud illiquidity rotation top_k=5 (Fifty-fourth)", 0.1047),
+    ("Amihud illiquidity rotation top_k=8 (Fifty-fourth)", 0.0367),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number
