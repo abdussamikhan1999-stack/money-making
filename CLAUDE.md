@@ -3737,3 +3737,89 @@ a finding about the IBS rotation strategy itself — the underlying
 Thirty-eighth through Forty-eighth entries' numbers are unaffected, since
 none of them ran during live market hours. **No mechanism has yet cleared
 the bar to actually trade.**
+
+## Fiftieth: a composite IBS + low-volatility cross-sectional score — a third combination shape tried, and rejected
+
+Two prior attempts to combine independently-real signals both hurt:
+AND-gating two signals into one trade's entry/exit (Eleventh/Twenty-second
+entries) and running independently-real strategies as a diversified
+multi-strategy portfolio (Thirty-second entry — too correlated). This
+entry tries a third, genuinely different combination shape never tested:
+blend IBS (this project's strongest cross-sectional finding, Thirty-eighth/
+Thirty-ninth) and the low-volatility anomaly (a real academic factor,
+Twenty-fourth entry, but one that decays hard in the recent Q4 2024-2026
+window) into a single composite cross-sectional RANK SCORE — not an
+AND-filter, not a separate capital sleeve — and use that one score as the
+sort key for the same monthly-rotation structure that worked for IBS
+alone. `vol_weight=0.0` reduces exactly to pure IBS rotation (kept as the
+in-sweep baseline for direct comparison); `vol_weight=1.0` reduces to pure
+low-vol rotation on the same universe/cost model.
+
+Implementation: `probe_ibs_lowvol_composite_rotation.py`, reusing
+`probe_ibs_rotation_widen`'s 52-stock `WIDE_UNIVERSE`/
+`build_wide_price_series` and `probe_ibs_rotation`'s `avg_ibs`/
+`dates_closes_maps`/`price_at_or_before`/`month_end_dates`/`fetch_calendar`
+unchanged — no fetch/calendar logic reimplemented, per the Forty-ninth
+entry's lesson. Composite score per stock per month: `(1 - vol_weight) *
+z(avg 5-day IBS) + vol_weight * z(trailing 20-day return stdev)`, both
+z-scored cross-sectionally (within that month's eligible universe) so the
+two signals' different units and scales don't distort the blend; ascending
+sort (lower = more oversold AND calmer). 4 new unit tests
+(`tests/test_ibs_lowvol_composite_rotation.py`) confirm the z-score helper
+handles degenerate (empty/constant) input and that `vol_weight=0.0`/`1.0`
+correctly reduce to pure-IBS-only and pure-volatility-only ranking on
+synthetic data. Full suite 174/174 green.
+
+**Perturbation sweep (`--sweep`, 10y, full period, 5 weights x 3 top_k =
+15 cells)**: no clean win anywhere. At the project's standard `top_k=5`,
+`vol_weight=0.00` (pure IBS) gives 22.11%/yr at 38.2% DD (return/DD ratio
+0.58) — every nonzero weight at `top_k=5` gives BOTH lower return AND
+comparable or only modestly lower drawdown (`vol_weight=1.00`: 14.93%/yr
+at 25.2% DD, ratio 0.59, essentially a wash, not an improvement). The best
+raw return/DD ratio in the whole grid (0.67) appears at `vol_weight=0.50,
+top_k=8` — but `top_k=8` is more generous than `top_k=5` for every weight
+tested (including pure IBS: 20.02%/yr at 31.7% DD there too), so this is a
+`top_k` effect, not evidence the composite itself helps; comparing at
+matched `top_k` throughout, blending in volatility never clearly wins.
+One real warning sign: `vol_weight=1.00, top_k=8` hits a NEGATIVE Q4 —
+the exact recent-quarter decay signature the Twenty-fourth entry's
+standalone low-vol anomaly already showed, creeping back in once
+volatility dominates the score even inside this otherwise-robust rotation
+shape.
+
+**Walk-forward (the decisive check)**: pure IBS at `top_k=5`
+(`vol_weight=0.00`) posts 24.59%/yr in-sample and a strong **19.12%/yr
+out-of-sample**. The two composite candidates that looked most
+competitive in the full-period sweep collapse out-of-sample instead:
+`vol_weight=0.50, top_k=5` goes from 21.19%/yr in-sample to **7.59%/yr**
+out-of-sample; `vol_weight=0.25, top_k=8` goes from 28.09%/yr in-sample to
+**9.38%/yr** out-of-sample. Both stay sign-consistent (still positive), so
+neither fails the walk-forward gate outright, but both give up roughly
+60% of their out-of-sample return relative to pure IBS at the same
+top_k — a materially worse recent-period result, not a wash.
+
+**Significance** (`--significance`, 1,000-seed random-top-k control,
+identical to the Thirty-ninth entry's methodology): `vol_weight=0.50,
+top_k=5` scores `percentile=64.0, empirical_p=0.36, z=0.17` —
+statistically indistinguishable from picking 5 random stocks each month.
+Pure IBS at the same `top_k=5` on the same universe scored `p=0.015`
+(Thirty-ninth entry). Blending in volatility doesn't just fail to help —
+it destroys the statistical significance that was this project's main
+evidence IBS rotation isn't a lucky draw.
+
+**Net verdict: rejected.** All three checks (full-grid sweep, walk-forward,
+significance) agree in direction: composite ranking never beats plain IBS
+rotation at matched `top_k`, degrades badly out-of-sample specifically
+(not just a return/risk trade-off), and destroys statistical significance
+at a plausible middle weight. The likely mechanism: low-volatility's real
+edge comes with its own Q4-decay weakness (Twenty-fourth entry), and
+blending it into the score doesn't get "the good part of low-vol without
+the bad part" — it dilutes IBS's real, mean-reversion-driven, still-Q4-
+robust edge while reintroducing exactly the regime fragility this test
+hoped to avoid. Sizing-up check intentionally skipped, consistent with
+every prior rotation entry (Thirty-eighth through Forty-ninth) — this is
+an equal-weight top-k rotation, not a per-trade ATR-stop sizing strategy,
+so the `--risk-per-trade-pct` dilution check doesn't apply to this shape.
+**The long-only plain IBS rotation (Thirty-eighth through Forty-first
+entries) remains this project's sole standing finding; 50 mechanisms
+tested, no mechanism has yet cleared the bar to actually trade.**

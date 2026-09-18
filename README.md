@@ -381,6 +381,21 @@ at all. Fixed with a shared `latest_settled_date()` guard in
 the prior trading day until 15:45 IST. See CLAUDE.md's "Forty-ninth"
 section for the full writeup.
 
+**Composite IBS + low-volatility score, tried and rejected (Fiftieth
+entry, `probe_ibs_lowvol_composite_rotation.py`)** — a third way of
+combining independently-real signals (after AND-gating one trade's
+entry/exit, and running a diversified multi-strategy portfolio, both of
+which hurt in earlier entries): blend IBS and the low-volatility anomaly
+into one cross-sectional rank score instead of ranking by IBS alone. At
+matched `top_k`, it never beats plain IBS on a full-period sweep, collapses
+out-of-sample in walk-forward (a candidate that looked competitive
+in-sample gives up ~60% of its return out-of-sample vs. pure IBS), and
+loses statistical significance entirely at a plausible middle weight
+(p=0.36 vs. pure IBS's p=0.015 on the same universe/top_k). Blending in
+volatility reintroduces that factor's own known recent-quarter decay
+rather than adding a "free" risk reduction. See CLAUDE.md's "Fiftieth"
+section for the full numbers.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an
