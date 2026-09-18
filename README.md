@@ -422,6 +422,25 @@ slippage, which this symmetric test can't detect). One of two flagged
 gaps closed; the multiple-comparisons-correction ask remains open. See
 CLAUDE.md's "Fifty-second" section for the full breakdown.
 
+**Closing the multiple-comparisons gap (Fifty-third entry,
+`multiple_comparisons.py`)** — applied Bonferroni and Benjamini-Hochberg
+corrections to every p-value this project's `--significance` random-control
+check has ever produced (7 total: IBS rotation's 3 portfolio sizes, RSI-2
+rotation's 3, the IBS+low-vol composite's 1), all re-derived fresh in one
+sitting for a consistent snapshot. At the honest family of everything
+actually tried with this methodology (m=7), **zero of the seven p-values
+survive either correction** — even IBS rotation's own best case misses the
+Bonferroni-corrected threshold by roughly 2x. At m=25 (the Fifty-first
+entry's own already-documented count of internal parameter/universe
+variants tried within the IBS-rotation line itself), IBS rotation's best
+p-value **also fails**, by roughly 7x — the only reading under which it
+survives is an artificially narrow m=3 (just its own 3 portfolio sizes)
+that undercounts this project's real search. Both of the Fifty-first
+entry's concrete asks are now closed (slippage, multiple comparisons); the
+project's repeated "p<0.05, corroborated" framing since the Thirty-ninth
+entry should be read as retired, not requalified. See CLAUDE.md's
+"Fifty-third" section for the full breakdown.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an
