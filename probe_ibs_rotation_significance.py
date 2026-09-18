@@ -20,7 +20,7 @@ from probe_ibs_rotation import month_end_dates, fetch_calendar, price_at_or_befo
 
 
 def simulate_random(rebalance_dates, series, seed, top_k=5,
-                     cost_pct=0.2, dp_charge=16.0, capital=100_000.0):
+                     cost_pct=0.2, dp_charge=16.0, capital=100_000.0, slippage_pct=0.0):
     """Same mechanics as simulate_wide but picks top_k RANDOM eligible
     names each month instead of ranking by IBS - the control distribution."""
     rng = random.Random(seed)
@@ -43,7 +43,9 @@ def simulate_random(rebalance_dates, series, seed, top_k=5,
         notional_each = capital_track / len(picks)
         month_pnl = 0.0
         for _, entry_px, exit_px in picks:
-            ret = (exit_px - entry_px) / entry_px
+            fill_entry = entry_px * (1 + slippage_pct / 100)
+            fill_exit = exit_px * (1 - slippage_pct / 100)
+            ret = (fill_exit - fill_entry) / fill_entry
             gross = notional_each * ret
             cost = notional_each * (cost_pct / 100) * 2 + dp_charge
             month_pnl += gross - cost
@@ -51,15 +53,18 @@ def simulate_random(rebalance_dates, series, seed, top_k=5,
     return capital_track
 
 
-def run(n_seeds=1000, top_ks=(3, 5, 8), lookback=5, period="10y", capital=100_000.0):
+def run(n_seeds=1000, top_ks=(3, 5, 8), lookback=5, period="10y", capital=100_000.0,
+        slippage_pct=0.0):
     series = build_wide_price_series(period)
     rebalance_dates = month_end_dates(fetch_calendar(period))
 
     for top_k in top_ks:
-        actual = simulate_wide(rebalance_dates, series, top_k=top_k, lookback=lookback, capital=capital)
+        actual = simulate_wide(rebalance_dates, series, top_k=top_k, lookback=lookback,
+                                capital=capital, slippage_pct=slippage_pct)
         actual_final = actual["final_capital"]
 
-        randoms = [simulate_random(rebalance_dates, series, seed, top_k=top_k, capital=capital)
+        randoms = [simulate_random(rebalance_dates, series, seed, top_k=top_k, capital=capital,
+                                    slippage_pct=slippage_pct)
                    for seed in range(n_seeds)]
         randoms.sort()
         n_beat_actual = sum(1 for r in randoms if r >= actual_final)
@@ -79,5 +84,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--n-seeds", type=int, default=1000)
     parser.add_argument("--top-ks", type=int, nargs="+", default=[3, 5, 8])
+    parser.add_argument("--slippage-pct", type=float, default=0.0)
     args = parser.parse_args()
-    run(n_seeds=args.n_seeds, top_ks=tuple(args.top_ks))
+    run(n_seeds=args.n_seeds, top_ks=tuple(args.top_ks), slippage_pct=args.slippage_pct)

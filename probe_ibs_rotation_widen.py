@@ -59,7 +59,8 @@ def build_wide_price_series(period: str, retries: int = 3):
 
 
 def simulate_wide(rebalance_dates, series, top_k=5, lookback=5,
-                   cost_pct=0.2, dp_charge=16.0, capital=100_000.0, track_picks=False):
+                   cost_pct=0.2, dp_charge=16.0, capital=100_000.0, track_picks=False,
+                   slippage_pct=0.0):
     """Same mechanics as probe_ibs_rotation.simulate(), extended to
     optionally track which symbol was picked each month (for attribution)."""
     dates_map = {s: [c["date"].date() for c in cds] for s, cds in series.items()}
@@ -88,7 +89,9 @@ def simulate_wide(rebalance_dates, series, top_k=5, lookback=5,
         notional_each = capital_track / len(picks)
         month_pnl = 0.0
         for _, sym, entry_px, exit_px in picks:
-            ret = (exit_px - entry_px) / entry_px
+            fill_entry = entry_px * (1 + slippage_pct / 100)
+            fill_exit = exit_px * (1 - slippage_pct / 100)
+            ret = (fill_exit - fill_entry) / fill_entry
             gross = notional_each * ret
             cost = notional_each * (cost_pct / 100) * 2 + dp_charge
             trade_pnl = gross - cost
@@ -110,14 +113,14 @@ def simulate_wide(rebalance_dates, series, top_k=5, lookback=5,
     return result
 
 
-def widen_check(top_k=5, lookback=5, period="10y", capital=100_000.0):
+def widen_check(top_k=5, lookback=5, period="10y", capital=100_000.0, slippage_pct=0.0):
     print(f"Widened universe: {len(WIDE_UNIVERSE)} stocks "
           f"({len(LARGE_CAP_UNIVERSE)} large-cap + {len(SMALL_MID_CAP_UNIVERSE)} small/mid-cap)")
     series = build_wide_price_series(period)
     rebalance_dates = month_end_dates(fetch_calendar(period))
     years = (rebalance_dates[-1] - rebalance_dates[0]).days / 365.25
 
-    kwargs = dict(top_k=top_k, lookback=lookback, capital=capital)
+    kwargs = dict(top_k=top_k, lookback=lookback, capital=capital, slippage_pct=slippage_pct)
 
     # Walk-forward
     cutoff = len(rebalance_dates) // 2
@@ -162,5 +165,7 @@ if __name__ == "__main__":
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--lookback", type=int, default=5)
     parser.add_argument("--capital", type=float, default=100_000.0)
+    parser.add_argument("--slippage-pct", type=float, default=0.0)
     args = parser.parse_args()
-    widen_check(top_k=args.top_k, lookback=args.lookback, capital=args.capital)
+    widen_check(top_k=args.top_k, lookback=args.lookback, capital=args.capital,
+                slippage_pct=args.slippage_pct)
