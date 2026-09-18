@@ -3823,3 +3823,82 @@ so the `--risk-per-trade-pct` dilution check doesn't apply to this shape.
 **The long-only plain IBS rotation (Thirty-eighth through Forty-first
 entries) remains this project's sole standing finding; 50 mechanisms
 tested, no mechanism has yet cleared the bar to actually trade.**
+
+## Fifty-first: an adversarial council review of the IBS rotation finding — the project's own "not tradable yet" caution turns out to still be an UNDERSTATEMENT
+
+Three independent reviewers (no shared context, no access to each other's
+findings or this project's own hedged framing) were asked to critically
+audit the IBS rotation finding from different angles: statistical rigor,
+data/execution realism, and devil's-advocate red-teaming. All three
+converged on a harder verdict than this project's own repeated "no
+mechanism has yet cleared the bar" disclaimer implies — not that the
+disclaimer is wrong, but that even it may be under-stating how far this
+finding is from tradable.
+
+**Statistical rigor**: the reported significance (Thirty-ninth entry's
+p=0.014-0.037) is a single-config p-value computed AFTER the config was
+selected from ~25+ internal parameter/universe variants tried within the
+IBS-rotation line itself, on top of the 50-mechanism search that produced
+this line in the first place. A Bonferroni-style family-wise correction
+across just the 50 mechanisms requires p<0.001 for alpha=0.05 — the
+reported values miss that by 1-2 orders of magnitude, and no
+multiple-testing correction has ever been applied anywhere in this
+project's write-ups. Separately: `rank_by_ibs()` ranks using the *same
+day's* candle that `price_at_or_before()` then fills at — an implicit
+same-bar, zero-latency fill assumption that isn't achievable live (this
+is structurally the same class of bug the Forty-ninth entry had to patch
+for the live tracker, except that fix only covers the live scripts, not
+the backtest itself). The walk-forward/quarter-split check is real and
+has killed 30+ other mechanisms, but here it isn't a true held-out test —
+the top_k/lookback grid and the universe size were themselves chosen by
+looking at performance on the exact same historical window being
+"validated."
+
+**Data/execution realism**: `build_price_series()`'s silent-empty-on-
+failed-fetch behavior can silently shrink the eligible universe for the
+ENTIRE backtest window, not just one month — plausibly the same mechanism
+already caught behaving non-deterministically in the Fortieth entry (top-3
+concentration 44.0% vs 50.4% on reruns of identical config/data). No
+slippage or bid-ask spread term exists anywhere in the cost model
+(`simulate()` charges a flat 0.2% + Rs16 and fills at the exact recorded
+close) — for a strategy whose entire selection criterion is "just closed
+near today's low," assuming a clean fill at that exact close is close to
+the least defensible assumption available. The Thirty-ninth entry's
+whole-share-rounding gap (MARUTI.NS, BAJAJ-AUTO.NS, ULTRACEMCO.NS) is
+still unfixed in the simulator, which still assumes continuous notional.
+
+**Red-team**: the Fortieth entry's survivorship stress test is being
+credited as "the strategy survives real historical blowups," but the
+actual numbers (JETAIRWAYS/YESBANK/RCOM/PCJEWELLER — 3 of 4 becoming
+top-3 contributors, PCJEWELLER alone the single best contributor in the
+whole 56-stock universe, concentration WORSENING to 50.4%) are direct
+confirmation of bounce-harvesting, not evidence against it — and the two
+genuine zero-recovery delistings (DHFL.NS, RELCAPITAL.NS) are invisible to
+yfinance, so the stress test could only ever be run on crashes that
+happened to keep trading. The "Cross-mechanism synthesis" (written before
+entry 38) already predicted single-instrument/short-horizon mean-reversion
+would outperform in this exact recent window — meaning IBS rotation is the
+first mechanism tried AFTER a hypothesis was already formed about what
+shape should win, a textbook regime-fluke-with-retrofitted-story risk that
+no check in this project's methodology is designed to catch. Also flagged:
+an asymmetric rigor pattern — IBS's own disconfirming candidates (short
+leg, composite score) got the full multi-check treatment before rejection,
+while OTHER mechanisms' stress tests (e.g. Forty-third's breakout/momentum
+rotation survey) stopped at the first walk-forward failure.
+
+**Net verdict**: no reviewer would deploy capital on this basis. This
+doesn't overturn the finding — IBS rotation remains the most rigorously
+tested candidate this project has produced, and the honest per-entry
+write-ups are why the gaps above were even findable. But "no mechanism has
+yet cleared the bar" should be read as true with room to spare, not as
+false modesty on an otherwise-ready result. **Concrete bar for next time,
+per all three reviewers**: (1) report significance against a
+multiple-comparisons-corrected threshold, not a raw single-config p-value;
+(2) add a real slippage/spread cost term before trusting the return
+numbers, especially for the specific "just cratered" stock bucket this
+strategy selects; (3) treat the Fortieth entry's bounce-harvesting finding
+as a live risk to size around, not a passed stress test; (4) wait for
+multiple real months of both paper trackers' forward data (currently 1
+day each, as of 2026-09-17) before revisiting tradability — no backtest
+refinement substitutes for that. No mechanism has yet cleared the bar to
+actually trade.
