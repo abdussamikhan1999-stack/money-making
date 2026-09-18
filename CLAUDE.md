@@ -4134,3 +4134,82 @@ size tested (m=7 broad, m=25 narrow-but-real) — only the artificially
 narrow m=3 reading (which undercounts this project's own already-documented
 search) still passes.** No mechanism has yet cleared the bar to
 actually trade.
+
+## Fifty-fourth: closing the whole-share-rounding gap flagged since the Thirty-ninth entry — a real, small drag at low capital, and a specific worry that didn't materialize
+
+Direct closure of the last still-open, concrete flagged gap this project
+had on hand (Fifty-first/Fifty-second/Fifty-third already closed
+slippage and multiple comparisons): the Thirty-ninth entry found that
+`probe_ibs_rotation.py`'s `simulate()` (and `probe_ibs_rotation_widen.py`'s
+`simulate_wide()`) assumes CONTINUOUS notional per pick — at the low end
+of this project's ₹30,000-100,000 target capital range, a ₹6,000
+per-position slice (`top_k=5`) can't literally buy a fractional share of
+an expensive name the way the simulator implicitly assumes, and flagged
+this as something to fix "before paper-trading at the low end of this
+project's target capital range specifically." Never actually done until
+now.
+
+Added `whole_shares` (default `False`, byte-for-byte unchanged old
+behavior — verified with a direct equality assertion, not just eyeballing
+similar numbers) to both `simulate()` and `simulate_wide()`: each pick's
+notional is rounded DOWN to `floor(slice_capital / fill_price)` whole
+shares at its actual fill price (post-slippage, so it composes correctly
+with the Fifty-second entry's own `slippage_pct` option); a pick that
+rounds to zero shares is skipped for the month rather than silently
+assumed tradable at any fractional size, exactly as the Thirty-ninth
+entry's own text described. Wired through both scripts' CLI
+(`--whole-shares`) and `widen_check()`. 3 new unit tests
+(`tests/test_ibs_rotation_whole_shares.py`, synthetic data): the flag
+defaults off unchanged, an unaffordable pick is correctly skipped, and
+whole-share P&L can never exceed the continuous-notional version's on the
+same data (rounding down can only leave capital idle, never invest more).
+Full suite: 188/188 green.
+
+**Reran the exact check the Thirty-ninth entry called for — walk-forward
+and quarter-split on the 52-stock `WIDE_UNIVERSE` at both ends of this
+project's target capital range, `top_k=5, lookback=5`, 10y, same data
+snapshot for a clean before/after**:
+
+| capital | whole_shares | full-period annualized | max DD |
+|---|---|---|---|
+| ₹30,000 | False | 20.95%/yr | 38.4% |
+| ₹30,000 | **True** | **19.96%/yr** | 37.6% |
+| ₹100,000 | False | 22.19%/yr | 38.2% |
+| ₹100,000 | **True** | **21.97%/yr** | 37.9% |
+
+Real whole-share rounding costs roughly **1 percentage point of annual
+return at ₹30,000** (20.95% -> 19.96%) and a negligible ~0.2pp at
+₹100,000 (22.19% -> 21.97%) — the drag scales with how large a fraction
+of each position slice ends up as un-invested leftover cash after
+rounding down, which is proportionally bigger on a smaller slice. At
+₹30,000 with `whole_shares=True`, walk-forward is still **CONSISTENT**
+(in-sample 21.88%/yr, out-of-sample 16.19%/yr, both clearly positive) and
+**all 4 quarters are still positive** (22.95% / 20.32% / 14.73% / 14.78%,
+Q4 — the most recent — still positive, no decay reintroduced by the fix).
+
+**The specific worry the Thirty-ninth entry named didn't actually
+materialize in this backtest, which is itself worth recording rather than
+assuming**: that entry's own text warned that `MARUTI.NS`
+(~₹12,370/share) "can't buy even ONE whole share" at a ₹6,000 slice, along
+with `BAJAJ-AUTO.NS`/`ULTRACEMCO.NS`/`DIVISLAB.NS`/`EICHERMOT.NS`. Checked
+directly: **zero of the 120 months in the 10-year backtest, at either
+₹30,000 or ₹100,000 capital, ever had a pick skipped for being
+unaffordable** — none of those specific expensive names ever actually
+landed in that month's bottom-5-by-IBS ranking during this window. The
+~1pp/year cost at ₹30,000 comes entirely from ordinary rounding leftover
+(a slice of ₹6,000 rarely divides evenly into a whole number of shares at
+any price), not from missed picks — a different, smaller mechanism than
+the one originally flagged, and worth knowing before assuming the fix
+would show a starker effect.
+
+**Net verdict**: the last of this project's concretely-flagged, still-open
+validation gaps (Thirty-ninth's whole-share rounding, alongside
+Fifty-first's slippage and multiple-comparisons asks already closed in the
+Fifty-second/Fifty-third entries) is now closed. The IBS rotation finding
+survives real whole-share sizing at the low end of this project's target
+capital range — a small, quantified, non-disqualifying tax on return, not
+a wall. This does not change this project's standing verdict: the
+Fifty-third entry's multiple-comparisons finding (no honestly-scoped
+family size clears a corrected significance threshold) and the
+unresolved survivorship-bias gap both still apply unchanged. **No
+mechanism has yet cleared the bar to actually trade.**

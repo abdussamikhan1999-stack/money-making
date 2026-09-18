@@ -230,11 +230,11 @@ cross-sectional finding in this project to survive widening rather than
 collapsing (PEAD and 52-week-high both fell apart on the same test). One
 real caveat found: at the LOW end of this project's ₹30,000-100,000
 target capital range, per-position notional (₹6,000 at ₹30,000 capital)
-can't buy a whole share of the priciest names — fine at ₹100,000, needs
-real share-rounding fixed before paper-trading near ₹30,000. Still not
-declared tradable — survivorship bias unresolved, genuine forward
-out-of-sample data still the one check no backtest can run. See
-CLAUDE.md's "Thirty-ninth" section for the full breakdown.
+can't buy a whole share of the priciest names — fine at ₹100,000, real
+share-rounding fixed in the Fifty-fourth entry. Still not declared
+tradable — survivorship bias unresolved, genuine forward out-of-sample
+data still the one check no backtest can run. See CLAUDE.md's
+"Thirty-ninth" section for the full breakdown.
 
 **Survivorship-bias stress test (Fortieth entry,
 `probe_ibs_rotation_survivorship.py`)** — a true point-in-time
@@ -440,6 +440,24 @@ entry's concrete asks are now closed (slippage, multiple comparisons); the
 project's repeated "p<0.05, corroborated" framing since the Thirty-ninth
 entry should be read as retired, not requalified. See CLAUDE.md's
 "Fifty-third" section for the full breakdown.
+
+**Closing the whole-share-rounding gap (Fifty-fourth entry,
+`probe_ibs_rotation.py` / `_widen.py`)** — added a `whole_shares` option
+(default `False`, old behavior unchanged) that rounds each pick's notional
+DOWN to a whole number of shares at its fill price instead of assuming
+continuous notional, per the Thirty-ninth entry's own flagged gap. At the
+low end of this project's target range (₹30,000 capital, ₹6,000/position),
+real rounding costs about 1 percentage point of annual return
+(20.95%/yr -> 19.96%/yr) purely from leftover un-invested cash each
+month — walk-forward stays consistent and all 4 quarters stay positive,
+including Q4. At ₹100,000 the effect is negligible (22.19%/yr ->
+21.97%/yr). One thing the original flag worried about turned out not to
+bite in this actual 10-year backtest: zero months, at either capital
+level, ever had to skip a pick outright for being unaffordable — the
+concern was real in principle but the specific expensive names it named
+(`MARUTI.NS` etc.) simply never got picked as a bottom-5 IBS name during
+this window. See CLAUDE.md's "Fifty-fourth" section for the full
+breakdown.
 
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
