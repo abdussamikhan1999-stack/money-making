@@ -396,6 +396,32 @@ volatility reintroduces that factor's own known recent-quarter decay
 rather than adding a "free" risk reduction. See CLAUDE.md's "Fiftieth"
 section for the full numbers.
 
+**Adversarial council review (Fifty-first entry)** — three independent
+reviewers (statistical rigor, data/execution realism, red-team) audited
+the IBS rotation finding and converged on a harder verdict than this
+project's own "not tradable yet" caution implied: the reported
+significance is a single-config p-value with no multiple-comparisons
+correction across ~25+ internal variants and 50+ mechanisms tried, no
+slippage/spread term existed in the cost model, and the Fortieth entry's
+survivorship "pass" is really evidence of bounce-harvesting, not against
+it. No reviewer would deploy capital on this basis.
+
+**Closing the slippage gap (Fifty-second entry, `probe_ibs_rotation.py` /
+`_widen.py` / `_significance.py`)** — added a symmetric per-leg
+`slippage_pct` fill-price haircut (default 0.0, old behavior unchanged) on
+top of the existing STT/stamp/DP cost model. Swept 0-0.5% per leg on the
+52-stock universe: return decays smoothly with no cliffs (22.13%/yr at
+0% down to 7.95%/yr at a stress 0.5%/leg), walk-forward stays consistent
+and all 4 quarters stay positive at every level tested. The 1,500-seed
+significance test barely moves either (p≈0.015 at `top_k=5` whether
+slippage is 0%, 0.10%, or 0.50%) — a mathematical consequence of applying
+the same slippage to both the real strategy and the random control, not
+new evidence of robustness to the specific risk the Fifty-first entry
+raised (that "just cratered" stocks may face worse-than-average real
+slippage, which this symmetric test can't detect). One of two flagged
+gaps closed; the multiple-comparisons-correction ask remains open. See
+CLAUDE.md's "Fifty-second" section for the full breakdown.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an

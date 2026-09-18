@@ -3902,3 +3902,101 @@ multiple real months of both paper trackers' forward data (currently 1
 day each, as of 2026-09-17) before revisiting tradability — no backtest
 refinement substitutes for that. No mechanism has yet cleared the bar to
 actually trade.
+
+## Fifty-second: closing the council review's slippage gap — the finding survives, at every level tested, but the reason why is itself a caveat worth stating plainly
+
+Direct closure of the first of the Fifty-first entry's two concrete asks
+("add a real slippage/spread cost term before trusting the return
+numbers"). Until now, `probe_ibs_rotation.py`'s cost model (and every
+script built on it — `_widen`, `_significance`, `_survivorship`, both
+paper trackers) charged only 0.2% STT+stamp per leg plus a flat ₹16 DP
+charge, filling at the exact recorded close — no separate slippage/spread
+term existed anywhere, despite this strategy's entry criterion
+("just closed near today's low") being close to the least defensible case
+for assuming a clean fill at the reference price.
+
+Added `slippage_pct` (default 0.0, byte-for-byte unchanged old behavior)
+to `simulate()` (`probe_ibs_rotation.py`), `simulate_wide()`
+(`probe_ibs_rotation_widen.py`), and `simulate_random()`
+(`probe_ibs_rotation_significance.py`) — a symmetric per-leg fill-price
+haircut, buying at `entry_px * (1 + slippage_pct/100)` and selling at
+`exit_px * (1 - slippage_pct/100)`, layered on top of the existing
+STT/stamp/DP cost, not replacing it. Applied identically to both the real
+IBS-ranked picks and the random-control draws in the significance test,
+for a fair comparison — flagged explicitly as itself a simplification
+below. Full suite (174 tests) unaffected and still green; no new pytest
+file per this project's established "probe scripts don't get one"
+convention — verified instead by confirming `slippage_pct=0.0` reproduces
+the pre-existing numbers exactly (the formula reduces to the untouched
+`(exit_px - entry_px) / entry_px` when the multiplier is 1.0).
+
+**Swept 0%, 0.05%, 0.1%, 0.2%, 0.3%, 0.5% per leg on the canonical 52-stock
+`WIDE_UNIVERSE`, `top_k=5, lookback=5`, full period + walk-forward +
+quarter-split** (10y):
+
+| slippage/leg | full-period | walk-forward (in/out) | consistent | quarters+ |
+|---|---|---|---|---|
+| 0.00% | 22.13%/yr | 24.61% / 19.15% | Yes | 4/4 |
+| 0.05% | 20.64%/yr | 23.10% / 17.69% | Yes | 4/4 |
+| 0.10% | 19.17%/yr | 21.60% / 16.26% | Yes | 4/4 |
+| 0.20% | 16.28%/yr | 18.65% / 13.44% | Yes | 4/4 |
+| 0.30% | 13.44%/yr | 15.77% / 10.68% | Yes | 4/4 |
+| 0.50% | 7.95%/yr | 10.22% / 5.36% | Yes | 4/4 |
+
+**Return decays smoothly and monotonically with no cliffs** — real
+Davey-style robustness to this specific cost dimension, holding all the
+way out to 0.50% per leg (a full 1.0% round-trip slippage ON TOP of the
+existing 0.4% STT+stamp round trip + flat DP charge — a genuinely
+aggressive stress level for liquid NSE names, not a realistic central
+estimate). Walk-forward stays consistent and all 4 quarters stay positive
+at every single level tested, including Q4 2024-2026 (the most recent
+window): +17.24%/yr at 0.10% slippage, +11.67%/yr even at the 0.30% stress
+level — no decay reappears.
+
+**Re-ran the Thirty-ninth entry's 1,500-seed significance test at 0.10%
+(a realistic estimate) and 0.50% (stress) per leg, `top_k=3/5/8`**: the
+empirical p-values and z-scores came back **essentially unchanged** from
+the zero-slippage originals at every portfolio size (`top_k=5`:
+p=0.0153/z=2.74 at 0.10% slippage and p=0.0153/z=2.73 at 0.50%, vs.
+the Thirty-ninth entry's own p=0.0153/z=2.75 at zero slippage). This
+isn't a coincidence or a bug — it's the direct mathematical consequence
+of applying the SAME slippage assumption, on the SAME number of monthly
+trades, to both the real strategy and every random-control draw: slippage
+shrinks both distributions by a similar proportional amount, so the
+actual strategy's PERCENTILE within the random-control distribution barely
+moves even though its absolute return drops hard (top_k=5's actual final
+capital fell from ₹731,663 at zero slippage to ₹574,417 at 0.10% and
+₹214,431 at 0.50%).
+
+**The caveat that matters more than the result**: this test can only speak
+to what happens when actual and random draws face the SAME slippage
+assumption — it does not, and by construction cannot, test the more
+concerning possibility the Fifty-first entry itself raised: that IBS's
+specific selection criterion (a stock that just closed at today's low,
+often after a large one-day move) could carry systematically WORSE
+slippage than an average/random stock on an average day, because a
+larger, more volatile move is more likely to coincide with a wider
+spread. If that asymmetry is real, the true degradation to the actual
+strategy specifically would be larger than modeled here, while the random
+control's would not — which would erode both the return AND (unlike this
+symmetric test) the statistical significance. Not modeled, because no
+real bid-ask/order-book data source is available to this project's stack
+(the same practical limitation the Fourteenth entry's iron-condor
+real-data validation ran into for a different instrument class) —
+flagged as an open, unresolved possibility rather than dismissed.
+
+**Net verdict**: fifty-second entry, and one of this project's flagged
+validation gaps closes cleanly — the IBS rotation finding is robust to
+slippage magnitude under a fair, symmetric assumption, all the way past
+any plausible realistic level and well into deliberately unrealistic
+stress territory. But this specific check cannot rule out — and by its
+own construction never could rule out — the asymmetric-slippage risk the
+Fifty-first entry actually raised (the "just cratered" bucket facing worse
+fills than an average stock, not just any fills being worse than the
+model). The Fifty-first entry's OTHER flagged item (report significance
+against a multiple-comparisons-corrected threshold across the ~25+
+internal configs and 50+ mechanisms tried) remains open, untouched by
+this entry. **The long-only IBS rotation (Thirty-eighth through
+Forty-first entries) remains this project's primary finding, now with one
+more rigor check closed in its favor — not yet enough to call it
+tradable.** No mechanism has yet cleared the bar to actually trade.

@@ -128,7 +128,14 @@ def rank_by_ibs(series: dict, dates_map: dict, closes_map: dict, as_of, lookback
 
 
 def simulate(rebalance_dates: list, series: dict, top_k: int = 5, lookback: int = 5,
-             cost_pct: float = 0.2, dp_charge: float = 16.0, capital: float = 100_000.0):
+             cost_pct: float = 0.2, dp_charge: float = 16.0, capital: float = 100_000.0,
+             slippage_pct: float = 0.0):
+    """slippage_pct (default 0.0, old behavior unchanged): a per-leg fill-price
+    haircut on top of cost_pct's STT/stamp -- buy above the recorded close,
+    sell below it, modeling that this strategy's entry criterion (closed
+    near today's low) picks stocks more likely to have a wide spread/gap on
+    the exact reference bar than a random name would (Fifty-first entry's
+    flagged gap: no slippage/spread term existed anywhere in this cost model)."""
     dates_map, closes_map = dates_closes_maps(series)
 
     capital_track = capital
@@ -147,7 +154,9 @@ def simulate(rebalance_dates: list, series: dict, top_k: int = 5, lookback: int 
         notional_each = capital_track / len(picks)
         month_pnl = 0.0
         for _, sym, entry_px, exit_px in picks:
-            ret = (exit_px - entry_px) / entry_px
+            fill_entry = entry_px * (1 + slippage_pct / 100)
+            fill_exit = exit_px * (1 - slippage_pct / 100)
+            ret = (fill_exit - fill_entry) / fill_entry
             gross = notional_each * ret
             cost = notional_each * (cost_pct / 100) * 2 + dp_charge
             month_pnl += gross - cost
@@ -200,6 +209,7 @@ if __name__ == "__main__":
     parser.add_argument("--lookback", type=int, default=5)
     parser.add_argument("--cost-pct", type=float, default=0.2)
     parser.add_argument("--dp-charge", type=float, default=16.0)
+    parser.add_argument("--slippage-pct", type=float, default=0.0)
     parser.add_argument("--walk-forward", action="store_true")
     parser.add_argument("--quarter-split", action="store_true")
     args = parser.parse_args()
@@ -207,7 +217,7 @@ if __name__ == "__main__":
     series = build_price_series(args.period)
     rebalance_dates = month_end_dates(fetch_calendar(args.period))
     kwargs = dict(top_k=args.top_k, lookback=args.lookback, capital=args.capital,
-                  cost_pct=args.cost_pct, dp_charge=args.dp_charge)
+                  cost_pct=args.cost_pct, dp_charge=args.dp_charge, slippage_pct=args.slippage_pct)
     years = (rebalance_dates[-1] - rebalance_dates[0]).days / 365.25 if len(rebalance_dates) > 1 else 0.0
 
     if args.walk_forward:
