@@ -115,6 +115,35 @@ def chaikin_money_flow(candles: list[dict], period: int = 20) -> float | None:
     return mfv_sum / total_volume
 
 
+def amihud_illiq(candles: list[dict], period: int = 21) -> float | None:
+    """Amihud (2002) illiquidity measure: mean daily |return| / dollar
+    volume over the trailing `period` days -- the standard price-impact-
+    per-rupee-of-volume proxy behind the illiquidity risk premium (higher
+    ILLIQ = harder to trade without moving the price = compensated with a
+    higher expected return). Needs `period + 1` candles (each day's return
+    needs the PRIOR day's close, the same "one extra bar" requirement
+    `on_balance_volume` above already has). Days with zero/negative volume
+    or a non-positive prior close are skipped rather than raising (yfinance
+    reports zero volume for index symbols, e.g. `^NSEI` -- ILLIQ is
+    undefined for a security with no traded volume, same situation
+    `chaikin_money_flow` already handles for the same root cause). Returns
+    None if there isn't enough history, or every day in the window is
+    skippable."""
+    if len(candles) < period + 1:
+        return None
+    window = candles[-(period + 1):]
+    ratios = []
+    for i in range(1, len(window)):
+        prev_close = window[i - 1]["close"]
+        close = window[i]["close"]
+        volume = window[i]["volume"]
+        if prev_close <= 0 or volume <= 0:
+            continue
+        dollar_volume = close * volume
+        ratios.append(abs((close - prev_close) / prev_close) / dollar_volume)
+    return sum(ratios) / len(ratios) if ratios else None
+
+
 def on_balance_volume(candles: list[dict], period: int = 20) -> float | None:
     """Windowed On-Balance Volume: net signed volume (an up day adds its
     volume, a down day subtracts it, a flat day contributes nothing) over

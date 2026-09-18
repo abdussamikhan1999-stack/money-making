@@ -1,6 +1,7 @@
 from indicators import (
     true_range, average_true_range, sma, rsi, stdev, highest, lowest, linreg,
     chaikin_money_flow, on_balance_volume, internal_bar_strength, ema_update,
+    amihud_illiq,
 )
 
 
@@ -150,3 +151,44 @@ def test_ema_update_matches_the_standard_recursive_formula():
 
 def test_ema_update_returns_the_seed_unchanged_when_price_equals_it():
     assert ema_update(prev_ema=50.0, price=50.0, period=10) == 50.0
+
+
+def test_amihud_illiq_none_when_not_enough_history():
+    candles = [candle(0, 0, 100, v=1000) for _ in range(3)]
+    assert amihud_illiq(candles, period=5) is None
+
+
+def test_amihud_illiq_computes_mean_return_over_dollar_volume():
+    # close 100 -> 102 -> 101: returns 2%/102000 and ~0.98%/101800
+    candles = [
+        candle(0, 0, 100, v=1000),
+        candle(0, 0, 102, v=1000),
+        candle(0, 0, 101, v=1000),
+    ]
+    expected = (
+        abs((102 - 100) / 100) / (102 * 1000)
+        + abs((101 - 102) / 102) / (101 * 1000)
+    ) / 2
+    assert abs(amihud_illiq(candles, period=2) - expected) < 1e-12
+
+
+def test_amihud_illiq_none_when_window_has_zero_volume_throughout():
+    # an index-like symbol: yfinance reports zero volume, ILLIQ undefined
+    candles = [candle(0, 0, c, v=0) for c in [100, 101, 99]]
+    assert amihud_illiq(candles, period=2) is None
+
+
+def test_amihud_illiq_skips_zero_volume_days_but_uses_the_rest():
+    candles = [
+        candle(0, 0, 100, v=1000),
+        candle(0, 0, 102, v=0),   # skipped: no volume that day
+        candle(0, 0, 101, v=1000),
+    ]
+    expected = abs((101 - 102) / 102) / (101 * 1000)
+    assert abs(amihud_illiq(candles, period=2) - expected) < 1e-12
+
+
+def test_amihud_illiq_higher_for_a_bigger_move_on_the_same_volume():
+    calm = [candle(0, 0, 100, v=1000), candle(0, 0, 101, v=1000)]
+    volatile = [candle(0, 0, 100, v=1000), candle(0, 0, 110, v=1000)]
+    assert amihud_illiq(volatile, period=1) > amihud_illiq(calm, period=1)
