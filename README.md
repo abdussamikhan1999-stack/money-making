@@ -441,7 +441,7 @@ project's repeated "p<0.05, corroborated" framing since the Thirty-ninth
 entry should be read as retired, not requalified. See CLAUDE.md's
 "Fifty-third" section for the full breakdown.
 
-**Amihud illiquidity rotation, tested and rejected (Fifty-fourth entry,
+**Amihud illiquidity rotation, tested and rejected (Fifty-fifth entry,
 `probe_amihud_rotation.py`)** — the same monthly cross-sectional rotation
 shape as IBS rotation, but with a genuinely different KIND of signal: a
 real, well-cited academic liquidity-risk-premium factor (Amihud, 2002),
@@ -462,7 +462,7 @@ possible 3-config family under Bonferroni correction. Read together: this
 implementation isn't harvesting a genuine month-to-month liquidity-risk
 rotation, it's closer to a near-static tilt toward the same dozen
 small/mid-cap names, dressed up as a cross-sectional rank. See CLAUDE.md's
-"Fifty-fourth" entry for the full breakdown.
+"Fifty-fifth" entry for the full breakdown.
 
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 

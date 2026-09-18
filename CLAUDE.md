@@ -4135,7 +4135,7 @@ narrow m=3 reading (which undercounts this project's own already-documented
 search) still passes.** No mechanism has yet cleared the bar to
 actually trade.
 
-## Fifty-fourth: Amihud (2002) illiquidity rotation — a genuinely different KIND of factor, and a clean rejection on concentration and significance, not decay
+## Fifty-fifth: Amihud (2002) illiquidity rotation — a genuinely different KIND of factor, and a clean rejection on concentration and significance, not decay
 
 Per the maintainer's explicit direction after the Fifty-third entry
 retired IBS rotation's significance claim: search for a NEW, genuinely
