@@ -5662,3 +5662,67 @@ score/cost logic is not where the errors were. 213 tests pass. No count change (
 mechanisms tested); no verdict change (IBS rotation unproven, nothing declared
 tradable); the trend gate's evidence is somewhat better than reported, the month-end
 concentration's somewhat worse.
+
+
+## Seventy-seventh: second independent code review (macro, fear-buy, ETF probes) — one bug had inflated the Entry 58 fear-buy numbers, one would have made the monthly state report print stale data; the fear-buy is now a clean null
+
+A second `/code-review` (medium) covering `probe_macro_analog.py`,
+`probe_fear_followup.py` and `probe_etf_rotation.py` returned seven findings. Fixed
+and rerun; two matter.
+
+**1. `declustered_events` re-entered mid-spike (Entry 58).** The 21-day gap was measured
+from the last accepted EVENT, not from the last "on" day, so inside a long spike (e.g. March-
+July 2020, 88 days) it emitted a new "first-crossing" entry every 21 days. Mid-spike
+days are exactly where Entry 58 found returns highest (+6.7%), so the event counts,
+p-values and the delay curve were contaminated toward a positive result. Fixed: an
+event is an "on" day with no "on" day in the previous 21 rows. Corrected results:
+- India VIX / 252d median first-crossing events (grid-free): >=1.4 17 events, mean
+  -0.00%, p=0.79; **>=1.5 14 events (was 23), mean +0.96% (was +2.38%), 9/14 positive,
+  p=0.50 (was 0.063)**; >=1.7 9 events, +2.93%, p=0.092. Unconditional +0.91%. US VIX
+  version: +0.13%/+0.04%/-0.72%, p 0.81-0.92. **The real-time fear-buy has no edge.**
+- Delay curve (14 events; post hoc): first crossing +0d +0.96%, +3d +1.79%, +5d +3.28%,
+  **+10d +5.45% (13/14 positive, worst -2.4%)**, +15d +3.46%: the India persistence
+  pattern is still there in the smaller sample, but it is a 14-event, 5-delay post-hoc
+  curve.
+- **S&P 500 1990-2026 replication: 38 events (was 74)**, unconditional +0.81%: +0d
+  +0.92% (p=0.45), +5d +0.26% (p=0.78), **+10d +0.66% (p=0.59)**, +15d +1.10% (p=0.35);
+  worst +10d event -13.1% (2008-09-17). The persistence effect does not replicate,
+  now unambiguously (it was p=0.14).
+- Unchanged: the daily OLS (India VIX-rel t=+4.56 alone, +2.18 alongside drawdown, NW-21)
+  and the IBS-overlap result (no declustering involved). Count-matched drawdown-only
+  trigger: 14 events +1.47% (p=0.34) vs the VIX trigger's +0.96% (p=0.50).
+- Entry 58's headline ("+2.4%, p=0.063") is superseded; Entry 57's "12/12 months +7.4%" was
+  already withdrawn by Entry 58 as a grid artefact and the S&P replication is now a
+  clear null. 10 p-values in the registry were updated in place.
+
+**2. `--state-only` printed stale data (Entries 61-62 told you to run it monthly).**
+`load()` returned `macro_cache.csv` whenever it existed and never refreshed it, so next
+month-end the gate and trigger readings would have been the 2026-09-18 values with
+no warning except the "As of" date. Fixed: `--state-only` now redownloads, drops a
+still-forming today bar (before 16:00 local), and writes `macro_cache_live.csv`
+(git-ignored) instead of touching the committed reproducible cache; on a network
+failure it prints a warning and falls back to the committed cache. The cache path
+is now absolute (module directory). Verified: a refreshed run works.
+
+**Other fixes.** `shift_p` returned the raw fraction (could be exactly 0.0); it now uses
+(count+1)/(n+1) (effect on Entry 57's 10,000-seed values <= 1e-4; the phase-robustness
+"p=0.0" cells at 300 seeds are really <= 0.0033). `robustness()` mutated module globals
+(`OFFSET`, `FEATURES`) with no `try/finally`; now restored on any exit. `probe_etf_rotation`:
+max drawdown now includes the starting capital in the peak, and `run()` lets weights
+drift so a static monthly 50/50 pays its rebalancing cost like the other paths. Re-running
+every ETF mode (NSE ETFs, NIFTY and S&P proxies, the 4-ETF cross-section, the
+allocation grid) moved no reported figure by more than 0.05 points/yr or 0.1 pt of
+drawdown and changed no p-value beyond the third decimal (e.g. static 50/50 12.76% ->
+12.73%; 4-ETF equal-weight 13.29% -> 13.26%); Entries 70-72 and 75 stand as written.
+Not done: consolidating the (now three) copies of the rotation-control p-value block
+into one shared helper.
+
+**Method lesson, recorded because it has now happened twice:** both code reviews found
+bugs that biased results in the direction of a finding (Entry 58's mid-spike
+re-entries) or of a cleaner story (Entry 62's unequal cost control), and both were
+in scripts whose output I had already written up. Independent review of analysis
+code before writing conclusions is now part of this project's method; the checks
+that did NOT catch these (unit tests of helpers, an independent reimplementation of
+the headline number) are necessary but not sufficient. 214 tests pass (1 new,
+1 corrected). No count change; IBS rotation remains unproven, the fear-buy is a null,
+nothing is declared tradable.
