@@ -241,6 +241,13 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("ETF trend gate SMA100 (Seventieth)", 0.347),
     ("ETF trend gate SMA150 (Seventieth)", 0.300),
     ("ETF trend gate SMA200 (Seventieth)", 0.497),
+    # Seventy-first entry: cross-sectional rotation across 4 ETFs vs random-pick control.
+    ("ETF 4-asset momentum L=6m top_k=1 (Seventy-first)", 0.046),
+    ("ETF 4-asset momentum L=6m top_k=2 (Seventy-first)", 0.213),
+    ("ETF 4-asset momentum L=12m top_k=1 (Seventy-first)", 0.500),
+    ("ETF 4-asset momentum L=12m top_k=2 (Seventy-first)", 0.164),
+    ("ETF 4-asset reversal L=1m top_k=1 (Seventy-first)", 0.852),
+    ("ETF 4-asset reversal L=1m top_k=2 (Seventy-first)", 0.666),
     # NOT individually registered (Sixty-fourth entry): 84 further cells, 21 fixed-step phase offsets
     # and 21 calendar-anchored offsets x {IBS(5) top_k=5, rev(21) top_k=8}. Counting them, an honest
     # Bonferroni family is m>=161 (threshold ~0.0003); the smallest p among them is 0.003.

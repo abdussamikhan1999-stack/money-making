@@ -5384,3 +5384,30 @@ gating, both with no timing edge over random); 62 mechanisms tested; the
 static equity-gold allocation is recorded as a risk-management observation, not
 a finding of alpha. IBS rotation remains the sole standing stock-selection
 finding; not declared tradable.**
+
+
+## Seventy-first: cross-sectional momentum and reversal across four NSE ETFs — a null; one cell at p=0.046 is what six cells produce by chance
+
+Survivorship-free counterpart to the stock-selection rotations: NIFTYBEES, BANKBEES,
+JUNIORBEES, GOLDBEES (2009-01 to 2026-09, 200 monthly decisions), next-close fills,
+0.1% per leg, random-pick control (k random ETFs each month, same costs, 1,000
+draws). Pre-registered (`probe_etf_rotation.py --multi`): momentum L in {6, 12}
+months and 1-month reversal, top_k in {1, 2}.
+
+Equal-weight all four (monthly): 13.29%/yr, DD 23.1%, Calmar 0.57. Momentum: 6m
+top_k=1 16.21%/yr, DD 33.2%, Calmar 0.49, random-pick 11.41%, **p=0.046**; 6m top_k=2
+13.49%, DD 17.3%, Calmar 0.78, p=0.21; 12m top_k=1 10.62%, p=0.50; 12m top_k=2 13.81%,
+DD 17.8%, Calmar 0.78, p=0.16. 1-month reversal: top_k=1 7.06%, p=0.85; top_k=2 10.81%,
+p=0.67 (worse than random). Only one of six cells is under 0.05 uncorrected, the
+number chance alone produces at that rate, and its 33% drawdown is worse than
+the equal-weight portfolio's; with the top_k=2 versions at Calmar 0.78 the risk-
+adjusted ordering is the reverse of the raw-return ordering. Nothing survives
+correction (6 more p-values registered, m=118 + 84 unregistered scan cells).
+Combined with the Seventieth entry: across NIFTYBEES/GOLDBEES/BANKBEES/JUNIORBEES,
+no timing or ranking rule beats holding them; the good risk profile belongs to
+holding a mix. **Rejected: 64 mechanisms tested.** The basket-wide-momentum
+finding of the Sixty-third entry (underperforms random across 52 stocks) is
+consistent with this ETF-level result (momentum at best marginal), while
+reversal fails here too, so the stock-level reversal effect is not an
+index-level one. Not declared tradable; IBS rotation remains the sole standing
+stock-selection finding.
