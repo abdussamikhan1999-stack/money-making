@@ -231,6 +231,9 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Original 12 small/mid hold 5d top_k=3 (Sixty-eighth)", 0.1359),
     ("Original 12 small/mid hold 10d top_k=3 (Sixty-eighth)", 0.0759),
     ("Original 12 small/mid hold 21d top_k=3 (Sixty-eighth)", 0.1648),
+    ("Universe B hold 5d, 2007-16 (Sixty-ninth)", 0.0093),
+    ("Universe B hold 10d, 2007-16 (Sixty-ninth)", 0.0693),
+    ("Universe B hold 21d, 2007-16 (Sixty-ninth)", 0.0693),
     # NOT individually registered (Sixty-fourth entry): 84 further cells, 21 fixed-step phase offsets
     # and 21 calendar-anchored offsets x {IBS(5) top_k=5, rev(21) top_k=8}. Counting them, an honest
     # Bonferroni family is m>=161 (threshold ~0.0003); the smallest p among them is 0.003.

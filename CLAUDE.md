@@ -5278,3 +5278,44 @@ the sole standing finding, now with a further-narrowed evidence base; not
 declared tradable.** What would change this: the forward record (Sixty-seventh
 entry now records the 5d/10d excess at every month-end) and any independent
 constituent list that includes delisted names.
+
+
+## Sixty-ninth: completing the stocks-by-time table for the month-end short-hold effect — present in 3 of 4 cells, absent in the one cell least exposed to survivorship bias
+
+The Sixty-sixth (same stocks, earlier decade) and Sixty-eighth (different stocks,
+same decade) entries each filled one off-diagonal cell. This fills the last one:
+universe B (54 different NSE names, 48 with prices by 2008) on 2007-09 to 2016-09,
+identical tests (IBS(5), top_k=5, lag-1 fill, month-end entry, hold h then cash,
+1,500-seed same-hold control).
+
+| | 2007-09 to 2016-09 | 2016-09 to 2026-09 |
+|---|---|---|
+| **A: original 52** | hold 5d p=**0.0013** (3.82% vs -3.69%); 5d excess +0.61%, t=2.75 | hold 5d p=**0.0020** (6.13% vs 0.66%); 5d excess +0.45%, t=2.5 (where it was found) |
+| **B: 54 different names** | hold 5d p=**0.0093** (1.96% vs -3.56%); 5d excess +0.46%, t=1.82; 10d p=0.069; 21d 20.60% vs 13.63%, p=0.069 | hold 5d p=**0.64** (0.32% vs 1.21%); 5d excess -0.06%, t=-0.4 |
+
+**Reading.** The effect is present in three cells at very similar size (+0.45-0.61%
+gross excess at day 5) and absent in one. That is a different picture from the
+Sixty-eighth entry's "specific to one stock set": in the EARLIER decade both
+independent stock sets show it, in the LATER decade only the set it was found on
+does. Three explanations fit and the data cannot separate them: (a) a real effect
+that has weakened in the later decade for second-tier names (plausible if
+oversold-bounce liquidity provision at the turn of the month got more competed
+away, but that is a story, not a test); (b) survivorship inflation: the earlier
+decade uses today's constituents for BOTH sets and a loser-bounce strategy is the
+strategy most flattered by that bias (delisted losers are absent), so the two
+earlier-decade cells are the two least trustworthy, and the one cell that is both
+fresh in stocks AND has the smallest survivorship exposure (B, later decade) shows
+nothing; (c) chance plus post-hoc selection of the window on set A's later decade.
+Explanation (b) predicts exactly this table; (a) and (c) also do.
+
+**Net.** Three of four cells support the effect, but the only cell that is
+independent of both the discovery data and the survivorship problem does not. It
+stays "unproven"; the forward paper record (Sixty-seventh entry) and any
+delisting-inclusive universe are the tests that would separate (a)-(c). 3 more
+p-values registered (m=106). 211 tests pass. **No count change (60 mechanisms
+tested); IBS rotation remains the sole standing finding; not declared tradable.**
+Standing lesson for this project's method: a universe of today's constituents
+makes every loser-bounce / oversold-ranking result in an EARLIER period
+unreliable in the favourable direction, so an earlier-period replication of such a
+strategy is weaker evidence than it looks, and a fresh-stocks-and-recent-period
+failure is stronger evidence than it looks.
