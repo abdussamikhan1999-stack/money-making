@@ -95,16 +95,16 @@ def descriptive(px, me):
     rg = run(px, np.tile([0.0, 1.0, 0.0], (n, 1)), me)
     rh = run(px, H, me)
     dates = px.index[me[:len(rh)]]
-    print(f"\nmonthly-return correlation NIFTYBEES vs GOLDBEES: {np.corrcoef(rn, rg)[0, 1]:.2f}")
+    print(f"\nmonthly-return correlation equity vs gold: {np.corrcoef(rn, rg)[0, 1]:.2f}")
     for label, lo, hi in (("2009-2013 (gold bull)", "2009-01-01", "2013-09-30"), ("2013-10..2019-05 (gold flat)", "2013-10-01", "2019-05-31"),
                           ("2019-06..2026 (gold bull)", "2019-06-01", "2026-12-31")):
         m = (dates >= lo) & (dates <= hi)
         f = lambda r: ((np.prod(1 + r[m]) ** (12 / m.sum()) - 1) * 100)
         dd = lambda r: (1 - np.cumprod(1 + r[m]) / np.maximum.accumulate(np.cumprod(1 + r[m]))).max()
-        print(f"  {label:32s} ({int(m.sum()):3d} mo): NIFTYBEES {f(rn):6.2f}%/yr DD {dd(rn):.1%} | GOLDBEES {f(rg):6.2f}%/yr DD {dd(rg):.1%} | 50/50 {f(rh):6.2f}%/yr DD {dd(rh):.1%}")
-    for name, r in (("NIFTYBEES", rn), ("GOLDBEES", rg), ("50/50", rh)):
+        print(f"  {label:32s} ({int(m.sum()):3d} mo): equity {f(rn):6.2f}%/yr DD {dd(rn):.1%} | gold {f(rg):6.2f}%/yr DD {dd(rg):.1%} | 50/50 {f(rh):6.2f}%/yr DD {dd(rh):.1%}")
+    for name, r in (("equity", rn), ("gold", rg), ("50/50", rh)):
         roll = np.array([(np.prod(1 + r[i:i + 36]) ** (1 / 3) - 1) * 100 for i in range(len(r) - 35)])
-        print(f"  rolling 3y CAGR {name:10s}: worst {roll.min():6.2f}%, median {np.median(roll):6.2f}%, share of windows < 5%/yr {np.mean(roll < 5):.0%}")
+        print(f"  rolling 3y CAGR {name:8s}: worst {roll.min():6.2f}%, median {np.median(roll):6.2f}%, share of windows < 5%/yr {np.mean(roll < 5):.0%}")
 
 
 def multi(seeds):
@@ -156,21 +156,48 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=2000)
     ap.add_argument("--multi", action="store_true")
+    ap.add_argument("--proxy", choices=("nifty", "spx"), help="long-history proxies instead of the NSE ETFs")
     a = ap.parse_args()
     if a.multi:
         return multi(min(a.seeds, 1000))
-    px = load()
+    if a.proxy:
+        return evaluate(proxy_prices(a.proxy), a.seeds, label=a.proxy)
+    return evaluate(load(), a.seeds, label="NSE ETFs")
+
+
+def proxy_prices(kind, cash_rate=0.04):
+    """Long-history stand-ins (Seventy-second entry): 'nifty' = ^NSEI + gold in INR (GC=F x INR=X), 2007+;
+    'spx' = ^GSPC + GC=F in USD, 2000+. Price indices (no dividends); cash accrues at a flat 4%/yr."""
+    def h(t):
+        x = yf.Ticker(t).history(start="2000-01-01")["Close"].dropna()
+        x.index = pd.DatetimeIndex(x.index.date)
+        return x
+    gold = h("GC=F")
+    if kind == "nifty":
+        eq, fx = h("^NSEI"), h("INR=X")
+        df = pd.DataFrame({"N": eq, "G": gold, "F": fx}).dropna()
+        df["G"] = df["G"] * df["F"]
+        df = df.drop(columns="F")
+    else:
+        df = pd.DataFrame({"N": h("^GSPC"), "G": gold}).dropna()
+    days = (df.index[1:] - df.index[:-1]).days
+    df["C"] = np.concatenate([[1.0], np.cumprod(1 + cash_rate * days / 365.25)])
+    return df
+
+
+def evaluate(px, seeds, label=""):
     me = month_ends(px.index)
     me = me[me >= 260]  # need a year of history for the lookbacks
-    print(f"{px.index[0].date()} .. {px.index[-1].date()}, {len(me) - 1} monthly decisions")
+    print(f"[{label}] {px.index[0].date()} .. {px.index[-1].date()}, {len(me) - 1} monthly decisions")
     cash = px["C"]
-    print(f"LIQUIDBEES (cash proxy) CAGR {((cash.iloc[-1] / cash.iloc[0]) ** (365.25 / (cash.index[-1] - cash.index[0]).days) - 1) * 100:.2f}%/yr")
+    print(f"cash leg CAGR {((cash.iloc[-1] / cash.iloc[0]) ** (365.25 / (cash.index[-1] - cash.index[0]).days) - 1) * 100:.2f}%/yr")
+    a = argparse.Namespace(seeds=seeds)
     n = len(me) - 1
     N = np.tile([1.0, 0.0, 0.0], (n, 1))
     G = np.tile([0.0, 1.0, 0.0], (n, 1))
     H = np.tile([0.5, 0.5, 0.0], (n, 1))
     print("\n--- baselines ---")
-    for name, w in (("NIFTYBEES buy&hold", N), ("GOLDBEES buy&hold", G), ("50/50 NIFTYBEES/GOLDBEES", H)):
+    for name, w in (("equity buy&hold", N), ("gold buy&hold", G), ("50/50 equity/gold", H)):
         print(line(name, run(px, w, me)))
     p = px.to_numpy()
     descriptive(px, me)

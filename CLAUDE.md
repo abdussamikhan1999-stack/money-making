@@ -5411,3 +5411,58 @@ consistent with this ETF-level result (momentum at best marginal), while
 reversal fails here too, so the stock-level reversal effect is not an
 index-level one. Not declared tradable; IBS rotation remains the sole standing
 stock-selection finding.
+
+
+## Seventy-second: the equity/gold allocation and its timing rules on longer histories that contain 2008 — the "11% drawdown" was a post-2009 property; the trend gate helps only where a crash is in sample and only at one length
+
+The Seventieth entry's NSE-ETF sample starts in 2009, so it excludes the 2008 crash
+and the 2000-02 bear. Same pre-registered rules (dual momentum 6/9/12m, per-asset
+SMA 100/150/200 gate), same fill lag, cost and rotation control, on two
+long-history proxies (`probe_etf_rotation.py --proxy nifty|spx`; price indices, no
+dividends; cash accrues at a flat 4%/yr): (a) NIFTY 50 index + gold priced in rupees
+(GC=F x INR=X), decisions from ~Sept 2008 (a year of warm-up, so only the tail of
+the 2008 crash is inside), 216 months; (b) S&P 500 + gold in dollars, decisions from
+~Sept 2001, so it contains the 2001-02 tail, the full 2008 crash, and the 2013-2019
+gold bear, ~300 months.
+
+| | NIFTY + INR gold, 2008-26 | S&P + USD gold, 2001-26 |
+|---|---|---|
+| equity buy&hold | 13.14%/yr, DD 32.8% | 8.33%/yr, DD 54.7% |
+| gold buy&hold | 14.31%/yr, DD 25.9% | 11.49%/yr, DD 41.7% |
+| **static 50/50** | **14.82%/yr, DD 12.8%, Calmar 1.16** | **10.60%/yr, DD 29.1%, Calmar 0.36** |
+| equity/gold monthly correlation | -0.22 | +0.07 |
+| dual momentum 6/9/12m (Calmar; p final wealth) | 0.50/0.69/0.58; 0.26/0.31/0.33 | 0.30/0.39/0.38; 0.19/0.23/0.36 |
+| trend gate SMA100 | 11.20%/yr, DD 11.7%, Calmar 0.96; p 0.25 | 7.38%, DD 17.1%, Calmar 0.43; p 0.63 |
+| trend gate SMA150 | 9.93%, DD 14.8%, Calmar 0.67; p 0.78 | **9.86%, DD 12.0%, Calmar 0.82; p(wealth) 0.023, p(Calmar) 0.001** |
+| trend gate SMA200 | 10.25%, DD 11.4%, Calmar 0.90; p 0.74 | 9.40%, DD 15.6%, Calmar 0.60; p 0.12 |
+
+**Corrections to the Seventieth entry.**
+1. *The static 50/50's ~11% drawdown belongs to the post-2009 window.* Once 2008 is
+   in the sample (S&P/USD proxy), equity and gold fell together for part of it and
+   the 50/50 drawdown is 29.1%, still roughly half the equity drawdown (54.7%) and
+   better than gold alone (41.7%), Calmar 0.36 vs 0.15/0.28, but nowhere near
+   11%. The rupee sample (2008-26) keeps 12.8% because rupee depreciation lifted
+   INR gold through the 2008-09 dip. Rolling 3-year worst: S&P 50/50 -2.38%
+   (equity -18.4%, gold -14.8%), 20% of windows below 5%/yr, not the 7% seen on the
+   ETF sample. Quote the drawdown as "roughly half of equity's, and 11-13% only in
+   the post-2009 windows."
+2. *Timing rules: still no edge on the NSE-style sample, and one significant cell on the
+   S&P.* Dual momentum never improves on static 50/50's Calmar and never beats the
+   rotation control (p 0.19-0.36). The trend gate on NIFTY+INR gold lowers Calmar
+   versus static (0.67-0.96 vs 1.16; p 0.25-0.78). On the S&P sample, where a 2008-
+   sized crash is present, SMA150 lifts Calmar from 0.36 to 0.82 (DD 29.1% -> 12.0%)
+   at p(wealth)=0.023, p(Calmar)=0.001; SMA100 (0.43, p=0.63) and SMA200 (0.60,
+   p=0.12) do not. **The gate's value is real only when a large equity-and-gold
+   crash is inside the window and depends heavily on the length** — the same
+   pattern the Sixty-second entry found for a NIFTY/S&P index gate (best length
+   differs by market, SMA200 worst on NIFTY). Not a rule to rely on: at SMA150 the p-
+   value is 0.001 uncorrected, and 12 more p-values are registered (m=130,
+   Bonferroni ~0.0004; the 1,500-seed floor is 0.0007, so no cell here can clear it).
+
+**Net.** The allocation observation is weaker and more honest than the Seventieth
+entry read it: diversifying equity with gold roughly halves the drawdown in both
+samples but the 9-13% figure is post-2009. Timing rules still add nothing reliable.
+213 tests pass; no count change (64 mechanisms tested, the 2 new families here
+extend the Seventieth entry's, they are not new mechanisms). Not declared tradable.
+Untested: cash yield above 4%, dividends, taxes, and a gold bear longer than
+2013-19 (the 1980-2000 gold bear is outside the available data).
