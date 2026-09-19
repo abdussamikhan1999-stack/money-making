@@ -4414,3 +4414,166 @@ now would be a fresh search inflating the family), and the series is
 weekly, so any faster positioning signal is untested. **The long-only IBS
 rotation remains this project's sole standing finding; 56 mechanisms
 tested, none has cleared the bar to trade.**
+
+
+## Fifty-seventh: macro/geopolitical regime probe — analog matching has no out-of-sample skill; a volatility-spike "fear-buy" is the one candidate this entry could not break, on 8 episodes and a control that cannot resolve corrected significance
+
+Requested direction: keep testing new strategies, analyse current market
+conditions, find similar global/geopolitical situations in history and say
+what repeats and what differs. Because of the Fifty-first entry's
+retrofitted-story warning (after a shock it is easy to pick the analog
+episodes that "worked"), **three candidates, their thresholds and their
+neighbour grids were fixed in `probe_macro_analog.py`'s docstring before any
+outcome was looked at**; episodes are found mechanically, never hand-picked.
+Data: Yahoo daily, cached in `macro_cache.csv` (NIFTY, India VIX 2008+, S&P,
+US VIX, Brent futures, gold, USDINR, DXY, US 10y), plus FRED dated Brent from
+1987 for the long-history episode study. Timing: every non-Indian series is
+lagged one day (India closes first) and trades fill at the NEXT close after
+the decision date (no same-bar fills, the flaw the Fifty-first/Fifty-sixth
+entries found). Non-overlapping monthly (21-trading-day) decisions, 2013-2026,
+160 of them, standard 0.2%/leg equity cost.
+
+**Current conditions (2026-09-18).** NIFTY 23,346, -11.3% from its 252d high.
+Brent futures $103.9 (+36% over 60d, 96th percentile of 2008-2026); FRED
+dated Brent $130.8 on 2026-09-15 (+71%/60d), i.e. a ~$25 physical premium to
+front futures. USDINR 95.9 (press: record ~96.96 in May; only +1.5% over the
+last 60d). US 10y 5.00% (+45bp/60d). India VIX **11.4 (5th percentile)**, US
+VIX 15.4, DXY 100.2. Web-sourced context, kept OUT of every test because it
+is unverified press/aggregator text: a Middle East supply shock since ~Feb
+2026 (Hormuz throughput ~halved, Houthi moves near Bab el-Mandeb, US SPR at
+its lowest since 1982), Brent up ~50% since February, FII net selling
+~Rs 17,800 cr in September.
+
+**Historical analogs, mechanical definition** (`--episodes`: dated Brent at a
+252d high AND +40% over 60 trading days, declustered 170 days; descriptive
+only, n is single digits, no p-value claimed). Ten past episodes 1989-2022,
+plus this year's onset (2026-03-06, Brent 95.7, VIX 29.5). What REPEATS: S&P
+forward 252d return positive in 9 of 10 (only 2022 negative, -10%); Sensex
+positive at 252d in 6 of 6 with data (+6% to +77%); but the near term is a
+coin flip, S&P 63d positive in only 6 of 10 (1990 -11%, 1999 -7%, 2005 -1%,
+2022 -5% were the negatives), Sensex 63d 3 of 6. Oil-shock onsets have
+historically been bad for a quarter and fine for a year, with wide dispersion.
+What DIFFERS now, checked directly rather than asserted: (1) **fear is
+absent** — of the 288 days since 2008 with Brent +30%/60d, India VIX was <=15
+on only 8 (2 in 2016, an oil-rebound-from-lows episode, and 6 in 2026 itself);
+its median on those days was 23.1 and today's 11.4 is the lowest of any of
+them; US VIX at prior onsets was 12-32, median ~21, vs 14.8 now (only 2004
+and 2005, demand-driven rises at 10y ~4%, were similarly calm). (2) Rates:
+US 10y 5.00% vs <=4.3% at every post-1999 episode; the only comparable rate
+levels are 1989-1996, and 2022, the one bad-year outcome, was the fast-rising
+-rate one. (3) The dated-vs-futures Brent gap is a physical-tightness signal
+no prior row here can be checked for (FRED gives only the dated series). (4)
+India is a large net oil importer with the rupee at record lows, a channel
+the US-centred 1990-2022 rows do not carry. **The market is pricing this as
+a calm one; historically these were not calm.** That is an observation about
+the gap between price and history, not a forecast.
+
+**Pre-registered candidates and results** (each tested against the Fifty-sixth
+entry's circular-rotation random-timing control, because long-only NIFTY earns
+drift for free):
+
+- **A. Analog forecaster** (k=8/15/30 nearest declustered historical states on
+  8 features; only past data, only candidates whose forward window had closed).
+  First pass looked like a win: k=15 P&L +102% vs random +30%, p=0.007
+  (10,000 seeds). **It is a grid-phase artifact**: re-running the identical
+  test with the decision grid shifted by 0,3,...,18 days gives p = 0.010,
+  0.000, 0.243, 0.450, 0.753, 0.103, 0.390 — significant at 2 of 7 phases,
+  median ~0.24. Feature ablation (k=15) says which inputs matter: geopolitical/
+  macro features only (Brent, USDINR, US10y, DXY) **anti-predict** (rank-IC
+  -0.133, p=0.914); volatility only p=0.078; everything except volatility
+  p=0.090; NIFTY-state only p=0.164. **Matching today to historical
+  geopolitical/macro states has no demonstrable skill on NIFTY 2013-2026;
+  whatever the full model saw came from the volatility inputs** — i.e. from
+  candidate C in disguise.
+- **B. Oil+rupee stress filter** (flat NIFTY while Brent 60d >= B and USDINR
+  60d >= I; 2x2 grid). Stress fires in only 2-8 of 160 months; p = 0.188,
+  0.339, 0.058, 0.339. Mean forward 21d NIFTY in the 3 months of the tightest
+  active cell was -2.7% vs +1.1% calm — directionally what one would expect
+  and statistically untestable at n=3. **Inconclusive, not a finding.**
+- **C. Fear-buy** (long NIFTY for 21 days when VIX / its trailing-252d median
+  >= X; India VIX and US VIX, X in {1.4, 1.5, 1.7}). India VIX: 10-14 of 160
+  months on, mean forward 21d **+7.4%** in the triggered months (median
+  +6.0%, minimum +2.2%, 12 of 12 positive) vs +1.0% unconditional (61% of
+  all months up); raw P&L +73% to +86% vs random-timing mean ~+7-10%.
+  Rotation-control p ≤ 0.017 at all 7 grid phases (A's failure mode does NOT
+  recur). The 12 months are 8 independent episodes (2013, 2014, 2015, 2019,
+  2020 [4 consecutive months], 2022, 2024, 2026), positive in every calendar
+  year that has one; without the best 3 months the sum is still +48%. Quarter
+  split (India VIX >=1.5): +24.2% / +6.0% / +50.3% / +8.4% — all positive,
+  most recent quarter positive, no decay (that quarter includes this year's
+  2026-04-02 trigger, +5.9%). US VIX is weaker: p phase-dependent (0.000 to
+  0.483), 4 negative months, quarters as low as +2.0%.
+
+**A defect in my own control, found and disclosed.** The rotation control
+prints "p=0.000" for C even at 10,000 seeds. It cannot be: 160 monthly
+decisions rotated by >=12 give only ~136 distinct offsets, so extra seeds just
+resample them and the smallest reportable p is ~1/137 = 0.0073. This same
+floor applies to the Fifty-sixth entry's PCR test to a lesser degree (~450
+offsets, floor ~0.002; none of its p-values were near it). Added a second
+null with an unbounded state space (`subset_p`: draw the same NUMBER of
+"on" months uniformly at random, (count+1)/(n+1) convention): India VIX
+p = 0.00005 at all three thresholds (the 20,000-draw floor; no draw reached
+the observed mean), US VIX 0.0107 / 0.0032 / 0.0002. The random-subset null is
+KINDER (it ignores that triggers cluster in time); the rotation null is
+stricter but cannot resolve anything below 0.0073. The truth is between them.
+
+**Adversarial self-review (per the hook's rule for a promising result; no
+fresh-judge council was run for this entry).**
+1. *It is partly "buy a deep drawdown."* A drawdown-only trigger with no VIX
+   (NIFTY <= -12.5% from its 252d high, 13 months) earns +5.35% mean fwd 21d
+   vs +7.40% for the India VIX trigger. The VIX adds roughly +2pp, and two
+   triggered months (2014-04, 2024-05, both election-driven VIX spikes with
+   NIFTY <1% off its high, +9.0% and +2.5%) fired with no drawdown at all,
+   but the drawdown explanation is real and untested for significance.
+2. *8 independent episodes.* All positive, but 8 is not a large number and
+   one (March 2020) contributes +22% in a single month; a "buy panic" rule
+   is exactly the shape that gets destroyed by the one episode that keeps
+   falling, and there was none in the window.
+3. *Multiple comparisons.* 29 p-values now sit in `multiple_comparisons.py`'s
+   broad family. **Bonferroni (threshold 0.00172): nothing passes under the
+   rotation null** (best registered value 0.0070, and C is registered at its
+   0.0073 resolution floor, the conservative reading). Under the random-subset
+   null India VIX (5e-5) clears 0.00172 by 30x. The candidate passes a
+   corrected bar only under the kinder null. BH flips IBS rotation top_k=5/8
+   to "PASS" at m=29 — an artifact of adding near-identical and floor-valued
+   rows (documented in a comment above the registry); **IBS's retired
+   significance claim (Fifty-third entry) is NOT reinstated by that.**
+4. *Execution.* Buying a panic close is when spreads are widest. Adding 0.5%
+   extra slippage per leg cuts the triggered-month sum from +88.8% to +76.8%
+   (arithmetic: 12 x 1.0%); the effect is not slippage-fragile. The symmetric/
+   asymmetric-slippage caveat from the Fifty-second entry applies unchanged.
+5. *Frequency is the practical problem.* ~1 trigger per year (12 in 13.7
+   years), 7.5% time in the market. Raw sum +85.7% over 13.7 years on the
+   capital deployed is ~6.5%/yr with idle cash earning nothing, below
+   NIFTYBEES buy-and-hold (~12.9%/yr); the case for it is as a low-exposure
+   timing overlay or an add-on entry, not a standalone strategy.
+6. *Prior.* "Buy volatility spikes" is a long-documented US effect, not a
+   pattern mined from this data, and its thresholds were set before looking,
+   which is what separates it from the many rejected single-instrument
+   survivors here. It is also exactly the bet the Cross-mechanism synthesis
+   and the Fifty-first entry's council warned about: a mean-reversion bet
+   that has paid in a regime with repeated V-shaped recoveries.
+
+**Current status of C:** India VIX / 252d median = 0.93 and US VIX 0.90
+(trigger is >= 1.5). **The trigger is OFF today**, despite Brent +36%, which
+is itself the entry's central observation: the market has not priced fear
+into this shock, so the one signal this entry found predictive is silent.
+`python probe_macro_analog.py --state-only` prints it.
+
+**Net verdict.** Analog matching against geopolitical/macro history: no
+skill (A, phase-fragile, ablation says the geopolitical features carry none).
+Oil+rupee stress filter: too few trigger months to test (B). VIX-spike
+fear-buy: survived every check this entry could construct, including three
+that failed A, but on 8 episodes, one control that cannot resolve corrected
+significance, a competing drawdown explanation, and a regime of V-shaped
+recoveries. Not declared tradable. 200 tests pass (4 new in
+`tests/test_probe_macro_analog.py`, including a leak test that a
+not-yet-closed forward window is unreachable by the analog matcher and that a
+same-day non-Indian shock cannot reach the features). **Concrete next steps,
+none done here:** (1) a forward trigger log for C (append-only, fires ~1x/year,
+so the record accumulates slowly); (2) test whether IBS rotation's own P&L
+differs in the months after a VIX spike (the two are both mean-reversion
+bets, likely correlated, which would mean C adds less than it appears);
+(3) significance-test the drawdown-only rival before crediting VIX with the
+extra 2pp. **The long-only IBS rotation remains this project's sole standing
+finding; 57 mechanisms tested, none has cleared the bar to trade.**

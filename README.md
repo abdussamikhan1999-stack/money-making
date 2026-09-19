@@ -493,6 +493,20 @@ uncorrected p = 0.051-0.327 across the configs tested, none under 0.05
 (0/16 survive correction in the now-16-test broad family). See CLAUDE.md's
 "Fifty-sixth" entry.
 
+**Macro/geopolitical regime probe (Fifty-seventh entry,
+`probe_macro_analog.py`)** — asked to match today's oil-shock/geopolitical
+backdrop against history. Analog matching on Brent/USDINR/rates/DXY has no
+demonstrable skill on NIFTY (its apparent p=0.007 was a decision-grid
+artifact; those features anti-predict in ablation). A VIX-spike "fear-buy"
+(long NIFTY 21 days when VIX is >=1.5x its 252d median) was the only
+candidate the entry could not break: 12 of 12 triggered months positive
+(mean +7.4% vs +1.0% unconditional, 8 independent episodes, all four
+quarters positive), but it fires ~1x/year, a drawdown-only rival earns
++5.4%, and its rotation control cannot resolve corrected significance.
+Notably the trigger is OFF today (India VIX 11.4 despite Brent +36%): the
+market has priced this shock as calm, which historically it was not. Not
+declared tradable. See CLAUDE.md's "Fifty-seventh" entry.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an
