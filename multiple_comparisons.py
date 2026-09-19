@@ -180,20 +180,27 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Reversal(21) top_k=5, own half-spread x2 (Sixtieth)", 0.1006),
     # Sixty-first entry: NIFTY SMA trend gate on IBS rotation. Registered claim = the
     # DRAWDOWN reduction vs random off-months (its return p-values are 0.28-0.71).
-    ("Trend gate SMA100 top_k=5, drawdown (Sixty-first)", 0.040),
-    ("Trend gate SMA150 top_k=5, drawdown (Sixty-first)", 0.062),
-    ("Trend gate SMA200 top_k=5, drawdown (Sixty-first)", 0.116),
-    ("Trend gate SMA100 top_k=8, drawdown (Sixty-first)", 0.016),
-    ("Trend gate SMA150 top_k=8, drawdown (Sixty-first)", 0.100),
-    ("Trend gate SMA200 top_k=8, drawdown (Sixty-first)", 0.153),
+    ("Trend gate SMA100 top_k=5, drawdown (Sixty-first, corrected Seventy-sixth)", 0.027),
+    ("Trend gate SMA150 top_k=5, drawdown (Sixty-first, corrected Seventy-sixth)", 0.031),
+    ("Trend gate SMA200 top_k=5, drawdown (Sixty-first, corrected Seventy-sixth)", 0.077),
+    ("Trend gate SMA100 top_k=8, drawdown (Sixty-first, corrected Seventy-sixth)", 0.013),
+    ("Trend gate SMA150 top_k=8, drawdown (Sixty-first, corrected Seventy-sixth)", 0.054),
+    ("Trend gate SMA200 top_k=8, drawdown (Sixty-first, corrected Seventy-sixth)", 0.078),
     # Sixty-second entry: the same gate on the INDEX alone. p(drawdown as low as random off-months);
     # S&P rows sit at the 2,000-draw floor (1/2001).
-    ("Index gate NIFTY 2008+ SMA100, drawdown (Sixty-second)", 0.0700),
-    ("Index gate NIFTY 2008+ SMA150, drawdown (Sixty-second)", 0.0110),
-    ("Index gate NIFTY 2008+ SMA200, drawdown (Sixty-second)", 0.1769),
+    ("Index gate NIFTY 2008+ SMA100, drawdown (Sixty-second, corrected)", 0.0550),
+    ("Index gate NIFTY 2008+ SMA150, drawdown (Sixty-second, corrected)", 0.0100),
+    ("Index gate NIFTY 2008+ SMA200, drawdown (Sixty-second, corrected)", 0.1599),
     ("Index gate S&P500 1950+ SMA100, drawdown (Sixty-second)", 0.0005),
     ("Index gate S&P500 1950+ SMA150, drawdown (Sixty-second)", 0.0005),
     ("Index gate S&P500 1950+ SMA200, drawdown (Sixty-second)", 0.0005),
+    # Seventy-sixth: the RETURN p-values of the index gate once the random control pays the same switching cost.
+    ("Index gate NIFTY 2008+ SMA100, return (Seventy-sixth)", 0.147),
+    ("Index gate NIFTY 2008+ SMA150, return (Seventy-sixth)", 0.179),
+    ("Index gate NIFTY 2008+ SMA200, return (Seventy-sixth)", 0.403),
+    ("Index gate S&P500 1950+ SMA100, return (Seventy-sixth)", 0.281),
+    ("Index gate S&P500 1950+ SMA150, return (Seventy-sixth)", 0.010),
+    ("Index gate S&P500 1950+ SMA200, return (Seventy-sixth)", 0.002),
     # Sixty-third entry: 12-1 momentum and 52-week-high rotations, lag 1. p = P(random >= actual);
     # values near 1 mean the strategy UNDERperforms random portfolios.
     ("12-1 momentum rotation top_k=3 (Sixty-third)", 0.9540),
