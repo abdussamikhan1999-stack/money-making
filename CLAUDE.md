@@ -4748,3 +4748,61 @@ loser-buying/oversold-ranking candidate: run the four-blowup survivorship stress
 BEFORE reading its walk-forward or p-value; `--stress` in this probe does it.
 58 mechanisms tested; none has cleared the bar to trade. 205 tests pass (2 new,
 covering the fill-lag logic that is the point of this file).
+
+
+## Sixtieth: measuring the asymmetric-slippage risk the Fifty-first/Fifty-second entries left open — IBS's picks do NOT face materially wider spreads than a random stock, by the one proxy this project's data supports
+
+The Fifty-second entry showed IBS rotation is robust to a SYMMETRIC slippage
+haircut but stated that such a test cannot see the real worry: that stocks which
+just closed near their low (often after a large one-day move) fill worse than
+average. That was left "unresolved, no real bid-ask data available." This entry
+measures it as well as daily OHLC allows, instead of leaving it as prose.
+
+**Method** (`probe_reversal_rotation.py --spread`). Corwin & Schultz (2012)
+high-low spread estimator per stock-day (two-day window ending on the fill day,
+negatives floored at 0, 3-day smoothed, halved to a half spread), applied as a
+per-pick cost on both legs of the lag-1 rotation. Each pick pays ITS OWN
+estimated half spread, for the strategy and for every random-control draw alike,
+so if the strategy's picks really sit in wider-spread situations the
+penalty falls on them and not the control — the asymmetry is priced in by
+construction, not assumed. Same 52-stock universe, 10y, 1,500 seeds.
+
+**Known limitation, stated first:** the estimator is biased UP on high-volatility
+days (a wide range from volatility is misread as spread), and IBS picks are
+exactly the volatile-day stocks, so this is an upper-leaning read of the
+asymmetry. Its ABSOLUTE level is not credible either: the universe-mean half
+spread comes out at 0.334%, roughly 5-10x what liquid Nifty stocks trade at.
+Treat the x1 rows below as a severe stress, x2 as absurd, and the RATIO as the
+finding.
+
+**Results (top_k=5, lag 1).**
+- IBS(5): mean half spread paid on entry **0.364% for the strategy's picks vs
+  0.352% for random picks, a ratio of 1.03x**. No spread cost: 20.05%/yr. Own
+  half spread on both legs, x1: 9.82%/yr (DD 40.6%) vs random control
+  4.20%/yr, p=0.058; x2: 0.32%/yr vs control -4.64%/yr, p=0.065.
+- rev(21): picks 0.372% vs random 0.350%, ratio 1.06x; x1 8.84%/yr vs control
+  4.08%, p=0.079; x2 -0.59%/yr vs -4.65%, p=0.101.
+
+**Read:** the asymmetric-slippage risk the council raised, measured by a proxy
+biased toward finding it, is small: picks are 3% (IBS) to 6% (reversal) wider
+than random, not the multiples feared. The much larger effect is simply the
+absolute cost level, and that is a property of the proxy's overstatement. Even
+under the inflated x1 cost, IBS keeps a ~5.6-point annual edge over an equally
+burdened random portfolio (9.8% vs 4.2%). What this does NOT settle: real
+execution on the fill day (queue position, impact of buying into a falling
+stock at the close, circuit-limit days) cannot be inferred from a high-low
+range. The paper trackers still run zero slippage; the number this entry
+supports is "expected fill drag is likely well under 0.1% per leg for Nifty
+names, and no evidence it is disproportionately worse for the picks."
+
+**Multiple comparisons.** 4 more p-values registered (m=59); none clears
+Bonferroni (0.00085) and IBS's p-values sit at 0.058/0.065 with the inflated
+cost, consistent with Part A of the Fifty-ninth entry (IBS's raw p is ~0.05 at
+lag 1 and no longer claimed as significant). 207 tests pass (2 new).
+
+**Net verdict:** closes the last concretely-flagged execution-realism gap for
+IBS rotation (slippage magnitude: Fifty-second; slippage asymmetry: here, by the
+best available proxy; whole shares: Fifty-fourth; fill lag: Fifty-ninth).
+**IBS rotation remains the sole standing finding at ~20%/yr backtest, with
+no surviving significance claim, unresolved survivorship exposure, and only
+2 days of forward paper data; not declared tradable. 58 mechanisms tested.**

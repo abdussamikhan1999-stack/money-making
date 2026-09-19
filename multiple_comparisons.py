@@ -172,6 +172,12 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Reversal(42) top_k=8 (Fifty-ninth, post hoc)", 0.0526),
     ("Reversal(63) top_k=8 (Fifty-ninth, post hoc)", 0.0899),
     ("Reversal(42) top_k=12 (Fifty-ninth, post hoc)", 0.0227),
+    # Sixtieth entry: each pick pays its own Corwin-Schultz half spread (asymmetric-
+    # slippage test); IBS/rev(21) top_k=5 at x1 and x2 of the (upward-biased) estimate.
+    ("IBS rotation top_k=5, own half-spread x1 (Sixtieth)", 0.0580),
+    ("IBS rotation top_k=5, own half-spread x2 (Sixtieth)", 0.0653),
+    ("Reversal(21) top_k=5, own half-spread x1 (Sixtieth)", 0.0793),
+    ("Reversal(21) top_k=5, own half-spread x2 (Sixtieth)", 0.1006),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number

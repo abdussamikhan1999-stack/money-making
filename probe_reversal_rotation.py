@@ -62,13 +62,32 @@ def scores(M, kind, window):
     return c / c.shift(window) - 1  # reversal: trailing return, lowest = biggest loser
 
 
-def simulate(M, S, top_k, lag, rng=None, capital=100_000.0):
-    """Long the top_k lowest-score names (random eligible names if rng given)."""
+def corwin_schultz_half_spread(M, smooth=3):
+    """Corwin & Schultz (2012) high-low bid-ask spread estimate, as a HALF spread
+    (fraction of price) per stock-day: two-day window ending on that day, negatives
+    floored at 0, smoothed over `smooth` days. Known upward bias on high-volatility
+    days (range widened by volatility, not spread), which is exactly the day type
+    IBS picks, so results are an UPPER-leaning estimate of that asymmetry."""
+    h, l = M["high"], M["low"]
+    k = 3 - 2 * np.sqrt(2)
+    beta = np.log(h / l) ** 2 + np.log(h.shift(1) / l.shift(1)) ** 2
+    gamma = np.log(np.maximum(h, h.shift(1)) / np.minimum(l, l.shift(1))) ** 2
+    alpha = (np.sqrt(2 * beta) - np.sqrt(beta)) / k - np.sqrt(gamma / k)
+    spread = (2 * (np.exp(alpha) - 1) / (1 + np.exp(alpha))).clip(lower=0)
+    return (spread.rolling(smooth, min_periods=1).mean() / 2)
+
+
+def simulate(M, S, top_k, lag, rng=None, capital=100_000.0, hs=None, hs_mult=1.0):
+    """Long the top_k lowest-score names (random eligible names if rng given).
+    hs: optional half-spread matrix (see corwin_schultz_half_spread); each pick pays
+    ITS OWN half spread x hs_mult on both legs, so the asymmetry between
+    the strategy's picks and random picks is priced in, not assumed."""
     c = M["close"].to_numpy()
     sc = S.to_numpy()
+    hsv = hs.to_numpy() if hs is not None else None
     me = M["me"]
     cap, peak, dd = capital, capital, 0.0
-    months, at = [], []
+    months, at, spreads = [], [], []
     for a, b in zip(me[:-1], me[1:]):
         ea, eb = a + lag, b + lag
         if eb >= len(c):
@@ -82,14 +101,19 @@ def simulate(M, S, top_k, lag, rng=None, capital=100_000.0):
         each = cap / k
         pnl = 0.0
         for j in pick:
-            r = c[eb, j] / c[ea, j] - 1
+            if hsv is not None:
+                r = c[eb, j] * (1 - hs_mult * np.nan_to_num(hsv[eb, j])) / (c[ea, j] * (1 + hs_mult * np.nan_to_num(hsv[ea, j]))) - 1
+            else:
+                r = c[eb, j] / c[ea, j] - 1
+            if hsv is not None:
+                spreads.append(np.nan_to_num(hsv[ea, j]))
             pnl += each * (r - 2 * COST_PCT / 100) - DP
         cap += pnl
         peak = max(peak, cap)
         dd = max(dd, (peak - cap) / peak)
         months.append(pnl / (cap - pnl))
         at.append(a)
-    return dict(final=cap, months=np.array(months), max_dd=dd, at=at)
+    return dict(final=cap, months=np.array(months), max_dd=dd, at=at, spreads=spreads)
 
 
 def cagr(final, years, capital=100_000.0):
@@ -135,12 +159,36 @@ def overlap(M, years, top_k=8):
     print(f"50/50 blend of the two return streams: {cagr(fin, years):.2f}%/yr vs rev {cagr(r1['final'], years):.2f}% / IBS {cagr(r2['final'], years):.2f}%")
 
 
+def spread_test(M, years, seeds, top_k=5):
+    """Asymmetric-slippage test (Fifty-second entry's open item)."""
+    hs = corwin_schultz_half_spread(M)
+    uni = np.nanmean(hs.to_numpy()[M["me"][0] + 1 :], axis=None)
+    print(f"universe mean estimated HALF spread (all stock-days): {uni:.3%}")
+    for kind, window in (("ibs", 5), ("rev", 21)):
+        S = scores(M, kind, window)
+        base = simulate(M, S, top_k, 1)
+        print(f"\n{kind}({window}) top_k={top_k} lag=1, no spread cost: {cagr(base['final'], years):.2f}%/yr")
+        rng = np.random.default_rng(0)
+        rspreads = np.mean([np.mean(simulate(M, S, top_k, 1, rng=rng, hs=hs)["spreads"]) for _ in range(200)])
+        with_hs = simulate(M, S, top_k, 1, hs=hs)
+        print(f"  mean half-spread paid on entry: strategy picks {np.mean(with_hs['spreads']):.3%} vs random picks {rspreads:.3%} "
+              f"(ratio {np.mean(with_hs['spreads']) / rspreads:.2f}x)")
+        for mult in (1.0, 2.0):
+            r = simulate(M, S, top_k, 1, hs=hs, hs_mult=mult)
+            rng = np.random.default_rng(0)
+            finals = np.array([simulate(M, S, top_k, 1, rng=rng, hs=hs, hs_mult=mult)["final"] for _ in range(seeds)])
+            p = ((finals >= r["final"]).sum() + 1) / (seeds + 1)
+            print(f"  own-half-spread x{mult:.0f} both legs: {cagr(r['final'], years):.2f}%/yr, maxDD {r['max_dd']:.1%}; "
+                  f"random control {cagr(finals.mean(), years):.2f}%/yr; p={p:.4f}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=1500)
     ap.add_argument("--validate", action="store_true")
     ap.add_argument("--stress", action="store_true", help="add 4 real blowups (survivorship stress)")
     ap.add_argument("--overlap", action="store_true", help="how much is rev(21) just IBS?")
+    ap.add_argument("--spread", action="store_true", help="price each pick's own Corwin-Schultz half spread")
     ap.add_argument("--extend", action="store_true", help="EXPLORATORY: windows/top_k beyond the pre-registered grid")
     a = ap.parse_args()
     M = load_matrices(stress=a.stress)
@@ -152,6 +200,8 @@ def main():
         return
     if a.overlap:
         return overlap(M, years)
+    if a.spread:
+        return spread_test(M, years, a.seeds)
     if a.extend:
         print("=== EXPLORATORY extension past the pre-registered grid's edge (no p claimed as pre-registered) ===")
         for window, top_k in ((21, 12), (42, 8), (63, 8), (42, 12)):
