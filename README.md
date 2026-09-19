@@ -11,6 +11,52 @@ accredited financial specialist before risking real capital. Backtest and
 paper-trade thoroughly before ever running this live. You are solely
 responsible for any trades it places.
 
+## Where things stand (2026-09-19)
+
+Read this before any of the per-entry detail below. Full numbers and caveats
+are in CLAUDE.md's numbered entries (56-73 cover the latest work).
+
+- **64 mechanisms tested; none is declared tradable.** Across the ~130
+  registered significance tests (`multiple_comparisons.py`, plus 84 phase-scan
+  cells noted but not registered) nothing in the stock-rotation family can clear
+  a family-wise corrected bar; the only Bonferroni pass is the trend gate's
+  drawdown effect on the S&P 500 since 1950 (a known effect, and a risk overlay,
+  not alpha).
+- **The one surviving stock-selection candidate is IBS rotation, and it is
+  unproven.** With realistic next-close fills its backtest is ~20%/yr (~21% at
+  ~0.25% round-trip cost) at a ~39% month-end drawdown, but: the edge is
+  concentrated in month-end entries and the first ~5 trading days after them
+  (Entries 64-66); the 5-day version replicated on an earlier decade of the same
+  stocks (p=0.0013) and on different stocks in that decade (p=0.009) but is absent
+  on different stocks in the recent decade (p=0.64), and the earlier-decade cells
+  are survivorship-inflated (Entries 68-69); the full-month hold does not
+  replicate on 2007-16 (p=0.26). Net economics of the short hold: ~8-13%/yr on
+  capital in the market 25-50% of the time, cost- and slippage-sensitive.
+- **Robust observations that are not edges:** (1) holding equity with gold
+  roughly halves the drawdown vs equity alone (12.8% on NIFTY+INR gold 2008-26,
+  29.1% on S&P+USD gold 2001-26, ~11% on the NSE ETFs since 2009) but its return
+  is carried by gold bull runs and no timing rule on top of it helps reliably
+  (Entries 70-72); (2) a NIFTY/S&P trend gate roughly halves index drawdown over
+  decades at a cost of 1-3 points/yr of return and no alpha; its best length
+  differs by market (Entries 61-62).
+- **Tested and rejected recently:** put-call-ratio contrarian long, macro/
+  geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
+  short-term reversal (0.85 correlated with IBS, collapses under survivorship
+  stress), 12-1 momentum and 52-week-high rotation (underperform random), dual
+  momentum and per-asset trend gates on NIFTYBEES/GOLDBEES, 4-ETF cross-
+  sectional rotation.
+- **Forward record (the test that matters).** Two append-only paper trackers
+  (`paper_track_ibs_rotation*.py`); the only record so far (2026-09-17) was
+  logged mid-month, the backtest's worst phase. **Run them on the last trading
+  days of each month** (next: ~28-30 Sept). The unhedged tracker now also records
+  the 5- and 10-day excess over the universe at each mark-to-market.
+- **Today:** the NIFTY trend gate reads RISK-OFF on SMA100/150/200; the VIX-spike
+  trigger is off (India VIX 11.4, the lowest of any Brent +30% day since 2008).
+  Neither is a recommendation. `python probe_macro_analog.py --state-only`
+  prints both.
+- Nothing here has been validated with real money and none of it is financial
+  advice.
+
 ## Daily-bar strategies (a second family, ten mechanisms so far)
 
 `backtest_daily.py` backtests daily-bar strategies against years of data
