@@ -4986,3 +4986,97 @@ pass (1 new: momentum score direction). **58 -> 60 mechanisms tested (12-1 and
 52-week-high cross-sectional rotations are new constructions; 6-1 momentum was
 the Fourth entry). IBS rotation remains the sole standing finding; not declared
 tradable.**
+
+
+## Sixty-fourth: the IBS rotation edge is concentrated in month-end entries — not in "buying oversold stocks" in general; the first paper-tracker record was logged in the backtest's worst phase
+
+Prompted by an anomaly, not a plan: the Fifty-ninth entry's rebalance-frequency
+sweep returned 7.6%/yr, p=0.92 for "IBS(5), every 21 trading days" against
+20.1%/yr, p=0.05 for the calendar month-end grid — two nominally monthly
+schedules of the SAME signal, costs and fills. That is exactly the grid-phase
+fragility that sank the Fifty-seventh entry's candidate A, applied to the
+standing finding. Investigated in two steps (`probe_reversal_rotation.py
+--phase`, `--anchor`; lag-1 fills, top_k=5, 52 stocks, 10y, lag-matched random
+control, 400-600 seeds per cell; validation against the known 20.1%/yr).
+
+**1. Fixed 21-day step, all 21 phase offsets** (drifts against the calendar,
+since months are 21-23 trading days): IBS(5) averages **15.2%/yr** (median 15.9,
+range 7.6-21.3) against a random-portfolio mean of ~14.0%: an average edge of
+~1.2 points, with **0 of 21 phases at p<0.05** (best 0.055). Reversal rev(21)
+top_k=8: mean 17.4%/yr, 7/21 phases at p<0.05. The calendar month-end grid
+(20.2%, p=0.048) sits at the very top of the IBS phase distribution.
+
+**2. Calendar-anchored: rebalance on the j-th trading day before each
+month-end, j=0..20** (j=0 is the month-end used everywhere else; no drift):
+
+| IBS(5) top_k=5 | j | return/yr | p vs random |
+|---|---|---|---|
+| last 5 trading days | 0,1,2,3,4 | 20.2, 18.9, 22.5, **24.4**, 21.3 | 0.048, 0.050, 0.010, **0.003**, 0.032 |
+| next week | 5,6 | 17.7, 18.3 | 0.146, 0.093 |
+| mid-month | 7,8,9 | 12.0, 9.8, **7.0** | 0.62, 0.78, 0.90 |
+| | 10,11 | 13.8, 14.4 | 0.37, 0.33 |
+| ~day 8-10 of the month | 12,13 | 22.0, 22.3 | 0.022, 0.018 |
+| | 14,15,16,17,18 | 14.6, 6.9, 8.9, **4.9**, 6.3 | 0.31-0.97 |
+| start of month | 19,20 | 14.1, 20.7 | 0.39, 0.050 |
+
+Across the 21 anchors the mean is 15.3%/yr (median 14.6, range 4.9-24.4) vs
+~13.5% for random; 8 of 21 anchors reach p<0.05 (adjacent anchors overlap
+heavily, so these are far from 8 independent confirmations). rev(21) top_k=8 is
+similar but wider: j=0..8 are 17-21%/yr (p 0.003-0.09), j=9..14 fall to 10-15%
+(p 0.35-0.90). Average of the last-5-days anchors (j=0..4) is 21.4%/yr vs 13.3%
+for the rest.
+
+**What survives a first check** (post hoc: the "last 5 trading days" window was
+defined AFTER seeing this scan, so treat everything below as a hypothesis):
+mean monthly return of the last-5-days anchors vs the mid/late-month anchors
+(j=7-9, 15-18): first half +2.03% vs +1.22% (diff +0.81%), second half +1.69% vs
++0.46% (+1.23%); quarters of the difference +0.52/+1.31/+1.26/+0.98% (all
+positive); paired t=2.09 over 119 months, A beats B in 57% of months. **Random
+portfolios show no such phase effect (+1.24% vs +1.19% per month)** so the
+timing dependence is a property of the IBS-picked stocks, not of the universe
+having a month-end drift. A plausible mechanism is a turn-of-month flow effect
+(SIP/institutional inflows concentrated in the first days of the month, end-of-
+month window dressing) acting on just-oversold names; the Sixth entry found no
+comparable calendar effect on the index itself, so it would be specific to
+oversold stocks. The mechanism is NOT tested here; only ~120 monthly
+observations exist and no independent sample.
+
+**Implications, most important first.**
+1. **The live paper tracker's first record (2026-09-17) was logged in the
+   backtest's worst neighbourhood** (j=9: 7.0%/yr, p=0.90) — 9 trading days
+   before month-end. Both trackers (`paper_track_ibs_rotation*.py`) now say in
+   their docstrings to run on the LAST FEW TRADING DAYS of the month; the next
+   record should be logged at the end of September/October so the forward test
+   matches the phase the backtest's edge lives in. Logs are not edited; the
+   2026-09-17 record simply becomes a mid-month sample the month-end record
+   marks to market (13 trading days, a stub period, not comparable to the
+   backtest's monthly figures).
+2. **The standing finding should be re-read.** "IBS rotation earns ~20%/yr" is
+   true for month-end-window entries; averaged over rebalance timing it is
+   ~15%/yr against ~13.5% random, with no phase-averaged significance. The gate
+   (Sixty-first/Sixty-second), the slippage test (Sixtieth), the fill-lag fix
+   (Fifty-ninth) and every survivorship/widening result all used the month-end
+   grid and are best read as conditional on that phase.
+3. **Multiple comparisons, again.** 84 phase/anchor cells were run and are NOT
+   individually registered (noted in `multiple_comparisons.py`); with them the
+   honest Bonferroni family is m>=161 (threshold ~0.0003) and the smallest
+   p among them, 0.003 (IBS j=3, itself a post-hoc-selected anchor), fails it.
+4. **Do not tune the anchor.** j=3 (24.4%/yr, DD 23.6%) is the best cell of a
+   21-cell scan; picking it would be exactly the curve-fit this project's
+   methodology exists to catch. The defensible claim is the window (j=0..4),
+   and only as a hypothesis for the forward record to test.
+
+**Net verdict.** The standing candidate is more fragile than the previous
+entries presented, but not dead: it shows a specific, halves-and-quarters-
+consistent, IBS-specific concentration of its edge at month-end entries with a
+plausible (untested) flow mechanism. It is now best described as "an oversold-
+bounce effect around the turn of the month that has paid ~20%/yr at month-end
+entries in 2016-2026," not a general cross-sectional mean-reversion premium.
+**Still not declared tradable; no count change (58 -> 60 mechanisms from the
+Sixty-third entry stands).** Next steps: (1) log the next tracker records at
+month-end; (2) test the turn-of-month hypothesis on an independent sample, e.g.
+apply the identical month-end IBS rotation to a different NSE universe (Nifty
+Next 50 / midcaps if a constituent list becomes available) or to earlier years
+if a point-in-time universe ever exists; (3) test whether the effect is really
+about the FIRST days of the month (holding period ends) rather than the entry
+day: hold windows anchored on the calendar, not just entries.
