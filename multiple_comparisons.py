@@ -286,6 +286,32 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("US large caps hold 5d, 2016-26 (Seventy-fourth)", 0.5145),
     ("US large caps hold 10d, 2016-26 (Seventy-fourth)", 0.5205),
     ("US large caps hold 21d, 2016-26 (Seventy-fourth)", 0.9970),
+    # Seventy-ninth entry: published approaches of famous funds/traders. TSMOM p(Sharpe) vs an EXACT enumeration of all
+    # circular rotations; vol-managed equity likewise; Halloween year-block bootstrap; vol breakout bootstrap p(mean<=0).
+    ("TSMOM B long/flat L=126, Sharpe (Seventy-ninth)", 0.015),
+    ("TSMOM C long/short L=126, Sharpe (Seventy-ninth)", 0.077),
+    ("TSMOM B long/flat L=189, Sharpe (Seventy-ninth)", 0.057),
+    ("TSMOM C long/short L=189, Sharpe (Seventy-ninth)", 0.155),
+    ("TSMOM B long/flat L=252, Sharpe (Seventy-ninth)", 0.005),
+    ("TSMOM C long/short L=252, Sharpe (Seventy-ninth)", 0.206),
+    ("Vol-managed S&P 1960+ target 10%, Sharpe (Seventy-ninth)", 0.347),
+    ("Vol-managed S&P 1960+ target 15%, Sharpe (Seventy-ninth)", 0.238),
+    ("Vol-managed NIFTY 2008+ target 10%, Sharpe (Seventy-ninth)", 0.891),
+    ("Vol-managed NIFTY 2008+ target 15%, Sharpe (Seventy-ninth)", 0.984),
+    ("Halloween S&P 500 1950+ (Seventy-ninth)", 0.0003),
+    ("Halloween NIFTY 2008+ (Seventy-ninth)", 0.7483),
+    ("Vol breakout ^NSEI long k=0.4 (Seventy-ninth)", 0.850),
+    ("Vol breakout ^NSEI long k=0.6 (Seventy-ninth)", 0.443),
+    ("Vol breakout ^NSEI long k=0.8 (Seventy-ninth)", 0.303),
+    ("Vol breakout ^NSEI short k=0.4 (Seventy-ninth)", 0.323),
+    ("Vol breakout ^NSEI short k=0.6 (Seventy-ninth)", 0.582),
+    ("Vol breakout ^NSEI short k=0.8 (Seventy-ninth)", 0.548),
+    ("Vol breakout SPY long k=0.4 (Seventy-ninth)", 1.000),
+    ("Vol breakout SPY long k=0.6 (Seventy-ninth)", 1.000),
+    ("Vol breakout SPY long k=0.8 (Seventy-ninth)", 1.000),
+    ("Vol breakout SPY short k=0.4 (Seventy-ninth)", 1.000),
+    ("Vol breakout SPY short k=0.6 (Seventy-ninth)", 1.000),
+    ("Vol breakout SPY short k=0.8 (Seventy-ninth)", 1.000),
     # NOT individually registered (Sixty-fourth entry): 84 further cells, 21 fixed-step phase offsets
     # and 21 calendar-anchored offsets x {IBS(5) top_k=5, rev(21) top_k=8}. Counting them, an honest
     # Bonferroni family is m>=161 (threshold ~0.0003); the smallest p among them is 0.003.
