@@ -47,9 +47,10 @@ CACHE = os.environ.get("REV_CACHE", "")
 
 def load_matrices(period="10y", stress=False):
     """stress=True: add the Fortieth entry's 4 real blowups (survivorship stress)."""
-    cache = CACHE.replace(".pkl", "_stress.pkl") if (CACHE and stress) else CACHE
-    if CACHE and SYMBOLS:
-        cache = CACHE.replace(".pkl", "_B.pkl")
+    cache = ""
+    if CACHE:  # key on period AND universe, so a 20y run can never read a 10y cache (review finding)
+        root = os.path.splitext(CACHE)[0]
+        cache = f"{root}_{period}{'_stress' if stress else ''}{'_B' if SYMBOLS else ''}.pkl"
     if cache and os.path.exists(cache):
         return pickle.load(open(cache, "rb"))
     if SYMBOLS:
@@ -70,14 +71,15 @@ def load_matrices(period="10y", stress=False):
         series = build_stress_price_series(period)
     else:
         series = build_wide_price_series(period)
-    cal = [c["date"].date() for c in fetch_calendar(period)]
+    cal_candles = fetch_calendar(period)
+    cal = [c["date"].date() for c in cal_candles]
     idx = pd.DatetimeIndex(cal)
     out = {}
     for name in ("close", "high", "low"):
         out[name] = pd.DataFrame(
             {s: pd.Series([c[name] for c in cds], index=pd.DatetimeIndex([c["date"].date() for c in cds]))
              for s, cds in series.items()}).reindex(idx).ffill()
-    out["me"] = [idx.get_loc(pd.Timestamp(d)) for d in month_end_dates(fetch_calendar(period))]
+    out["me"] = [idx.get_loc(pd.Timestamp(d)) for d in month_end_dates(cal_candles)]
     if cache:
         pickle.dump(out, open(cache, "wb"))
     return out
@@ -227,15 +229,16 @@ def gate_test(M, years, seeds):
     lag-1 fill) cut IBS rotation's drawdown without giving back the edge? Pre-registered:
     L in {100,150,200}, top_k in {5,8}. Control: same NUMBER of risk-off months chosen at random."""
     import probe_macro_analog as pm
-    nifty = pm.load()["nifty"].dropna()
-    nifty = nifty.reindex(M["close"].index.union(nifty.index)).ffill().reindex(M["close"].index)
+    nifty_full = pm.load()["nifty"].dropna()  # SMA is computed on the FULL history, so no warm-up falls inside the backtest
+    align = lambda x: x.reindex(M["close"].index.union(x.index)).ffill().reindex(M["close"].index)
+    nifty = align(nifty_full)
     S = scores(M, "ibs", 5)
     for top_k in (5, 8):
         base = simulate(M, S, top_k, 1)
         print(f"\ntop_k={top_k} ungated: {cagr(base['final'], years):.2f}%/yr, maxDD {base['max_dd']:.1%}")
         for L in (100, 150, 200):
-            sma = nifty.rolling(L, min_periods=L).mean()
-            gate = (nifty > sma).fillna(True).to_numpy()
+            sma = align(nifty_full.rolling(L, min_periods=L).mean())
+            gate = np.where(sma.isna(), True, nifty > sma)  # (nifty > NaN) is False, so fillna would never fire
             r = simulate(M, S, top_k, 1, gate=gate)
             off = [a for a in M["me"][:-1] if not gate[a]]
             rng = np.random.default_rng(0)
@@ -293,7 +296,8 @@ def index_gate_replication(seeds=2000):
             sma = pd.Series(p).rolling(L).mean().to_numpy()
             on = np.array([(p[a] > sma[a]) if not np.isnan(sma[a]) else True for a in starts])
             flips = np.abs(np.diff(np.concatenate([[1], on.astype(int)]))).sum()
-            g = np.where(on, rets, 0.0) - np.where(np.abs(np.diff(np.concatenate([[1], on.astype(int)]))) > 0, 0.002, 0.0)
+            flip_cost = lambda mask: np.where(np.abs(np.diff(np.concatenate([[1], mask.astype(int)]))) > 0, 0.002, 0.0)
+            g = np.where(on, rets, 0.0) - flip_cost(on)
             gf, gdd = stats(g)
             rng = np.random.default_rng(0)
             n_off = int((~on).sum())
@@ -301,7 +305,7 @@ def index_gate_replication(seeds=2000):
             for _ in range(seeds):
                 m = np.ones(len(rets), bool)
                 m[rng.choice(len(rets), n_off, replace=False)] = False
-                f_, d_ = stats(np.where(m, rets, 0.0))
+                f_, d_ = stats(np.where(m, rets, 0.0) - flip_cost(m))  # control pays the same switching cost
                 fin.append(f_)
                 dds.append(d_)
             pdd = ((np.array(dds) <= gdd).sum() + 1) / (seeds + 1)
@@ -364,7 +368,7 @@ def anchor_test(M, seeds, kind="ibs", window=5, top_k=5):
     rows = []
     for j in range(0, 21):
         Mj = dict(M)
-        Mj["me"] = [m - j for m in M["me"] if m - j > 260 * 0 and m - j >= 0]
+        Mj["me"] = [m - j for m in M["me"] if m - j >= 0]
         r = simulate(Mj, S, top_k, 1)
         yrs = len(r["months"]) / 12
         rng = np.random.default_rng(0)
@@ -384,7 +388,15 @@ def load_us(period_start="2006-06-01"):
     cal = yf.Ticker("^GSPC").history(start=period_start)["Close"].dropna()
     idx = pd.DatetimeIndex(cal.index.date)
     out = {}
-    raw = {t: yf.Ticker(t).history(start=period_start) for t in US_UNIVERSE}
+    raw = {}
+    for t in US_UNIVERSE:
+        for _ in range(3):
+            d = yf.Ticker(t).history(start=period_start)
+            if len(d):
+                break
+        raw[t] = d
+        if not len(d):
+            print(f"{t}: fetch failed after 3 retries, excluded")
     for name in ("Close", "High", "Low"):
         out[name.lower()] = pd.DataFrame({t: pd.Series(d[name].to_numpy(), index=pd.DatetimeIndex(d.index.date))
                                           for t, d in raw.items() if len(d)}).reindex(idx).ffill()
@@ -393,11 +405,11 @@ def load_us(period_start="2006-06-01"):
     return out
 
 
-def us_test(seeds):
+def us_test(seeds, cost=0.05):
     """Same pre-declared month-end tests on US large caps: horizon curve j=0 vs j=9, hold 5/10/21 (top_k=5,
     lag 1, US cost 0.05%/leg and no DP charge), both decades, same-hold random control."""
     global COST_PCT, DP
-    COST_PCT, DP = 0.05, 0.0
+    COST_PCT, DP = cost, 0.0
     M = load_us()
     print(f"US universe {M['close'].shape[1]} stocks, {M['close'].index[0].date()} .. {M['close'].index[-1].date()}, {len(M['me'])} month-ends")
     S = scores(M, "ibs", 5)
@@ -442,24 +454,24 @@ def oos_anchor_test(period="20y", split="2016-09-19"):
     print(f"stocks with a price by 2008: {int(M['close'].iloc[250:300].notna().any().sum())}")
 
     def stream(j, lo, hi, rng=None):
+        """{month-end row: return}, keyed by the CALENDAR month so anchors align (review finding: positional
+        alignment paired different months when the window edge cut some anchors' first month)."""
         Mj = dict(M)
         Mj["me"] = [m - j for m in M["me"] if lo <= m - j < hi]
-        return simulate(Mj, S, 5, 1, rng=rng)["months"]
+        r = simulate(Mj, S, 5, 1, rng=rng)
+        return {a + j: x for a, x in zip(r["at"], r["months"])}
 
     windows = {"last-5-days (j=0-4)": list(range(0, 5)), "mid/late (j=7-9,15-18)": [7, 8, 9, 15, 16, 17, 18]}
     for label, lo, hi in (("EARLIER (out-of-sample) ", 0, cut), ("LATER (where it was found)", cut, len(M["close"]))):
-        out = {}
-        for name, js in windows.items():
-            xs = [stream(j, lo, hi) for j in js]
-            n = min(len(x) for x in xs)
-            out[name] = np.mean([x[:n] for x in xs], axis=0)
-        A, B = out["last-5-days (j=0-4)"], out["mid/late (j=7-9,15-18)"]
-        n = min(len(A), len(B))
-        A, B = A[:n], B[:n]
+        streams = {name: [stream(j, lo, hi) for j in js] for name, js in windows.items()}
+        common = sorted(set.intersection(*[set(d) for ds in streams.values() for d in ds]))
+        n = len(common)
+        A = np.mean([[d[m] for m in common] for d in streams["last-5-days (j=0-4)"]], axis=0)
+        B = np.mean([[d[m] for m in common] for d in streams["mid/late (j=7-9,15-18)"]], axis=0)
         d = A - B
         rng = np.random.default_rng(3)
-        ra = np.mean([np.mean([stream(j, lo, hi, rng)[:n].mean() for _ in range(100)]) for j in windows["last-5-days (j=0-4)"]])
-        rb = np.mean([np.mean([stream(j, lo, hi, rng)[:n].mean() for _ in range(100)]) for j in windows["mid/late (j=7-9,15-18)"]])
+        rmean = lambda js: np.mean([np.mean([np.mean([stream(j, lo, hi, rng).get(m, np.nan) for m in common]) for _ in range(100)]) for j in js])
+        ra, rb = rmean(windows["last-5-days (j=0-4)"]), rmean(windows["mid/late (j=7-9,15-18)"])
         print(f"{label}: {n} months | IBS last-5-days {A.mean():+.2%}/mo vs mid/late {B.mean():+.2%}/mo, diff {d.mean():+.2%}, "
               f"paired t={d.mean() / (d.std(ddof=1) / np.sqrt(n)):.2f}, A>B in {(A > B).mean():.0%} of months | "
               f"random portfolios {ra:+.2%} vs {rb:+.2%}")
@@ -549,12 +561,12 @@ def main():
     if a.cost is not None:
         globals()["COST_PCT"] = a.cost
     if a.us:
-        return us_test(a.seeds)
+        return us_test(a.seeds, a.cost if a.cost is not None else 0.05)
     if a.universe_b:
         global SYMBOLS
         SYMBOLS = UNIVERSE_B
     if a.index_gate:
-        return index_gate_replication()
+        return index_gate_replication(a.seeds)
     if a.oos:
         return oos_anchor_test()
     if a.oos_horizon:
@@ -592,8 +604,6 @@ def main():
         return spread_test(M, years, a.seeds)
     if a.gate:
         return gate_test(M, years, a.seeds)
-    if a.index_gate:
-        return index_gate_replication()
     if a.extend:
         print("=== EXPLORATORY extension past the pre-registered grid's edge (no p claimed as pre-registered) ===")
         for window, top_k in ((21, 12), (42, 8), (63, 8), (42, 12)):
