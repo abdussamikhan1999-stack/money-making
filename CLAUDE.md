@@ -4943,3 +4943,46 @@ finding; 58 mechanisms tested; not declared tradable.** Today's gate reading
 RISK-OFF on all three, meaning the gated variant would be in cash for the
 month the two live trackers logged picks; the unhedged tracker's 2026-09-17
 record is unaffected (logs are never edited).
+
+
+## Sixty-third: cross-sectional 12-1 momentum and 52-week-high rotation, re-tested properly — worse than a random portfolio, not just "decayed"
+
+Closes an evidence gap in the Cross-mechanism synthesis: the basket-wide
+directional bets it says decay recently (Fourth entry's 6-1 momentum rotation,
+Thirty-fifth/Thirty-sixth single-instrument 52-week high) were tested BEFORE this
+project had a fill lag or a lag-matched random-portfolio control. Both classic
+academic signals were re-run in the Fifty-ninth entry's machinery (52 stocks,
+10y, monthly, lag-1 fill, same costs, 1,500-seed control, top_k 3/5/8):
+Jegadeesh-Titman 12-1 momentum (return from t-252 to t-21) and George-Hwang
+nearness to the 252-day high (`probe_reversal_rotation.py --momentum`).
+Annualised over the months actually invested (each needs ~1y of history).
+
+| signal | top_k | return/yr | max DD | halves | quarters | random mean | P(random >= actual) |
+|---|---|---|---|---|---|---|---|
+| 12-1 momentum | 3 | 2.45% | 54.7% | +76%/-29% | +16/+55/+13/-39% | 13.00% | 0.954 |
+| | 5 | 7.96% | 45.3% | +61%/+23% | +20/+43/+44/-20% | 12.65% | 0.820 |
+| | 8 | 6.58% | 39.4% | +64%/+8% | +13/+53/+33/-23% | 12.24% | 0.937 |
+| 52-wk high | 3 | -1.08% | 46.7% | +25%/-27% | -22/+68/-13/-21% | 13.00% | 0.990 |
+| | 5 | 3.82% | 36.5% | +53%/-9% | +2/+56/+2/-14% | 12.65% | 0.973 |
+| | 8 | 2.96% | 38.6% | +28%/+1% | -15/+59/+13/-15% | 12.24% | 0.997 |
+
+**Every cell underperforms a random portfolio** (a P(random >= actual) near 1
+is the wrong side of the test: the strategy loses to most random draws), the
+most recent quarter is negative in all six, and the second walk-forward half is
+weak or negative in five. Adding the Fortieth entry's four blowups (56 stocks)
+changes nothing (2-5% return/yr, same signs, P 0.85-0.98). One reading of the
+mirror image: 52-week-high top_k=8 sits at the 0.3rd percentile of random
+portfolios, i.e. in this universe/period "near the high" was a reliably WORSE
+place to buy than a coin-flip stock — consistent with the mean-reversion
+signals (IBS, reversal) working; not exploitable as a short leg (the
+Forty-fourth entry's SLB caveat, and that entry already showed shorting
+IBS's mirror image lost).
+
+**Net verdict: two more rejections, and a stronger basis for the Cross-mechanism
+synthesis** — basket-wide momentum is not just "decayed in Q4" but underperforms
+random selection over the full 2016-2026 window in this universe. 6 p-values
+registered (m=77); they are on the wrong side and change no verdict. 209 tests
+pass (1 new: momentum score direction). **58 -> 60 mechanisms tested (12-1 and
+52-week-high cross-sectional rotations are new constructions; 6-1 momentum was
+the Fourth entry). IBS rotation remains the sole standing finding; not declared
+tradable.**

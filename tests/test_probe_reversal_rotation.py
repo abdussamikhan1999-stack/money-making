@@ -55,3 +55,13 @@ def test_risk_off_gate_month_earns_zero_and_pays_no_cost():
     r = rr.simulate(M, S, 1, 1, gate=gate)
     assert r["months"][0] == 0.0 and len(r["months"]) == 2
     assert r["final"] == 100_000.0 * (1 + r["months"][1]) or abs(r["final"] - 100_000.0 * (1 + r["months"][1])) < 1e-6
+
+
+def test_momentum_scores_sort_winners_first():
+    idx = pd.bdate_range("2023-01-01", periods=300)
+    up = pd.Series(np.linspace(100, 200, 300), index=idx)
+    down = pd.Series(np.linspace(200, 100, 300), index=idx)
+    M = dict(close=pd.DataFrame({"up": up, "down": down}), high=None, low=None, me=[])
+    for kind in ("mom", "hi52"):
+        s = rr.scores(M, kind, 0).iloc[-1]
+        assert s["up"] < s["down"]  # lowest score is picked first: the winner / the name at its high
