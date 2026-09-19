@@ -5840,3 +5840,51 @@ and are cached. (6) Loop-invariant volatilities are precomputed. (7) Duplicated 
 **Ledger.** 24 more p-values registered (m=172 + 84 unregistered scan cells = 256, Bonferroni 0.00020); the only
 rows passing are still the three S&P index-gate drawdown rows. 217 tests pass (3 new). 64 -> 69 mechanisms tested.
 Nothing is declared tradable.
+
+
+## Eightieth: a second batch of famous-fund approaches — currency carry, sector-ETF pairs, short-vol term-structure timing — one thin real effect, one null, one that worked only in a product that no longer exists
+
+Same discipline as the Seventy-ninth entry: rules pre-registered in `probe_famous_strategies2.py`'s docstring
+before any run, survivorship-free instruments, lag-1 fills, an independent code review BEFORE the entry
+was written (six findings; two biased toward the strategy; all fixed and rerun). Everything here is
+retail-inaccessible from India as specified (US-listed ETFs, FX, shorting): research on whether each approach
+works, not an implementation plan.
+
+**1. Currency carry** (the classic macro-fund trade). 9 currencies vs USD (EUR GBP JPY AUD NZD CAD CHF NOK
+SEK), FRED 3-month interbank rates lagged one month, long top-3 / short bottom-3 carry, dollar-neutral, monthly,
+0.03%/leg, 2003-06..2026-07 (278 months). Result: **+2.06%/yr, vol 7.5%, Sharpe 0.31, max DD 30.9%, worst month
+-10.4%**; carry income +2.93%/yr, spot P&L -0.57%/yr; skew -0.34; 19 months below -3%; **2008 -27.0%**, 2009
++26.6% (a crash-then-rebound shape), 2013 -5.3%. Halves Sharpe 0.34/0.28 (steady, thin). Control: random
+3-long/3-short books. **First version compared net-vs-net and reported p(Sharpe)=0.013, p(wealth)=0.005; the review
+showed the random control redraws its whole book monthly and pays several times the strategy's turnover cost,
+biasing p in the strategy's favour. Compared gross of cost on both sides (4,000 draws): p(Sharpe)=0.070,
+p(wealth)=0.034; random mean Sharpe 0.00.** Also fixed: FRED's GBP series ends 2026-01, so its last 6 months of
+carry had been silently frozen at a stale rate; stale rates are now dropped. So carry is a real but thin premium
+(~2%/yr, borderline significance) paid for with crash risk; not a return source at this size.
+
+**2. Sector-ETF pairs** (the stat-arb archetype, Gatev-Goetzmann-Rouwenhorst). 9 SPDR sector ETFs, 1999-12..
+2026-07, 53 non-overlapping 126-day windows, the 5 closest pairs by 252-day SSD, 2-sigma entry, zero-crossing exit,
+0.2% round trip, signal at close t-2 -> position over day t (lag 1). Result: **-0.09%/yr, Sharpe 0.02, max DD 47.4%**;
+quarters +29.7%/-26.9%/-14.4%/+16.3% (total P&L per $1 pair capital); vs 5 RANDOM pairs per window (3,000 draws)
+**p(Sharpe)=0.65, p(P&L)=0.68** (random pairs earned MORE, +18.6% vs +4.6% total). Null; the classic result that the
+pairs premium has vanished since the 1990s reproduces on sector ETFs.
+
+**3. Short-volatility term-structure timing** (the vol-seller's trade). Hold SVXY when ^VIX/^VIX3M < threshold
+(contango), else T-bill cash; signal at close t, fill at the next close, earn the following day (two-day lag);
+Sharpe in EXCESS of cash; 2011-10..2026-09. SVXY buy&hold 12.23%/yr, vol 54.8%, Sharpe 0.54, **max DD 95.2%**, worst
+day -83% (2018-02-06); SPY buy&hold 15.56%/yr, vol 16.7%, **Sharpe 0.85**, DD 33.7%. Rule at ratio<1.0: 19.95%/yr, Sharpe
+0.60, DD 65.9%, exact-rotation p(Sharpe)=0.104, worst year 2018 -57%. Rule at ratio<0.9: 21.71%/yr, vol 31.0%,
+Sharpe 0.74, DD 38.6%, p=0.073, in the market 60% of days. The term-structure filter did NOT hold SVXY into its -83%
+day (the ratio had inverted) but did take the -32% day before it. **The review's structural point:** SVXY became
+a -0.5x product on 2018-02-28, and the sample splices the two. In the -0.5x era alone: SVXY buy&hold 11.81%/yr, vol
+36.7%, Sharpe 0.42, DD 62.2%; rule at <1.0 **8.39%/yr, Sharpe 0.34, DD 57.6%; rule at <0.9 -0.21%/yr, Sharpe -0.03**,
+DD 38.6%. **The 21.7%/yr headline was earned in the -1x era (mostly 2011-2017's calm, the decade before the product
+was cut down), and the timing rule has earned nothing since.** SPY beats the rule on Sharpe in every window.
+
+**Reading.** Across the two batches (Entries 79-80) every famous approach tested is either a drawdown/risk tool
+(trend, risk parity, vol-managed), a thin crash-prone premium (carry), a decayed or local anomaly (Halloween), or a
+null (pairs, vol breakout, short-vol timing since 2018). None beats a broad equity index on Sharpe, none is a
+retail-accessible return source, and the funds' actual edge in these constructions is leverage and breadth.
+Ledger: 6 more p-values registered (178 registered + 84 unregistered = m=262, Bonferroni 0.00019); the only rows
+passing are still the three S&P index-gate drawdown effects. 219 tests pass (2 new). 69 -> 72 mechanisms tested;
+nothing is declared tradable.

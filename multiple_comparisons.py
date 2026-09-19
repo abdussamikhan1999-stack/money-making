@@ -312,6 +312,13 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Vol breakout SPY short k=0.4 (Seventy-ninth)", 1.000),
     ("Vol breakout SPY short k=0.6 (Seventy-ninth)", 1.000),
     ("Vol breakout SPY short k=0.8 (Seventy-ninth)", 1.000),
+    # Eightieth entry: currency carry (control GROSS of cost on both sides), sector-ETF pairs, SVXY term-structure timing.
+    ("Currency carry L3/S3, Sharpe vs random 3v3, gross (Eightieth)", 0.0697),
+    ("Currency carry L3/S3, wealth vs random 3v3, gross (Eightieth)", 0.0335),
+    ("Sector-ETF pairs (SSD top-5), Sharpe vs random pairs (Eightieth)", 0.6471),
+    ("Sector-ETF pairs (SSD top-5), P&L vs random pairs (Eightieth)", 0.6771),
+    ("SVXY when VIX/VIX3M<1.0, Sharpe exact rotation (Eightieth)", 0.1044),
+    ("SVXY when VIX/VIX3M<0.9, Sharpe exact rotation (Eightieth)", 0.0728),
     # NOT individually registered (Sixty-fourth entry): 84 further cells, 21 fixed-step phase offsets
     # and 21 calendar-anchored offsets x {IBS(5) top_k=5, rev(21) top_k=8}. Counting them, an honest
     # Bonferroni family is m>=161 (threshold ~0.0003); the smallest p among them is 0.003.
