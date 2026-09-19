@@ -33,8 +33,10 @@ are in CLAUDE.md's numbered entries (56-73 cover the latest work).
   replicate on 2007-16 (p=0.26). Net economics of the short hold: ~8-13%/yr on
   capital in the market 25-50% of the time, cost- and slippage-sensitive.
 - **Robust observations that are not edges:** (1) holding equity with gold
-  roughly halves the drawdown vs equity alone (12.8% on NIFTY+INR gold 2008-26,
-  29.1% on S&P+USD gold 2001-26, ~11% on the NSE ETFs since 2009) but its return
+  roughly halves the drawdown vs equity alone (24-27% for a 50/50 on Sensex+INR
+  gold 2003-26 and 26-29% on S&P+USD gold 2000-26, both containing the full 2008
+  crash; only ~11-13% on samples that start after it, i.e. NSE ETFs since 2009)
+  but its return
   is carried by gold bull runs and no timing rule on top of it helps reliably
   (Entries 70-72); (2) a NIFTY/S&P trend gate roughly halves index drawdown over
   decades at a cost of 1-3 points/yr of return and no alpha; its best length

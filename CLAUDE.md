@@ -5542,3 +5542,52 @@ ones." It stays "unproven" and I would now weight it as more likely to be a
 finding of the discovery sample than a tradable effect. 6 more p-values registered
 (m~136 + 84 scan cells); 213 tests pass; no count change (64 mechanisms tested); not
 declared tradable. The forward record (Sixty-seventh entry) remains the arbiter.
+
+
+## Seventy-fifth: a descriptive static equity/gold grid on histories that contain the full 2008 crash — the drawdown scales with the equity share, annual rebalancing is not worse than monthly, and the "12.8%" was an artefact of where the sample started
+
+No test statistic here (static weights have no timing to test), just the numbers a
+person choosing weights actually needs, on the longest data available
+(`probe_etf_rotation.py --alloc`): Sensex + gold in rupees (GC=F x INR=X), 2003-12 to
+2026-09 (273 months, the full 2008 crash), and S&P 500 + gold in dollars, 2000-08 to
+2026-09 (313 months); price indices (no dividends), cash leg at a flat 4%/yr, month-end
+closes, 0.1% per leg on rebalancing turnover, annual = December month-ends.
+
+| weights / rebalance | Sensex + INR gold: return, max DD, Calmar, worst rolling 3y | S&P + USD gold: return, max DD, Calmar, worst rolling 3y |
+|---|---|---|
+| 30% equity / 70% gold, monthly | 14.64%, 19.7%, 0.74, -2.7% | 10.24%, 26.1%, 0.39, -7.2% |
+| 30/70, annual | 14.85%, 17.2%, 0.86, -2.8% | 10.31%, 26.5%, 0.39, -6.3% |
+| 50/50, monthly | 14.24%, 27.0%, 0.53, +1.3% | 9.37%, 26.1%, 0.36, -2.4% |
+| 50/50, annual | 14.55%, 23.8%, 0.61, +1.1% | 9.45%, 26.7%, 0.35, -1.4% |
+| 70% equity / 30% gold, monthly | 13.52%, 37.2%, 0.36, +3.3% | 8.32%, 36.3%, 0.23, -6.8% |
+| 70/30, annual | 13.86%, 33.8%, 0.41, +3.8% | 8.39%, 34.6%, 0.24, -6.0% |
+| 40/40/20 cash, monthly | 12.28%, 21.5%, 0.57, +1.9% | 8.41%, 20.8%, 0.40, -1.1% |
+| 40/40/20 cash, annual | 12.60%, 18.5%, 0.68, +1.8% | 8.50%, 20.9%, 0.41, -0.3% |
+
+**What it says.**
+1. *Corrects the Seventieth/Seventy-second entries' headline again.* With the full 2008
+   crash in the sample, a 50/50 equity/gold portfolio had a 24-27% max drawdown on
+   both markets (equity alone: ~55% for the S&P), not 11-13%. The NIFTY-proxy 12.8%
+   in the Seventy-second entry started its decisions in September 2008, after the first
+   leg of the fall, and the NSE-ETF ~11% starts in 2009. README corrected.
+2. *Drawdown scales with the equity share* (Sensex: 17-20% at 30% equity, 24-27% at
+   50%, 34-37% at 70%; S&P: 26%, 26%, 35-36%) and the worst rolling 3-year return
+   improves with equity share on the Sensex sample, so the weights are a risk
+   preference, not a discovery. Adding a 20% cash sleeve lowers the drawdown to
+   ~18-21% at a cost of ~1.5-2 points/yr.
+3. *Annual rebalancing is at least as good as monthly* (equal or better return in all
+   8 pairs by ~0.05-0.3 points, drawdown equal or lower in 5 of 8): fewer trades,
+   fewer taxable events, no reason to rebalance monthly.
+4. *More gold looks better here because gold beat equities in this sample* (gold
+   from ~$270 to ~$4,400 and the rupee's decline both add to INR gold; S&P
+   returned 8.3%/yr on this data). The grid cannot tell you gold will keep doing
+   that; the Sensex 30/70 winner is a bet on it. The one gold-flat stretch
+   (2013-2019) is where the 50/50's return trailed equity's (Seventieth entry).
+
+**Not a strategy claim and not a recommendation:** dividends, taxes, expense ratios,
+tracking error of the ETFs, and a gold bear longer than 2013-19 are not modeled. 213
+tests pass (no new logic worth a test: the grid reuses `stats`, tested previously); no
+count change (64 mechanisms tested). Its use is as the risk-management baseline any
+future candidate should be compared against: a 50/50 annual-rebalance
+equity/gold portfolio earned ~9.5-14.6%/yr at a ~24-27% drawdown with no signal at
+all.
