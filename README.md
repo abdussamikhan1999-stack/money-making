@@ -515,6 +515,16 @@ is not this trade in disguise. Downgraded to a weak, sample-specific effect;
 the descriptive finding (calm VIX during an oil shock) stands. See CLAUDE.md's
 "Fifty-eighth" entry.
 
+**Fill-lag fix and short-term reversal (Fifty-ninth entry,
+`probe_reversal_rotation.py`)** — IBS rotation's backtest filled at the same
+close it ranked on; with a realistic next-close fill it earns ~20%/yr (not
+22%) and its raw p at top_k=5 moves from 0.015 to 0.051, still all quarters
+positive. The classic short-term reversal factor (rank by trailing 21-day
+return, buy 8 losers) looked like a pass (20.9%/yr, p=0.0027) but is 0.85
+correlated with IBS and collapses to 15.6%/yr, 57% drawdown, p=0.11 once four
+real blowups are added to the universe (IBS improves under the same stress).
+Rejected. See CLAUDE.md's "Fifty-ninth" entry.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an

@@ -153,6 +153,25 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Fear-buy S&P500 1990+ enter+5d (Fifty-eighth)", 0.1995),
     ("Fear-buy S&P500 1990+ enter+10d (Fifty-eighth)", 0.1356),
     ("Fear-buy S&P500 1990+ enter+15d (Fifty-eighth)", 0.0602),
+    # Fifty-ninth entry: fill-lag-1 (real-account-executable) IBS rotation, and
+    # the pre-registered 3x3 short-term-reversal grid, 1,500-seed lag-matched
+    # random-portfolio control, plus 4 post-hoc extension cells past the grid edge.
+    ("IBS rotation top_k=3 lag-1 fill (Fifty-ninth)", 0.0546),
+    ("IBS rotation top_k=5 lag-1 fill (Fifty-ninth)", 0.0506),
+    ("IBS rotation top_k=8 lag-1 fill (Fifty-ninth)", 0.0300),
+    ("Reversal(5) top_k=3 (Fifty-ninth)", 0.3471),
+    ("Reversal(5) top_k=5 (Fifty-ninth)", 0.1746),
+    ("Reversal(5) top_k=8 (Fifty-ninth)", 0.3977),
+    ("Reversal(10) top_k=3 (Fifty-ninth)", 0.0706),
+    ("Reversal(10) top_k=5 (Fifty-ninth)", 0.2385),
+    ("Reversal(10) top_k=8 (Fifty-ninth)", 0.0560),
+    ("Reversal(21) top_k=3 (Fifty-ninth)", 0.3258),
+    ("Reversal(21) top_k=5 (Fifty-ninth)", 0.0660),
+    ("Reversal(21) top_k=8 (Fifty-ninth)", 0.0027),
+    ("Reversal(21) top_k=12 (Fifty-ninth, post hoc)", 0.0160),
+    ("Reversal(42) top_k=8 (Fifty-ninth, post hoc)", 0.0526),
+    ("Reversal(63) top_k=8 (Fifty-ninth, post hoc)", 0.0899),
+    ("Reversal(42) top_k=12 (Fifty-ninth, post hoc)", 0.0227),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number
