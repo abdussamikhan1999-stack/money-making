@@ -4577,3 +4577,89 @@ bets, likely correlated, which would mean C adds less than it appears);
 (3) significance-test the drawdown-only rival before crediting VIX with the
 extra 2pp. **The long-only IBS rotation remains this project's sole standing
 finding; 57 mechanisms tested, none has cleared the bar to trade.**
+
+
+## Fifty-eighth: following up the VIX-spike fear-buy — the Fifty-seventh entry's headline (12/12 months, +7.4%) was partly the decision grid's luck, the "wait for persistence" fix does not replicate on the S&P 500, and IBS rotation is not this trigger in disguise
+
+Direct follow-up on the Fifty-seventh entry's own three "next steps"
+(`probe_fear_followup.py`), plus two checks that entry's grid-phase lesson
+called for. **Net effect: the fear-buy is downgraded from "the one candidate
+this entry could not break" to "a weak, market- and sample-specific effect."**
+
+**1. Grid-free re-test.** Instead of the 160 non-overlapping monthly decision
+days (whose sampled days happen to fall anywhere inside a spike), take every
+day the trigger is on and keep one entry per 21-trading-day spike cluster
+(the FIRST day, the real-time-executable definition). India VIX / 252d median:
+>=1.5 gives **23 events, not 12**; mean forward 21d **+2.38%** (not +7.4%),
+median +2.77%, **16/23 positive, worst -28.5%**, random-day p=0.063
+(unconditional mean +0.91%, 61% of days up). >=1.4: 30 events, +1.66%, p=0.194;
+>=1.7: 13 events, +3.35%, 9/13, p=0.026. US VIX version: +1.1% to +1.4%,
+p=0.26-0.43. The Fifty-seventh entry's "p=0.000" and "12 of 12" describe the
+monthly-grid version only; no honest reading of the real-time trigger supports
+them. (Returns are gross of the 0.4% round-trip cost.)
+
+**2. Drawdown rival: not separable in the event version, partly separable in
+the regression.** A NIFTY-drawdown-only trigger matched on count (<= -15% from
+the 252d high, 22 events) earns +2.36% (p=0.070) vs the India VIX trigger's
++2.38% (p=0.063), and the two share only 1 entry day, i.e. they are two
+different, equally weak signals. Daily OLS of forward 21d return on both
+(standardised, Newey-West 21-lag t-stats): VIX-rel alone beta +0.0088, t=4.56;
+drawdown alone t=-2.99; together VIX-rel keeps t=+2.18 and drawdown falls to
+t=-1.32. So VIX carries some information beyond the drawdown level, but the
+per-event edge is small.
+
+**3. IBS rotation overlap: it is NOT the same trade.** The 52-stock monthly IBS
+rotation's return in the 12 months right after an India-VIX spike (rel>=1.4 at
+the month-end rebalance) averages +2.44% vs +1.84% in the other 108 months
+(random-month p=0.38); removing the spike months leaves +504% compounded vs
++632% with them. The IBS finding does not depend on VIX spikes. The overlap
+also carries a risk note: its single worst month in 10 years, 2020-02-28
+(-29.9%), was a spike month, followed by +25.9% and -2.3% — the
+bounce-harvesting volatility the Fortieth/Fifty-first entries flagged
+concentrates exactly where a fear-buy would also be active, so the two are
+not independent diversifiers in a crash.
+
+**4. Why the grid version looked so much better (exploratory, post hoc, no
+significance claimed).** Forward 21d return by how long the spike has been
+on: first day +1.3% (n=35), days 1-5 +3.5% (74), days 6-15 **+6.7%** (68), day
+16+ +5.8% (96). Entering k days after the first crossing (23 events): k=0
++2.38% (16/23, worst -28.5%), k=5 +3.34% (19/23), **k=10 +5.05% (20/23, worst
+-2.4%)**, k=15 +3.54% (18/23). A monthly grid samples mostly mid-spike days,
+which is why it looked like +7.4%: the effect was a "wait for persistence"
+effect that the fixed grid happened to encode, not a property of spikes
+per se. That is a hypothesis generated from the same 23 events it fits (5
+delays tried), so it needed out-of-sample support.
+
+**5. Out-of-sample replication on the S&P 500, 1990-2026 (74 first-crossing
+events, VIX / 252d median >= 1.5; includes 2000-02 and 2008, which the India
+sample — India VIX rel needs 252 days of a series starting 2008-03, so 2009+ —
+structurally cannot contain).** Unconditional mean fwd21 +0.81% (64% up).
+Enter +0d: +1.21%, 46/74, worst -22.0%, p=0.222 (first half +0.02%, second
+half +2.40%). +5d: +1.25%, p=0.200. **+10d: +1.38%, 51/74, worst -18.6%,
+p=0.136.** +15d: +1.61%, p=0.060. The four worst +10d events are all 2008
+(-18.6%, -13.1%, -12.4%, -10.0%). **The persistence effect does not
+replicate:** a delay improves the US numbers only marginally and none clears
+0.05 uncorrected. The India +5% at k=10 came from a 2009+ sample of V-shaped
+recoveries with no 2008 in it — the exact regime-fluke risk the Fifty-first
+entry's council named for any mean-reversion bet that has paid in this window.
+
+**Multiple comparisons.** 10 more p-values registered (6 grid-free, 4 S&P
+delays), family m=39, Bonferroni threshold 0.00128; nothing passes; the six
+rotation-floor rows from the Fifty-seventh entry stay in the registry for
+counting honesty but are superseded by these. The BH "flip" of IBS rotation
+noted in that entry vanishes at m=39, confirming it was an artifact of the
+floor-valued rows.
+
+**Net verdict.** The VIX-spike fear-buy is not a finding this project can
+lean on: in real-time (first-crossing) form it is +2.4% per 21 days at
+p=0.06 on India (16/23 positive, one -28.5% loss), +1.2% at p=0.22 on the
+S&P since 1990, statistically indistinguishable from a drawdown-only rule,
+and its persistence refinement fails out of sample. What survives from the
+Fifty-seventh entry is the descriptive observation (India VIX is at its 5th
+percentile during a Brent +36% shock, unlike every prior such episode since
+2008), not a strategy. The trigger is still OFF (0.93). The Fifty-seventh
+entry's "concrete next step (1)", an append-only forward trigger log, is
+therefore NOT worth building. **The long-only IBS rotation remains this
+project's sole standing finding; 57 mechanisms tested, none has cleared the
+bar to trade.** (This entry adds no new mechanism count: it rejects its own
+predecessor's follow-ups.) 203 tests pass (3 new).
