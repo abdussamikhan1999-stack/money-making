@@ -77,7 +77,7 @@ def corwin_schultz_half_spread(M, smooth=3):
     return (spread.rolling(smooth, min_periods=1).mean() / 2)
 
 
-def simulate(M, S, top_k, lag, rng=None, capital=100_000.0, hs=None, hs_mult=1.0):
+def simulate(M, S, top_k, lag, rng=None, capital=100_000.0, hs=None, hs_mult=1.0, gate=None):
     """Long the top_k lowest-score names (random eligible names if rng given).
     hs: optional half-spread matrix (see corwin_schultz_half_spread); each pick pays
     ITS OWN half spread x hs_mult on both legs, so the asymmetry between
@@ -92,6 +92,10 @@ def simulate(M, S, top_k, lag, rng=None, capital=100_000.0, hs=None, hs_mult=1.0
         ea, eb = a + lag, b + lag
         if eb >= len(c):
             break
+        if gate is not None and not gate[a]:  # risk-off month: sit in cash (0%, no cost)
+            months.append(0.0)
+            at.append(a)
+            continue
         ok = ~np.isnan(sc[a]) & ~np.isnan(c[ea]) & ~np.isnan(c[eb])
         cand = np.flatnonzero(ok)
         if len(cand) == 0:
@@ -182,6 +186,47 @@ def spread_test(M, years, seeds, top_k=5):
                   f"random control {cagr(finals.mean(), years):.2f}%/yr; p={p:.4f}")
 
 
+def gate_test(M, years, seeds):
+    """Does going to cash when NIFTY < its L-day SMA (at the ranking close, known before the
+    lag-1 fill) cut IBS rotation's drawdown without giving back the edge? Pre-registered:
+    L in {100,150,200}, top_k in {5,8}. Control: same NUMBER of risk-off months chosen at random."""
+    import probe_macro_analog as pm
+    nifty = pm.load()["nifty"].dropna()
+    nifty = nifty.reindex(M["close"].index.union(nifty.index)).ffill().reindex(M["close"].index)
+    S = scores(M, "ibs", 5)
+    for top_k in (5, 8):
+        base = simulate(M, S, top_k, 1)
+        print(f"\ntop_k={top_k} ungated: {cagr(base['final'], years):.2f}%/yr, maxDD {base['max_dd']:.1%}")
+        for L in (100, 150, 200):
+            sma = nifty.rolling(L, min_periods=L).mean()
+            gate = (nifty > sma).fillna(True).to_numpy()
+            r = simulate(M, S, top_k, 1, gate=gate)
+            off = [a for a in M["me"][:-1] if not gate[a]]
+            rng = np.random.default_rng(0)
+            # control: turn the same number of (random) months off
+            finals, dds = [], []
+            for _ in range(seeds):
+                idx = set(rng.choice(M["me"][:-1], size=len(off), replace=False)) if off else set()
+                g = np.ones(len(nifty), bool)
+                for i in idx:
+                    g[i] = False
+                rr = simulate(M, S, top_k, 1, gate=g)
+                finals.append(rr["final"])
+                dds.append(rr["max_dd"])
+            finals = np.array(finals)
+            p = ((finals >= r["final"]).sum() + 1) / (seeds + 1)
+            pdd = ((np.array(dds) <= r["max_dd"]).sum() + 1) / (seeds + 1)
+            mo = r["months"]
+            h = len(mo) // 2
+            qs = [np.prod(1 + q) - 1 for q in np.array_split(mo, 4)]
+            print(f"    halves {np.prod(1 + mo[:h]) - 1:+.0%}/{np.prod(1 + mo[h:]) - 1:+.0%}, quarters {[f'{q:+.0%}' for q in qs]}, "
+                  f"worst single month {mo.min():+.1%} (ungated {base['months'].min():+.1%}), Calmar {cagr(r['final'], years) / (100 * r['max_dd']):.2f} "
+                  f"(ungated {cagr(base['final'], years) / (100 * base['max_dd']):.2f})")
+            print(f"  SMA{L}: {len(off)}/{len(M['me']) - 1} months in cash -> {cagr(r['final'], years):.2f}%/yr, "
+                  f"maxDD {r['max_dd']:.1%}; random {len(off)} off-months: {cagr(finals.mean(), years):.2f}%/yr, "
+                  f"DD {np.mean(dds):.1%}; p(return)={p:.3f}, p(drawdown as low)={pdd:.3f}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=1500)
@@ -189,6 +234,7 @@ def main():
     ap.add_argument("--stress", action="store_true", help="add 4 real blowups (survivorship stress)")
     ap.add_argument("--overlap", action="store_true", help="how much is rev(21) just IBS?")
     ap.add_argument("--spread", action="store_true", help="price each pick's own Corwin-Schultz half spread")
+    ap.add_argument("--gate", action="store_true", help="NIFTY SMA trend gate on IBS rotation")
     ap.add_argument("--extend", action="store_true", help="EXPLORATORY: windows/top_k beyond the pre-registered grid")
     a = ap.parse_args()
     M = load_matrices(stress=a.stress)
@@ -202,6 +248,8 @@ def main():
         return overlap(M, years)
     if a.spread:
         return spread_test(M, years, a.seeds)
+    if a.gate:
+        return gate_test(M, years, a.seeds)
     if a.extend:
         print("=== EXPLORATORY extension past the pre-registered grid's edge (no p claimed as pre-registered) ===")
         for window, top_k in ((21, 12), (42, 8), (63, 8), (42, 12)):
