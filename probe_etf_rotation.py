@@ -107,10 +107,58 @@ def descriptive(px, me):
         print(f"  rolling 3y CAGR {name:10s}: worst {roll.min():6.2f}%, median {np.median(roll):6.2f}%, share of windows < 5%/yr {np.mean(roll < 5):.0%}")
 
 
+def multi(seeds):
+    """Seventy-first entry (pre-registered): cross-sectional rotation across 4 ETFs (NIFTYBEES, BANKBEES,
+    JUNIORBEES, GOLDBEES): momentum L in {6, 12} months and 1-month reversal, top_k in {1, 2}, monthly,
+    next-close fill, 0.1% per leg on changes. Control: k random ETFs each month (same costs)."""
+    px = pd.DataFrame({t: fetch(t + ".NS") for t in ("NIFTYBEES", "BANKBEES", "JUNIORBEES", "GOLDBEES")}).dropna()
+    me = month_ends(px.index)
+    me = me[me >= 260]
+    p = px.to_numpy()
+    n = len(me) - 1
+    print(f"\n{px.index[0].date()} .. {px.index[-1].date()}, 4 ETFs, {n} monthly decisions")
+
+    def run_w(W):
+        rets, prev = [], np.zeros(4)
+        for i in range(n):
+            a, b = me[i] + 1, me[i + 1] + 1
+            if b >= len(p):
+                break
+            rets.append(float((W[i] * (p[b] / p[a] - 1)).sum() - COST * np.abs(W[i] - prev).sum()))
+            prev = W[i]
+        return np.array(rets)
+
+    def weights(kind, L, k):
+        W = np.zeros((n, 4))
+        for i in range(n):
+            t = me[i]
+            r = p[t] / p[t - 21 * L] - 1
+            order = np.argsort(-r) if kind == "mom" else np.argsort(r)
+            W[i, order[:k]] = 1.0 / k
+        return W
+
+    eqw = run_w(np.full((n, 4), 0.25))
+    print(line("equal-weight all four (monthly)", eqw))
+    for kind, L, k in (("mom", 6, 1), ("mom", 6, 2), ("mom", 12, 1), ("mom", 12, 2), ("rev", 1, 1), ("rev", 1, 2)):
+        r = run_w(weights(kind, L, k))
+        rng = np.random.default_rng(0)
+        fin = []
+        for _ in range(seeds):
+            W = np.zeros((n, 4))
+            for i in range(n):
+                W[i, rng.choice(4, k, replace=False)] = 1.0 / k
+            fin.append(stats(run_w(W))[2])
+        pv = ((np.array(fin) >= stats(r)[2]).sum() + 1) / (seeds + 1)
+        print(line(f"{kind} L={L}m top_k={k}", r) + f"; random-pick mean {((np.mean(fin) ** (1 / (len(r) / 12)) - 1) * 100):.2f}%/yr, p={pv:.3f}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=2000)
+    ap.add_argument("--multi", action="store_true")
     a = ap.parse_args()
+    if a.multi:
+        return multi(min(a.seeds, 1000))
     px = load()
     me = month_ends(px.index)
     me = me[me >= 260]  # need a year of history for the lookbacks
