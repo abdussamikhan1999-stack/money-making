@@ -4806,3 +4806,83 @@ best available proxy; whole shares: Fifty-fourth; fill lag: Fifty-ninth).
 **IBS rotation remains the sole standing finding at ~20%/yr backtest, with
 no surviving significance claim, unresolved survivorship exposure, and only
 2 days of forward paper data; not declared tradable. 58 mechanisms tested.**
+
+
+## Sixty-first: a NIFTY trend gate on IBS rotation — the first drawdown control that roughly doubles Calmar instead of just trading return for risk, robust at top_k=5 but not at top_k=8
+
+IBS rotation's real weakness is a ~39% max drawdown (Fifty-ninth entry, lag-1
+fills). Prior attempts to cut it — a per-stock short leg (Forty-fourth), a NIFTY
+futures hedge (Forty-fifth, capital-blocked), a half NIFTYBEES hedge
+(Forty-sixth/Forty-seventh, 12.0%/yr at 24.2% DD, i.e. Calmar 0.50 vs the
+unhedged 0.58) — either destroyed the edge or did not improve risk-adjusted
+return. This entry tests the standard alternative, a whole-portfolio trend
+gate: at each month-end ranking close, if NIFTY is below its L-day simple
+moving average, hold cash (0%, no cost) for the next month, else run the
+normal lag-1 rotation. The signal is known at the ranking close, before the
+next-close fill (no new look-ahead). Pre-registered before running:
+L in {100, 150, 200} x top_k in {5, 8}. (`probe_reversal_rotation.py --gate`.)
+
+**52-stock WIDE_UNIVERSE, 10y (ungated: top_k=5 20.05%/yr, DD 39.5%, Calmar
+0.51; top_k=8 19.11%/yr, DD 33.3%, Calmar 0.57).** The gate puts the portfolio
+in cash 38-40 of 120 months (a third of the time; cash earns 0 here).
+
+| top_k / SMA | return/yr | max DD | Calmar | worst month | p(DD as low as random off-months) |
+|---|---|---|---|---|---|
+| 5 / 100 | 15.11% | 13.5% | 1.12 | -12.4% | 0.040 |
+| 5 / 150 | 14.79% | 14.8% | 1.00 | -12.4% | 0.062 |
+| 5 / 200 | 13.97% | 17.9% | 0.78 | -12.4% | 0.116 |
+| 8 / 100 | 13.58% | 11.4% | 1.19 | -10.5% | 0.016 |
+| 8 / 150 | 12.48% | 16.2% | 0.77 | -10.6% | 0.100 |
+| 8 / 200 | 10.75% | 17.9% | 0.60 | -10.6% | 0.153 |
+
+(Ungated worst month: -30.0% at top_k=5, -24.7% at top_k=8.) Both walk-forward
+halves and all four quarters are positive in every cell. The gate costs 5-9
+points of annual return (13.4-15.1% vs 20.05% at top_k=5) but takes drawdown
+down by 20-26 points; and the return it keeps is NOT distinguishable from
+turning the same number of RANDOM months off (p(return) 0.28-0.71: it does not
+"time" returns better than chance), while the drawdown it avoids IS better than
+random off-months at the shorter SMAs (p 0.016-0.062 at SMA100/150, top_k=5/8;
+0.116-0.153 at SMA200). Smooth across L: return falls and drawdown rises
+monotonically from SMA100 to SMA200, no cliff. It beats the half-hedge in
+risk-adjusted terms (Calmar 1.0-1.1 vs 0.50) over the same window.
+
+**Survivorship stress (the Fortieth entry's four blowups added, 56 stocks;
+ungated top_k=5 21.87%/yr DD 36.2%, top_k=8 22.67%/yr DD 33.5%).** top_k=5
+holds up: SMA100/150/200 give 19.13/19.75/18.48%/yr at DD 20.8/14.8/15.2%,
+Calmar 0.92/1.34/1.22 vs 0.60 ungated, halves and quarters all positive. **top_k=8
+does not:** SMA100 helps (16.34%/yr, DD 18.9%, Calmar 0.86 vs 0.68) but SMA150
+and SMA200 leave DD at 27.9%/30.6% with Calmar 0.57/0.45, i.e. worse than
+ungated, and p(DD) 0.40-0.46. So the benefit is robust only for the concentrated
+top_k=5 book, where a cluster of blowup-name picks is what the gate dodges;
+the broader top_k=8 book already diversifies away part of the tail the gate
+targets, and the gate then mostly just costs return.
+
+**Caveats that matter.**
+1. *Drawdown is measured on month-end capital points only* (the whole rotation
+   family's convention). Intramonth drawdowns are larger and a monthly gate
+   cannot act on them, so the true improvement is smaller than the tables show.
+2. *One regime.* 2016-2026 contains one crash (March 2020) and otherwise a
+   rising market; a trend gate's classic failure mode is whipsaw in a
+   sideways year, and there is no such stretch of length here.
+3. *Selection.* p(DD) values are 0.016-0.153 uncorrected; six of them are
+   registered in `multiple_comparisons.py` (m=65; Bonferroni threshold 0.00077);
+   none clears it, so this is descriptive, not confirmed. The return side of
+   the gate has no statistical support at all.
+4. *Cost.* A third of the time in cash is a real opportunity cost (cash yield
+   not modeled; at ~6% it would add roughly 2 points/yr).
+5. *Prior.* Trend filters are a standard, prior-motivated overlay, not a
+   pattern mined from this data, and the L grid was fixed in advance.
+
+**Net verdict.** Not a new mechanism (no count change), but the most useful
+result for IBS rotation's actual bottleneck since the ETF hedge: at top_k=5, a
+100-150-day NIFTY trend gate roughly doubles Calmar (0.51 -> 1.0-1.1; 0.60 ->
+0.9-1.3 under blowup stress) at a cost of ~5 points/yr and a third of the time
+in cash. It does not fix top_k=8, does not turn the return significant, and
+its edge is one crash. **Still not declared tradable.** Concrete next steps,
+none done here: (1) add the gate as a THIRD forward tracker alongside the two
+existing ones, since the gate's live behaviour (how often it flips, whipsaw) is
+exactly the thing a backtest with one crash cannot answer, (2) check the gate
+against a longer NIFTY history with the SAME rule applied to the IBS signal on
+older data if a point-in-time universe ever becomes available, (3) test a
+cash-yield-adjusted version. **The long-only IBS rotation remains the sole
+standing finding; 58 mechanisms tested, none has cleared the bar to trade.**
