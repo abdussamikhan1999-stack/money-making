@@ -27,11 +27,14 @@ HOLD = m.HOLD
 
 
 def declustered_events(mask, gap=HOLD):
-    idx, last = [], -10**9
+    """One event per spike CLUSTER: an 'on' day with no 'on' day in the previous `gap` rows. The gap is measured
+    from the last 'on' day, not the last accepted event (review finding: measuring from the last event re-entered
+    every `gap` days inside a long spike, i.e. mid-spike entries counted as first crossings)."""
+    idx, last_on = [], -10**9
     for i in np.flatnonzero(mask):
-        if i - last >= gap:
+        if i - last_on >= gap:
             idx.append(i)
-            last = i
+        last_on = i
     return np.array(idx, dtype=int)
 
 

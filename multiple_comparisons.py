@@ -143,16 +143,16 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     # Fifty-eighth entry: grid-free re-test of the same trigger (one entry per
     # 21d spike cluster, random-day null) - the honest replacement for the six
     # rotation-floor rows above - and the S&P 500 1990+ replication.
-    ("Fear-buy grid-free india-VIX>=1.4 (Fifty-eighth)", 0.1937),
-    ("Fear-buy grid-free india-VIX>=1.5 (Fifty-eighth)", 0.0631),
-    ("Fear-buy grid-free india-VIX>=1.7 (Fifty-eighth)", 0.0263),
-    ("Fear-buy grid-free US-VIX>=1.4 (Fifty-eighth)", 0.2565),
-    ("Fear-buy grid-free US-VIX>=1.5 (Fifty-eighth)", 0.3104),
-    ("Fear-buy grid-free US-VIX>=1.7 (Fifty-eighth)", 0.4304),
-    ("Fear-buy S&P500 1990+ enter+0d (Fifty-eighth)", 0.2220),
-    ("Fear-buy S&P500 1990+ enter+5d (Fifty-eighth)", 0.1995),
-    ("Fear-buy S&P500 1990+ enter+10d (Fifty-eighth)", 0.1356),
-    ("Fear-buy S&P500 1990+ enter+15d (Fifty-eighth)", 0.0602),
+    ("Fear-buy grid-free india-VIX>=1.4 (Fifty-eighth, corrected Seventy-seventh)", 0.7947),
+    ("Fear-buy grid-free india-VIX>=1.5 (Fifty-eighth, corrected Seventy-seventh)", 0.4986),
+    ("Fear-buy grid-free india-VIX>=1.7 (Fifty-eighth, corrected Seventy-seventh)", 0.0921),
+    ("Fear-buy grid-free US-VIX>=1.4 (Fifty-eighth, corrected Seventy-seventh)", 0.8076),
+    ("Fear-buy grid-free US-VIX>=1.5 (Fifty-eighth, corrected Seventy-seventh)", 0.8160),
+    ("Fear-buy grid-free US-VIX>=1.7 (Fifty-eighth, corrected Seventy-seventh)", 0.9197),
+    ("Fear-buy S&P500 1990+ enter+0d (Fifty-eighth, corrected Seventy-seventh)", 0.4486),
+    ("Fear-buy S&P500 1990+ enter+5d (Fifty-eighth, corrected Seventy-seventh)", 0.7804),
+    ("Fear-buy S&P500 1990+ enter+10d (Fifty-eighth, corrected Seventy-seventh)", 0.5931),
+    ("Fear-buy S&P500 1990+ enter+15d (Fifty-eighth, corrected Seventy-seventh)", 0.3497),
     # Fifty-ninth entry: fill-lag-1 (real-account-executable) IBS rotation, and
     # the pre-registered 3x3 short-term-reversal grid, 1,500-seed lag-matched
     # random-portfolio control, plus 4 post-hoc extension cells past the grid edge.
