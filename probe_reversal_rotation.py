@@ -59,6 +59,10 @@ def scores(M, kind, window):
     if kind == "ibs":
         ibs = ((c - l) / (h - l).replace(0, np.nan))
         return ibs.rolling(window, min_periods=window).mean()
+    if kind == "hi52":  # George-Hwang: nearness to the 252d high; NEGATED so "lowest score" = nearest the high
+        return -(c / c.rolling(252, min_periods=252).max())
+    if kind == "mom":  # Jegadeesh-Titman 12-1: return from t-252 to t-21, NEGATED so highest momentum sorts first
+        return -(c.shift(21) / c.shift(252) - 1)
     return c / c.shift(window) - 1  # reversal: trailing return, lowest = biggest loser
 
 
@@ -131,6 +135,7 @@ def report(M, kind, window, top_k, lag, seeds, years):
     half = n // 2
     h1, h2 = np.prod(1 + r["months"][:half]) - 1, np.prod(1 + r["months"][half:]) - 1
     qs = [np.prod(1 + q) - 1 for q in np.array_split(r["months"], 4)]
+    years = len(r["months"]) / 12  # annualize over the months actually invested (momentum needs ~1y of history first)
     line = (f"{kind}({window}) top_k={top_k} lag={lag}: {cagr(r['final'], years):6.2f}%/yr, maxDD {r['max_dd']:.1%}, "
             f"halves {h1:+.0%}/{h2:+.0%}, quarters {[f'{q:+.0%}' for q in qs]}")
     if seeds:
@@ -283,6 +288,7 @@ def main():
     ap.add_argument("--spread", action="store_true", help="price each pick's own Corwin-Schultz half spread")
     ap.add_argument("--gate", action="store_true", help="NIFTY SMA trend gate on IBS rotation")
     ap.add_argument("--index-gate", action="store_true", help="trend gate on NIFTY 2008+ and S&P 1950+")
+    ap.add_argument("--momentum", action="store_true", help="12-1 momentum and 52-week-high rotation")
     ap.add_argument("--extend", action="store_true", help="EXPLORATORY: windows/top_k beyond the pre-registered grid")
     a = ap.parse_args()
     if a.index_gate:
@@ -296,6 +302,12 @@ def main():
         return
     if a.overlap:
         return overlap(M, years)
+    if a.momentum:
+        print(f"=== basket-wide momentum rotations, lag 1, {a.seeds}-seed control (pre-registered 2 signals x top_k 3/5/8) ===")
+        for kind in ("mom", "hi52"):
+            for top_k in (3, 5, 8):
+                print(report(M, kind, 0, top_k, 1, a.seeds, years)[0])
+        return
     if a.spread:
         return spread_test(M, years, a.seeds)
     if a.gate:
