@@ -5201,3 +5201,23 @@ execution-cost measurement for oversold names at the close (the one input
 that decides whether ~0.5% gross per trade is tradable) is now the most valuable
 missing data; (3) any live decision should be sized to a strategy that earns
 single-digit percent per year net, not ~20%. 210 tests pass (1 new: hold logic).
+
+
+## Sixty-seventh: the unhedged paper tracker now records the short-hold hypothesis directly — no extra runs needed
+
+Implements the Sixty-sixth entry's first implication. `paper_track_ibs_rotation.py`'s
+`mark_to_market` step now also writes, into the record it closes, a
+`horizon_returns` block computed from the price history available at mark time:
+for h in {5, 10} trading days, the gross mean return of the logged picks from the
+lag-1 fill (the close after the record's date, as in the backtest), the
+equal-weight return of every symbol in the 52-stock universe over the same days,
+and their difference (`excess`). Horizons not yet elapsed are omitted, never
+guessed. Because it uses only prices that exist at mark time, the forward test of
+"the edge is the first ~5 trading days after a month-end entry" needs no
+additional tracker runs; each month-end record contributes one observation to be
+compared with the backtest's +0.45-0.61% (5d) and +0.39-0.62% (10d) gross excess.
+Dry-run against the real 2026-09-17 record (log untouched): `{}`, correct — only
+one trading day has elapsed. 1 new test (lag-1 fill, universe baseline, unelapsed
+horizons omitted); 211 tests pass. The hedged tracker is unchanged (its hedge
+leg changes the return being measured). No verdict change: 60 mechanisms tested,
+not declared tradable.

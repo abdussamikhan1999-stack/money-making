@@ -24,6 +24,7 @@ backtests cannot fabricate. Reuses rank_by_ibs()/dates_closes_maps() from
 probe_ibs_rotation.py so this can never silently drift from what was
 actually validated (see test_paper_track_ibs_rotation.py).
 """
+import bisect
 import json
 import os
 from datetime import date
@@ -77,6 +78,30 @@ def mark_to_market(record: dict, dates_map: dict, closes_map: dict, as_of) -> di
     return record
 
 
+def horizon_returns(record: dict, dates_map: dict, closes_map: dict, hs=(5, 10)) -> dict:
+    """Sixty-sixth entry's short-hold hypothesis, measured from the price history at mark time (no extra
+    runs needed): gross mean return of the logged picks over h trading days from the LAG-1 fill (the
+    close after the record's date, as in the backtest), the equal-weight return of every symbol over the
+    same days, and their difference. Horizons not yet elapsed are omitted."""
+    entry = date.fromisoformat(record["date"])
+    picked = {p["symbol"] for p in record["picks"]}
+    out = {}
+    for h in hs:
+        pick_r, uni_r = [], []
+        for sym, dates in dates_map.items():
+            j0 = bisect.bisect_right(dates, entry)  # first bar strictly after the record date
+            if j0 + h >= len(dates):
+                continue
+            r = closes_map[sym][j0 + h] / closes_map[sym][j0] - 1
+            uni_r.append(r)
+            if sym in picked:
+                pick_r.append(r)
+        if len(pick_r) == len(picked) and uni_r:
+            pm, um = sum(pick_r) / len(pick_r), sum(uni_r) / len(uni_r)
+            out[str(h)] = {"picks_mean": round(pm, 5), "universe_mean": round(um, 5), "excess": round(pm - um, 5)}
+    return out
+
+
 def run() -> None:
     log = load_log()
     series = build_wide_price_series("1y")
@@ -89,6 +114,7 @@ def run() -> None:
 
     if log and log[-1]["exit"] is None:
         mark_to_market(log[-1], dates_map, closes_map, as_of)
+        log[-1]["horizon_returns"] = horizon_returns(log[-1], dates_map, closes_map)
         print(f"Marked to market: {log[-1]['date']} -> {today_str}, "
               f"net_pnl={log[-1]['exit']['net_pnl']:.0f} "
               f"({log[-1]['exit']['net_pnl_pct']:+.2f}%)")
