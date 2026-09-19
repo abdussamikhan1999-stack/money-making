@@ -5,6 +5,9 @@ same remaining gap — no backtest substitutes for genuine out-of-sample
 data that didn't exist when the backtest was written.
 
 Run this ONCE A MONTH (matches the strategy's own rebalance cadence).
+(Sixty-fourth entry: run on the LAST FEW TRADING DAYS of the calendar month --
+the backtest's edge is concentrated in month-end entries; the first record,
+2026-09-17, was mid-month, the backtest's worst phase.)
 Each run does two things:
   1. Marks the PREVIOUS run's picks to market using today's prices,
      appending a realized-P&L record to the log (using this project's
