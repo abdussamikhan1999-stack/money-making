@@ -5726,3 +5726,58 @@ that did NOT catch these (unit tests of helpers, an independent reimplementation
 the headline number) are necessary but not sufficient. 214 tests pass (1 new,
 1 corrected). No count change; IBS rotation remains unproven, the fear-buy is a null,
 nothing is declared tradable.
+
+
+## Seventy-eighth: third independent code review (PCR probe and the p-value registry) — the registry undercounted the family, one PCR cell sits on the 0.05 line, and the one surviving Bonferroni result is now backed by properly resolved p-values
+
+A third `/code-review` (medium) of `probe_pcr_signal.py` and `multiple_comparisons.py`
+found no correctness bug in the core simulation (fill lag, percentile window, OI
+parsing and the BH implementation all check out; every registry value it
+cross-checked against CLAUDE.md matched) and six issues in the accounting around it.
+All fixed.
+
+**1. The registry understated the family, and the report said so nowhere.** The broad-family
+table used m = number of registered rows (now 148) while the Sixty-fourth entry's 84 phase/
+anchor scan cells were only mentioned in a comment. `multiple_comparisons.py` now
+prints a HONEST-family line: 148 registered + `UNREGISTERED_SCAN_CELLS` (84) = m=232,
+Bonferroni threshold 0.00022, and lists the rows that pass it. Stale docstring/comment
+references (`PVALUES`, "All 7 numbers") fixed.
+
+**2. Six PCR sweep cells were never registered** (the registry held 6 of the 12 configs and its
+comment miscounted them). All 12 are now registered, re-derived with a proper
+(count+1)/(n+1) p-value (the PCR probe had the same raw-fraction defect fixed elsewhere in
+the Seventy-seventh entry): 0.80/13 0.070, 0.80/26 0.053, 0.80/52 0.133, 0.85/13 0.124,
+0.85/26 0.051, **0.85/52 0.049-0.053**, 0.90/13 0.124, 0.90/26 0.085, 0.90/52 0.070,
+0.95/13 0.118, 0.95/26 0.328, 0.95/52 0.220. **Correction to the Fifty-sixth entry:** it said
+"none clears even an uncorrected 0.05". The 0.85/52 cell (40 trades, Rs 51,949, 4.87%/yr,
+walk-forward consistent, Q4 +Rs 3,320) is at p = 0.050 with 1,500 seeds, 0.053 with 5,000 and
+0.049 with 20,000: on the line, i.e. one cell in twelve at ~0.05, what chance gives. It clears no
+corrected threshold (and 0.05 is on the wrong side of it anyway); the PCR rejection stands but
+the sentence was inaccurate.
+
+**3. The BH caution comment was stale.** It described only an IBS flip at m>=29; at the current size
+BH marks rows the project has rejected on other grounds (Reversal(21) top_k=8, the nested IBS
+hold-policy rows) as PASS. The comment now says BH's independence assumption is violated by
+nested and resolution-floor rows, that its column is informational only for this family, and
+that Bonferroni against the honest m is operative; the report prints that note.
+
+**4. The S&P index-gate drawdown p-values were resolution-floor values.** They were 0.0005 (the
+2,000-draw floor), which cannot be compared to an m=232 threshold of 0.00022. Rerun at 20,000
+draws (`--index-gate --seeds 20000`): S&P 1950+ drawdown p = **0.0001 (SMA100), <=5e-5 (SMA150),
+<=5e-5 (SMA200)**; return p 0.269/0.011/0.001. NIFTY 2008+ drawdown p 0.055/0.0072/0.149.
+**Under the honest family (m=232, threshold 0.00022) exactly three rows pass Bonferroni: the three S&P
+1950+ index-gate drawdown effects.** The README's "only Bonferroni pass" statement stands, now resting
+on resolved p-values; the caveats stand too (random-off-months null ignores that trend-off months
+cluster in crashes, which is the gate's whole point; it is a risk overlay of a well-known effect;
+best length differs by market).
+
+**5. PCR probe hygiene.** The cached PCR series was loaded whenever the file existed regardless of
+`--start/--end` (a `--start 2020-01-01` run would silently simulate 2016+ but annualise from
+2020); it now checks coverage and refetches on mismatch. A partial fetch is no longer written to
+the cache (a transient NSE failure used to be reused forever with no warning), and an empty
+NIFTYBEES price pull raises instead of reporting "0 trades" as a null result.
+
+No count change (64 mechanisms tested); no verdict change; nothing is declared tradable. 214
+tests pass. The three reviews together found 8 + 7 + 6 issues; the first two moved published
+numbers, this one moved accounting only. Standing practice: independent review of analysis
+code and of the significance ledger before conclusions are written.
