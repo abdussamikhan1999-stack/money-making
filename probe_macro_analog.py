@@ -218,6 +218,10 @@ def state_report(f, k=8):
         print(f"{c:10s} {cur[c]:9.3f} {z[c]:6.2f} {pct:6.0f}%")
     print(f"fear-buy trigger status (candidate C, fires at >=1.5): india-VIX/252d-median "
           f"{f['ivix_rel'].iloc[t]:.2f}, US-VIX/252d-median {f['vix_rel'].iloc[t]:.2f}")
+    px = f["nifty"]
+    smas = {L: px.rolling(L).mean().iloc[-1] for L in (100, 150, 200)}
+    print("IBS-rotation trend gate (Sixty-first entry; cash when NIFTY < SMA at the month-end ranking close): "
+          f"NIFTY {px.iloc[-1]:,.0f} vs " + ", ".join(f"SMA{L} {v:,.0f} -> {'RISK-ON' if px.iloc[-1] > v else 'RISK-OFF'}" for L, v in smas.items()))
     mu, sd = sub.mean().to_numpy(), sub.std().to_numpy()
     Xa = X.to_numpy()
     ok = ~np.isnan(Xa).any(axis=1)
