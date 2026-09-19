@@ -248,6 +248,19 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("ETF 4-asset momentum L=12m top_k=2 (Seventy-first)", 0.164),
     ("ETF 4-asset reversal L=1m top_k=1 (Seventy-first)", 0.852),
     ("ETF 4-asset reversal L=1m top_k=2 (Seventy-first)", 0.666),
+    # Seventy-second entry: the Seventieth entry's rules on long-history proxies (p on final wealth vs rotation control).
+    ("Proxy NIFTY+INR gold, dual momentum 6m (Seventy-second)", 0.256),
+    ("Proxy NIFTY+INR gold, dual momentum 9m (Seventy-second)", 0.314),
+    ("Proxy NIFTY+INR gold, dual momentum 12m (Seventy-second)", 0.332),
+    ("Proxy NIFTY+INR gold, trend gate SMA100 (Seventy-second)", 0.252),
+    ("Proxy NIFTY+INR gold, trend gate SMA150 (Seventy-second)", 0.780),
+    ("Proxy NIFTY+INR gold, trend gate SMA200 (Seventy-second)", 0.740),
+    ("Proxy S&P+USD gold, dual momentum 6m (Seventy-second)", 0.192),
+    ("Proxy S&P+USD gold, dual momentum 9m (Seventy-second)", 0.229),
+    ("Proxy S&P+USD gold, dual momentum 12m (Seventy-second)", 0.357),
+    ("Proxy S&P+USD gold, trend gate SMA100 (Seventy-second)", 0.630),
+    ("Proxy S&P+USD gold, trend gate SMA150 (Seventy-second)", 0.023),
+    ("Proxy S&P+USD gold, trend gate SMA200 (Seventy-second)", 0.123),
     # NOT individually registered (Sixty-fourth entry): 84 further cells, 21 fixed-step phase offsets
     # and 21 calendar-anchored offsets x {IBS(5) top_k=5, rev(21) top_k=8}. Counting them, an honest
     # Bonferroni family is m>=161 (threshold ~0.0003); the smallest p among them is 0.003.
