@@ -5576,7 +5576,7 @@ closes, 0.1% per leg on rebalancing turnover, annual = December month-ends.
    preference, not a discovery. Adding a 20% cash sleeve lowers the drawdown to
    ~18-21% at a cost of ~1.5-2 points/yr.
 3. *Annual rebalancing is at least as good as monthly* (equal or better return in all
-   8 pairs by ~0.05-0.3 points, drawdown equal or lower in 5 of 8): fewer trades,
+   8 pairs by 0.07-0.34 points; drawdown lower in 5 of 8 and slightly higher, by 0.1-0.6 points, in the other 3, all S&P): fewer trades,
    fewer taxable events, no reason to rebalance monthly.
 4. *More gold looks better here because gold beat equities in this sample* (gold
    from ~$270 to ~$4,400 and the rupee's decline both add to INR gold; S&P
