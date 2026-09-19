@@ -4891,3 +4891,55 @@ against a longer NIFTY history with the SAME rule applied to the IBS signal on
 older data if a point-in-time universe ever becomes available, (3) test a
 cash-yield-adjusted version. **The long-only IBS rotation remains the sole
 standing finding; 58 mechanisms tested, none has cleared the bar to trade.**
+
+
+## Sixty-second: the trend gate on the index alone — the drawdown effect replicates over 70 years of S&P 500 and through the 2008 crash on NIFTY, so it is a generic trend-filter property, not something IBS-specific
+
+The Sixty-first entry's gate had exactly one crash in its sample (March 2020).
+This entry applies the identical rule to the INDEX with no stock selection at
+all — hold the index next month iff its close is above its L-day SMA at the
+month-end (fill at the next close, 0.2% on each switch, month-end drawdown,
+random-off-months control with the same number of cash months, 2,000 draws) —
+on two longer histories: NIFTY 2008+ (227 months, includes the 2008 crash) and
+the S&P 500 1950+ (919 months). (`probe_reversal_rotation.py --index-gate`.)
+
+| market | SMA | cash months | switches | return/yr | max DD | Calmar | p(DD vs random) | p(return vs random) |
+|---|---|---|---|---|---|---|---|---|
+| NIFTY 2008+ | buy&hold | - | - | 8.58% | 56.5% | 0.15 | - | - |
+| | 100 | 80/227 | 50 | 7.13% | 30.1% | 0.24 | 0.070 | 0.260 |
+| | 150 | 70/227 | 39 | 7.03% | 23.7% | 0.30 | 0.011 | 0.323 |
+| | 200 | 62/227 | 35 | 5.74% | 36.6% | 0.16 | 0.177 | 0.566 |
+| S&P 500 1950+ | buy&hold | - | - | 8.30% | 54.7% | 0.15 | - | - |
+| | 100 | 298/919 | 220 | 4.95% | 26.0% | 0.19 | 0.0005 | 0.760 |
+| | 150 | 276/919 | 144 | 6.54% | 23.3% | 0.28 | 0.0005 | 0.164 |
+| | 200 | 260/919 | 110 | 7.34% | 27.1% | 0.27 | 0.0005 | 0.038 |
+
+**What replicates:** on the S&P the gate halves month-end drawdown (54.7% ->
+23-27%) at all three lengths and roughly doubles Calmar (0.15 -> 0.27-0.28
+for SMA150/200), at a cost of 1-3 points a year for SMA150/200 and 3.4 for
+SMA100, with the drawdown reduction beating random cash months at the
+2,000-draw resolution floor (p=0.0005, which clears the m=71 Bonferroni
+threshold 0.0007) — a real, corrected-significance result, on a well-known
+effect (Faber 2007) replicated on 70 years of data. On NIFTY, through 2008,
+drawdown falls 56.5% -> 23.7-36.6% and Calmar rises at SMA100/150. Together with
+the Sixty-first entry (Calmar roughly doubling for IBS rotation), the gate is a
+consistent halving of drawdown across three independent samples.
+**What does not:** the best length differs by market (S&P: SMA200 keeps the most
+return and p(return)=0.038 is the only return-side result under 0.05; NIFTY:
+SMA150 is best and SMA200 is the WORST, DD 36.6%; IBS rotation: SMA100 best),
+so no single L should be tuned; 110-220 switches over the S&P sample show real
+whipsaw cost at SMA100; and the gate does not "time returns" better than
+random months (return p-values mostly 0.16-0.76): it reduces risk, it does not
+add alpha.
+
+**Implication for the standing candidate.** A plain gated NIFTY/S&P index
+position earns ~7%/yr at Calmar 0.27-0.30; a gated IBS rotation (Sixty-first
+entry) earns ~14-15%/yr at Calmar 1.0-1.1 (one-crash, 2016-2026 sample). So
+the gate is not what makes IBS rotation good — it is an inexpensive
+drawdown overlay that is now independently corroborated, applied to the same
+underlying edge. **No count change; IBS rotation remains the sole standing
+finding; 58 mechanisms tested; not declared tradable.** Today's gate reading
+(2026-09-18): NIFTY 23,346 is below its SMA100/150/200 (23,952/24,051/24,494),
+RISK-OFF on all three, meaning the gated variant would be in cash for the
+month the two live trackers logged picks; the unhedged tracker's 2026-09-17
+record is unaffected (logs are never edited).

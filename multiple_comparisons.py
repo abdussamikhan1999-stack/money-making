@@ -186,6 +186,14 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Trend gate SMA100 top_k=8, drawdown (Sixty-first)", 0.016),
     ("Trend gate SMA150 top_k=8, drawdown (Sixty-first)", 0.100),
     ("Trend gate SMA200 top_k=8, drawdown (Sixty-first)", 0.153),
+    # Sixty-second entry: the same gate on the INDEX alone. p(drawdown as low as random off-months);
+    # S&P rows sit at the 2,000-draw floor (1/2001).
+    ("Index gate NIFTY 2008+ SMA100, drawdown (Sixty-second)", 0.0700),
+    ("Index gate NIFTY 2008+ SMA150, drawdown (Sixty-second)", 0.0110),
+    ("Index gate NIFTY 2008+ SMA200, drawdown (Sixty-second)", 0.1769),
+    ("Index gate S&P500 1950+ SMA100, drawdown (Sixty-second)", 0.0005),
+    ("Index gate S&P500 1950+ SMA150, drawdown (Sixty-second)", 0.0005),
+    ("Index gate S&P500 1950+ SMA200, drawdown (Sixty-second)", 0.0005),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number
