@@ -4878,10 +4878,15 @@ result for IBS rotation's actual bottleneck since the ETF hedge: at top_k=5, a
 100-150-day NIFTY trend gate roughly doubles Calmar (0.51 -> 1.0-1.1; 0.60 ->
 0.9-1.3 under blowup stress) at a cost of ~5 points/yr and a third of the time
 in cash. It does not fix top_k=8, does not turn the return significant, and
-its edge is one crash. **Still not declared tradable.** Concrete next steps,
-none done here: (1) add the gate as a THIRD forward tracker alongside the two
-existing ones, since the gate's live behaviour (how often it flips, whipsaw) is
-exactly the thing a backtest with one crash cannot answer, (2) check the gate
+its edge is one crash. **Still not declared tradable.** Concrete next steps:
+(1) NO third tracker is needed — the gated forward record is fully determined by
+the existing unhedged log (`paper_track_ibs_rotation_log.json`) plus NIFTY's own
+closes, since the gate is only a cash override on that log's dated picks; each
+month, read the gate off `python probe_macro_analog.py --state-only` (prints
+NIFTY vs SMA100/150/200 -> RISK-ON/OFF) and treat a RISK-OFF month's logged
+picks as cash when evaluating the gated variant. How often the gate flips and
+whether it whipsaws is exactly what a one-crash backtest cannot answer, and
+that is what the forward record will show; (2) check the gate
 against a longer NIFTY history with the SAME rule applied to the IBS signal on
 older data if a point-in-time universe ever becomes available, (3) test a
 cash-yield-adjusted version. **The long-only IBS rotation remains the sole
