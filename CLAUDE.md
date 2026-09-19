@@ -5781,3 +5781,62 @@ No count change (64 mechanisms tested); no verdict change; nothing is declared t
 tests pass. The three reviews together found 8 + 7 + 6 issues; the first two moved published
 numbers, this one moved accounting only. Standing practice: independent review of analysis
 code and of the significance ledger before conclusions are written.
+
+
+## Seventy-ninth: published versions of what famous funds and traders do — none is a return source at retail scale; the useful findings are about risk, and a data-quality check that came out clean
+
+Asked to try strategies "the top hedge funds or extremely successful traders use". The
+honest scope: the actual books of Renaissance, Citadel or Bridgewater are secret; what
+can be tested is the published, public version of each approach. Pre-registered in
+`probe_famous_strategies.py` and `probe_vol_breakout.py` before any run, on
+survivorship-free instruments (ETFs, indices), lag-1 fills, 0.05%/leg, T-bill cash, and an
+independent code review of the probe BEFORE conclusions were written (it found 7 issues,
+all fixed and rerun; see "corrections" below).
+
+| approach (who) | what was tested | result |
+|---|---|---|
+| **Time-series momentum** (CTA core: Winton, Man AHL; Moskowitz-Ooi-Pedersen) | 11 ETFs (SPY EFA EEM VNQ TLT IEF LQD GLD SLV DBC UUP), 2006-08..2026-07, 240 months, L in {126,189,252}, 60d vol | **Long/short 10%-vol (research only, retail can't run it): 3.4-3.9%/yr, Sharpe 0.38-0.49 (equal-weight buy&hold 0.54), max DD 6-10%**. **Long/flat inverse-vol (retail-tradable): 4.6-5.0%/yr, Sharpe 0.67-0.78, DD 6.0-6.7%**, but the no-signal twin (always long, inverse-vol) is 5.86%/yr, Sharpe 0.67, DD 14.2%: the trend signal is a drawdown device (~1pt/yr of return for half the drawdown), not extra Sharpe. Exact rotation-control p(Sharpe) 0.005-0.057 (B), 0.077-0.206 (C) |
+| **Risk parity** (Bridgewater All Weather) | inverse-vol SPY/TLT/IEF/GLD/DBC, unlevered, 2007-04..2026-07 | 5.64%/yr, vol 7.1%, Sharpe 0.60, DD 15.3% vs 60/40 SPY/IEF 8.18%, Sharpe 0.68, DD 30.3%, SPY 10.82%, DD 52.9%. Windows: **2008** RP +4.2% vs 60/40 -16.4%, SPY -34.3%; **2022** RP -11.1% vs 60/40 -16.5%, equal-weight -9.0%, SPY -19.0%. Unlevered, it is the lowest-drawdown option with the lowest return and NO Sharpe gain over 60/40; the fund's edge is leverage, which retail does not have |
+| **Volatility-managed equity** (AQR/Moreira-Muir) | exposure = min(1, target/21d vol), target 10%/15% | S&P 500 1960+: Sharpe 0.28/0.29 vs 0.29 buy&hold, DD 30.3%/41.5% vs 54.7%, p(Sharpe) 0.35/0.24. NIFTY 2008+: Sharpe 0.35/0.33 vs 0.45, DD 20.7%/27.1% vs 32.2%, p(Sharpe) 0.89/0.98 (worse than random exposure). A drawdown device again, no Sharpe gain |
+| **Halloween / "sell in May"** (Stock Trader's Almanac) | hold Nov-Apr, cash May-Oct, T-bill cash and switch costs | **S&P 500 1950+: winter beats summer by +0.73%/month, 77 cycles, year-block bootstrap p=0.0003, positive in 68% of cycles; halves +0.92%/+0.55% (decaying). Nov-Apr-only 8.59%/yr vs buy&hold 8.48%, vol 10.4% vs 14.7%, Sharpe 0.44 vs 0.34, DD 31.9% vs 54.7%.** NIFTY 2008+: gap -0.38%/month, p=0.75, Nov-Apr-only 5.09% vs 7.78% buy&hold |
+| **Volatility breakout** (Larry Williams, 1987 champion) | buy at open + k x yesterday's range, sell at close; k in {0.4,0.6,0.8}; long and short; fill at trigger (optimistic) | ^NSEI 2007+: mean per trade -0.02% to +0.02% net of 0.1% costs (p 0.30-0.85 long, 0.32-0.58 short), all negative with 0.1% slippage/leg. SPY 1993+: **-0.10% per trade, p=1.0 at every k, both sides.** Nothing |
+
+**Reading.** None of these beats the plain benchmark on return, and the famous funds' actual edge in these
+constructions is leverage and breadth that a retail account cannot replicate (levered risk parity, 10%-vol long/short
+across dozens of futures markets). What retail CAN take from them is the same lesson this project keeps
+finding: trend/vol filters and diversified allocations are drawdown tools, not return sources, and the
+one clean, long-history, statistically strong effect (Halloween on the S&P, p=0.0003) is (a) not present in India,
+(b) already halved in its second half, and (c) does not clear the honest Bonferroni threshold
+(m=256, 0.00020). The Halloween result is the most interesting single finding: the same total return as
+buy&hold at ~70% of the volatility and ~58% of the drawdown, but it is a US result and it is decaying.
+The TSMOM equity/bond/gold/commodity universe is US-listed ETFs; an Indian retail investor would need the
+overseas-investment route, so even the "retail-tradable" long/flat variant is not directly implementable.
+
+**Data-quality check (prompted by a spurious result).** The vol-breakout probe's first run printed a
+NIFTYBEES short result of +0.26-0.31% per trade at p~0. Its unconditional open-to-close mean was -0.41%/day
+(about -70%/yr): impossible. Inspection: Yahoo's NIFTYBEES.NS rows include days with Open=High=Low=Close and
+open==high-or-low on 42% of days; the ETF's OHLC is corrupt. It was removed and a sanity guard added. Because
+every NSE instrument on Yahoo also shows a positive overnight gap and a negative intraday return (^NSEI +0.11%
+overnight, -0.069% intraday; RELIANCE +0.125%/-0.048%; SPY +0.03%/+0.02%), and the IBS work depends on Yahoo's
+high/low for NSE stocks, the Yahoo OHLC was validated against NSE's OFFICIAL daily bhavcopy (30 random dates
+2018-2026 x 10 large caps = 300 symbol-days): **in every row the four Yahoo/NSE price ratios agree to within
+0.000%; 21.7% of rows differ only by a split/bonus adjustment factor (Yahoo adjusts history, bhavcopy does not)
+and the other 78% match the official Open/High/Low/Close exactly.** So Yahoo's OHLC for NSE large caps IS the
+official data: the IBS results are not a vendor artifact, and the overnight/intraday asymmetry is a real property of
+NSE opening-auction prints. NIFTYBEES's corruption is specific to that ETF (and its Open-based numbers are not used
+anywhere).
+
+**Corrections made from the independent review of this entry's probe (7 findings, all fixed, results rerun).**
+(1) The risk-parity stress-window table labelled each month by its decision date, one month early: the first run
+printed SPY -7.8% for 2022 (true -18.2%); labelled by fill date it is -19.0%, and the 2008/2013 rows moved too
+(risk parity's 2008 went from -2.0% to +4.2%). (2) `rotation_p` drew 2,000 random offsets from ~185 distinct
+rotations (implying a false resolution of 1/2001); it now enumerates every rotation exactly with (count+1)/(m+1).
+(3) The Halloween resample included the still-forming current month. (4) The Halloween strategy ignored T-bill cash
+and switching costs (buy&hold vs Nov-Apr-only was 8.30% vs 6.49% with cash 0; with cash and costs it is 8.48% vs
+8.59%: the gap the first version showed against the seasonal rule was an accounting artifact). (5) Fetches now retry
+and are cached. (6) Loop-invariant volatilities are precomputed. (7) Duplicated helpers vs the other probes remain
+(documented debt).
+
+**Ledger.** 24 more p-values registered (m=172 + 84 unregistered scan cells = 256, Bonferroni 0.00020); the only
+rows passing are still the three S&P index-gate drawdown rows. 217 tests pass (3 new). 64 -> 69 mechanisms tested.
+Nothing is declared tradable.
