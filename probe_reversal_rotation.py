@@ -28,15 +28,40 @@ from probe_ibs_rotation import fetch_calendar, month_end_dates
 from probe_ibs_rotation_widen import build_wide_price_series
 
 COST_PCT, DP = 0.2, 16.0
+
+# Sixty-eighth entry: 52 DIFFERENT NSE large/mid-caps (zero overlap with WIDE_UNIVERSE) for a
+# stock-independent replication. Today's constituents, so the same survivorship caveat applies.
+UNIVERSE_B = ["AMBUJACEM", "BANKBARODA", "BEL", "BOSCHLTD", "CANBK", "CHOLAFIN", "COLPAL", "DABUR", "DLF", "GAIL",
+              "GODREJCP", "HAVELLS", "ICICIGI", "INDIGO", "IOC", "JINDALSTEL", "LICHSGFIN", "MARICO", "MOTHERSON",
+              "NHPC", "PFC", "PIDILITIND", "PNB", "RECLTD", "SAIL", "SIEMENS", "SRF", "TATAPOWER", "TORNTPHARM",
+              "TVSMOTOR", "VOLTAS", "BHEL", "ABB", "APOLLOHOSP", "AUROPHARMA", "BANDHANBNK", "BERGEPAINT", "BIOCON",
+              "CUMMINSIND", "ESCORTS", "FEDERALBNK", "GLENMARK", "IDFCFIRSTB", "LUPIN", "MUTHOOTFIN", "PAGEIND",
+              "PETRONET", "TATACOMM", "INDUSINDBK", "M&M", "ADANIENT", "NMDC", "IGL", "SHREECEM"]
+SYMBOLS = None  # set by --universe-b
 CACHE = os.environ.get("REV_CACHE", "")
 
 
 def load_matrices(period="10y", stress=False):
     """stress=True: add the Fortieth entry's 4 real blowups (survivorship stress)."""
     cache = CACHE.replace(".pkl", "_stress.pkl") if (CACHE and stress) else CACHE
+    if CACHE and SYMBOLS:
+        cache = CACHE.replace(".pkl", "_B.pkl")
     if cache and os.path.exists(cache):
         return pickle.load(open(cache, "rb"))
-    if stress:
+    if SYMBOLS:
+        from data_yfinance import fetch_candles
+        series = {}
+        for sym in SYMBOLS:
+            cds = []
+            for _ in range(3):
+                cds = fetch_candles(sym + ".NS", "1d", period)
+                if cds:
+                    break
+            if cds:
+                series[sym + ".NS"] = cds
+            else:
+                print(f"{sym}: fetch failed, excluded")
+    elif stress:
         from probe_ibs_rotation_survivorship import build_stress_price_series
         series = build_stress_price_series(period)
     else:
@@ -471,8 +496,12 @@ def main():
     ap.add_argument("--horizon", action="store_true", help="IBS excess-return curve by holding horizon")
     ap.add_argument("--hold", action="store_true", help="post-hoc: hold h days from month-end entry then cash")
     ap.add_argument("--oos-horizon", action="store_true", help="horizon curve on 2007-2016 vs 2016-2026")
+    ap.add_argument("--universe-b", action="store_true", help="52 different NSE names (Sixty-eighth entry)")
     ap.add_argument("--extend", action="store_true", help="EXPLORATORY: windows/top_k beyond the pre-registered grid")
     a = ap.parse_args()
+    if a.universe_b:
+        global SYMBOLS
+        SYMBOLS = UNIVERSE_B
     if a.index_gate:
         return index_gate_replication()
     if a.oos:

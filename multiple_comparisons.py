@@ -217,6 +217,20 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("IBS month-end hold 5d top_k=5, 2007-16 OOS (Sixty-sixth)", 0.0013),
     ("IBS month-end hold 10d top_k=5, 2007-16 OOS (Sixty-sixth)", 0.0793),
     ("IBS month-end hold 21d top_k=5, 2007-16 OOS (Sixty-sixth)", 0.2645),
+    # Sixty-eighth entry: the same tests on 54 DIFFERENT NSE names (universe B) and on subsets of the original 52.
+    ("Universe B hold 5d top_k=5 (Sixty-eighth)", 0.6356),
+    ("Universe B hold 8d top_k=5 (Sixty-eighth)", 0.3611),
+    ("Universe B hold 10d top_k=5 (Sixty-eighth)", 0.7009),
+    ("Universe B hold 13d top_k=5 (Sixty-eighth)", 0.7328),
+    ("Universe B hold 21d top_k=5 (Sixty-eighth)", 0.1999),
+    ("Universe B full-month IBS top_k=5 (Sixty-eighth)", 0.1872),
+    ("Universe B full-month IBS top_k=8 (Sixty-eighth)", 0.2352),
+    ("Original 40 large caps hold 5d (Sixty-eighth)", 0.0160),
+    ("Original 40 large caps hold 10d (Sixty-eighth)", 0.3037),
+    ("Original 40 large caps hold 21d (Sixty-eighth)", 0.1978),
+    ("Original 12 small/mid hold 5d top_k=3 (Sixty-eighth)", 0.1359),
+    ("Original 12 small/mid hold 10d top_k=3 (Sixty-eighth)", 0.0759),
+    ("Original 12 small/mid hold 21d top_k=3 (Sixty-eighth)", 0.1648),
     # NOT individually registered (Sixty-fourth entry): 84 further cells, 21 fixed-step phase offsets
     # and 21 calendar-anchored offsets x {IBS(5) top_k=5, rev(21) top_k=8}. Counting them, an honest
     # Bonferroni family is m>=161 (threshold ~0.0003); the smallest p among them is 0.003.
