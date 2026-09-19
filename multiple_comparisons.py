@@ -11,7 +11,7 @@ choice for an exploratory multi-config sweep like this project's) are
 reported side by side - neither alone is "the" right answer for this kind of
 after-the-fact research audit.
 
-PVALUES below is the actual family: every p-value this project's
+ALL_SIGNIFICANCE_TESTS_PVALUES below is the registered family: every p-value this project's
 --significance check has produced, from one fresh rerun (2026-09-18, same
 session, same data snapshot) rather than the individually-recorded numbers
 scattered across CLAUDE.md entries - this project's own Fortieth/Forty-eighth
@@ -87,7 +87,7 @@ IBS_ROTATION_PVALUES = [
 # control check has EVER produced, across every candidate that methodology
 # was applied to while searching for a strategy to report - not just the
 # one that was eventually kept. This is the family the Fifty-first entry's
-# council review actually objected to being ignored. All 7 numbers are from
+# council review actually objected to being ignored. The first 7 numbers are from
 # one fresh rerun (2026-09-18, same session, same data snapshot) rather than
 # the individually-recorded numbers scattered across CLAUDE.md entries -
 # this project's own Fortieth/Forty-eighth entries already documented that
@@ -95,15 +95,18 @@ IBS_ROTATION_PVALUES = [
 # run, so re-deriving all of them together in one sitting is more honest
 # than mixing numbers logged in different sessions. See CLAUDE.md's
 # "Fifty-third" entry for the raw script output each of these came from.
-# CAUTION (Fifty-seventh entry): at m>=29 the Benjamini-Hochberg column flips
-# IBS rotation top_k=5/8 to PASS. That is an ARTIFACT, not new evidence: the
-# Fifty-seventh entry's rows are near-identical nested configs, several sitting
-# on a circular-rotation control's resolution floor (~0.0073), and BH's step-up
-# rule lets a cluster of small p-values lift everyone else's critical value.
-# Bonferroni is the operative criterion; IBS's retired significance claim
-# (Fifty-third entry) is NOT reinstated by this table. (The flip disappears at
-# m=39 once the Fifty-eighth entry's honest grid-free rows are added, which
-# confirms it was an artifact of the floor-valued rows, not signal.)
+# CAUTION on the Benjamini-Hochberg column (updated Seventy-eighth entry): this family contains many
+# near-identical nested configs (hold-policy rows 5d/8d/10d x top_k, threshold grids) and several rows sitting on
+# a control's resolution floor (S&P index gate 0.0005; the rotation floor ~0.0073). BH assumes independent or
+# positively dependent tests and lets a cluster of small p-values lift the critical value for everyone, so its PASS
+# marks here are informational only: at the current size it passes rows the project has rejected on other grounds
+# (e.g. Reversal(21) top_k=8, killed by survivorship stress in the Fifty-ninth entry). Bonferroni against the
+# HONEST family size (registered rows + UNREGISTERED_SCAN_CELLS, printed below) is the operative criterion, and
+# IBS rotation's retired significance claim (Fifty-third entry) is NOT reinstated by any BH PASS.
+# Cells that were run and reported but never registered row-by-row: the Sixty-fourth entry's 84 phase/anchor scan
+# cells (21 fixed-step phases + 21 calendar anchors, x IBS(5) and rev(21)).
+UNREGISTERED_SCAN_CELLS = 84
+
 ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("RSI-2 rotation top_k=3 (Forty-second)", 0.1987),
     ("RSI-2 rotation top_k=5 (Forty-second)", 0.2840),
@@ -114,14 +117,22 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Amihud illiquidity rotation top_k=3 (Fifty-fourth)", 0.5900),
     ("Amihud illiquidity rotation top_k=5 (Fifty-fourth)", 0.1047),
     ("Amihud illiquidity rotation top_k=8 (Fifty-fourth)", 0.0367),
-    # Nifty PCR contrarian long on NIFTYBEES (Fifty-sixth entry), 1,500-seed
-    # circular-shift control, 1-day fill lag, 5 of the 12 swept configs.
-    ("Nifty PCR entry=0.80 window=26 (Fifty-sixth)", 0.052),
+    # Nifty PCR contrarian long on NIFTYBEES (Fifty-sixth entry): ALL 12 swept configs (4 entry thresholds x 3
+    # windows), 1,500-seed circular-shift control, (count+1)/(n+1) p-values as re-derived in the Seventy-eighth
+    # entry (the original entry registered only 6 and its comment miscounted them). The 0.85/52 cell is 0.050 at
+    # 1,500 seeds, 0.053 at 5,000 and 0.049 at 20,000, i.e. ON the 0.05 line.
+    ("Nifty PCR entry=0.80 window=13 (Fifty-sixth)", 0.070),
+    ("Nifty PCR entry=0.80 window=26 (Fifty-sixth)", 0.053),
+    ("Nifty PCR entry=0.80 window=52 (Fifty-sixth)", 0.133),
+    ("Nifty PCR entry=0.85 window=13 (Fifty-sixth)", 0.124),
     ("Nifty PCR entry=0.85 window=26 (Fifty-sixth)", 0.051),
-    ("Nifty PCR entry=0.90 window=13 (Fifty-sixth)", 0.123),
-    ("Nifty PCR entry=0.90 window=26 (Fifty-sixth)", 0.084),
-    ("Nifty PCR entry=0.90 window=52 (Fifty-sixth)", 0.069),
-    ("Nifty PCR entry=0.95 window=26 (Fifty-sixth)", 0.327),
+    ("Nifty PCR entry=0.85 window=52 (Fifty-sixth)", 0.049),
+    ("Nifty PCR entry=0.90 window=13 (Fifty-sixth)", 0.124),
+    ("Nifty PCR entry=0.90 window=26 (Fifty-sixth)", 0.085),
+    ("Nifty PCR entry=0.90 window=52 (Fifty-sixth)", 0.070),
+    ("Nifty PCR entry=0.95 window=13 (Fifty-sixth)", 0.118),
+    ("Nifty PCR entry=0.95 window=26 (Fifty-sixth)", 0.328),
+    ("Nifty PCR entry=0.95 window=52 (Fifty-sixth)", 0.220),
     # Macro-regime probe (Fifty-seventh entry), circular-rotation control, phase 0.
     # A = analog forecaster k=8/15/30; B = oil+rupee stress filter (4 cells);
     # C = VIX-spike fear-buy. C is registered at the ROTATION control's
@@ -188,19 +199,19 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Trend gate SMA200 top_k=8, drawdown (Sixty-first, corrected Seventy-sixth)", 0.078),
     # Sixty-second entry: the same gate on the INDEX alone. p(drawdown as low as random off-months);
     # S&P rows sit at the 2,000-draw floor (1/2001).
-    ("Index gate NIFTY 2008+ SMA100, drawdown (Sixty-second, corrected)", 0.0550),
-    ("Index gate NIFTY 2008+ SMA150, drawdown (Sixty-second, corrected)", 0.0100),
-    ("Index gate NIFTY 2008+ SMA200, drawdown (Sixty-second, corrected)", 0.1599),
-    ("Index gate S&P500 1950+ SMA100, drawdown (Sixty-second)", 0.0005),
-    ("Index gate S&P500 1950+ SMA150, drawdown (Sixty-second)", 0.0005),
-    ("Index gate S&P500 1950+ SMA200, drawdown (Sixty-second)", 0.0005),
+    ("Index gate NIFTY 2008+ SMA100, drawdown (Sixty-second, 20k draws)", 0.0550),
+    ("Index gate NIFTY 2008+ SMA150, drawdown (Sixty-second, 20k draws)", 0.0072),
+    ("Index gate NIFTY 2008+ SMA200, drawdown (Sixty-second, 20k draws)", 0.1492),
+    ("Index gate S&P500 1950+ SMA100, drawdown (Sixty-second, 20k draws)", 0.0001),
+    ("Index gate S&P500 1950+ SMA150, drawdown (Sixty-second, 20k draws; <=5e-5)", 0.00005),
+    ("Index gate S&P500 1950+ SMA200, drawdown (Sixty-second, 20k draws; <=5e-5)", 0.00005),
     # Seventy-sixth: the RETURN p-values of the index gate once the random control pays the same switching cost.
-    ("Index gate NIFTY 2008+ SMA100, return (Seventy-sixth)", 0.147),
-    ("Index gate NIFTY 2008+ SMA150, return (Seventy-sixth)", 0.179),
-    ("Index gate NIFTY 2008+ SMA200, return (Seventy-sixth)", 0.403),
-    ("Index gate S&P500 1950+ SMA100, return (Seventy-sixth)", 0.281),
-    ("Index gate S&P500 1950+ SMA150, return (Seventy-sixth)", 0.010),
-    ("Index gate S&P500 1950+ SMA200, return (Seventy-sixth)", 0.002),
+    ("Index gate NIFTY 2008+ SMA100, return (Seventy-sixth, 20k draws)", 0.128),
+    ("Index gate NIFTY 2008+ SMA150, return (Seventy-sixth, 20k draws)", 0.172),
+    ("Index gate NIFTY 2008+ SMA200, return (Seventy-sixth, 20k draws)", 0.394),
+    ("Index gate S&P500 1950+ SMA100, return (Seventy-sixth, 20k draws)", 0.269),
+    ("Index gate S&P500 1950+ SMA150, return (Seventy-sixth, 20k draws)", 0.011),
+    ("Index gate S&P500 1950+ SMA200, return (Seventy-sixth, 20k draws)", 0.001),
     # Sixty-third entry: 12-1 momentum and 52-week-high rotations, lag 1. p = P(random >= actual);
     # values near 1 mean the strategy UNDERperforms random portfolios.
     ("12-1 momentum rotation top_k=3 (Sixty-third)", 0.9540),
@@ -312,6 +323,14 @@ if __name__ == "__main__":
     print("\n--- broad family: every candidate this project ever ran the ---")
     print("--- --significance check against, IBS included             ---")
     report(ALL_SIGNIFICANCE_TESTS_PVALUES, args.alpha)
+    honest_m = len(ALL_SIGNIFICANCE_TESTS_PVALUES) + UNREGISTERED_SCAN_CELLS
+    thr, passed = bonferroni(ALL_SIGNIFICANCE_TESTS_PVALUES, args.alpha, m=honest_m)
+    print(f"\n--- HONEST family: {len(ALL_SIGNIFICANCE_TESTS_PVALUES)} registered + {UNREGISTERED_SCAN_CELLS} unregistered scan cells "
+          f"= m={honest_m}; Bonferroni threshold {thr:.5f} ---")
+    winners = [(l, p) for (l, p), ok in zip(ALL_SIGNIFICANCE_TESTS_PVALUES, passed) if ok]
+    print("rows passing the honest Bonferroni threshold:", winners if winners else "none")
+    print("NOTE: the BH column above is informational only for this family (see the CAUTION comment: nested rows,")
+    print("resolution-floor rows, dependence); Bonferroni against the honest m is the operative criterion.")
     print("\n--- internal-search family (m=25, per the Fifty-first entry's ---")
     print("--- own count) - Bonferroni only, BH needs the full ranked    ---")
     print("--- list which isn't available at this family size            ---")
