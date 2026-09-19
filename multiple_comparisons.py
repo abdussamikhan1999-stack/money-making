@@ -234,6 +234,13 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Universe B hold 5d, 2007-16 (Sixty-ninth)", 0.0093),
     ("Universe B hold 10d, 2007-16 (Sixty-ninth)", 0.0693),
     ("Universe B hold 21d, 2007-16 (Sixty-ninth)", 0.0693),
+    # Seventieth entry: ETF timing rules vs rotation control (p on final wealth; static 50/50 has no timing to test).
+    ("ETF dual momentum L=6m (Seventieth)", 0.147),
+    ("ETF dual momentum L=9m (Seventieth)", 0.319),
+    ("ETF dual momentum L=12m (Seventieth)", 0.172),
+    ("ETF trend gate SMA100 (Seventieth)", 0.347),
+    ("ETF trend gate SMA150 (Seventieth)", 0.300),
+    ("ETF trend gate SMA200 (Seventieth)", 0.497),
     # NOT individually registered (Sixty-fourth entry): 84 further cells, 21 fixed-step phase offsets
     # and 21 calendar-anchored offsets x {IBS(5) top_k=5, rev(21) top_k=8}. Counting them, an honest
     # Bonferroni family is m>=161 (threshold ~0.0003); the smallest p among them is 0.003.

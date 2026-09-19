@@ -5319,3 +5319,68 @@ makes every loser-bounce / oversold-ranking result in an EARLIER period
 unreliable in the favourable direction, so an earlier-period replication of such a
 strategy is weaker evidence than it looks, and a fresh-stocks-and-recent-period
 failure is stronger evidence than it looks.
+
+
+## Seventieth: multi-asset ETF rotation (NIFTYBEES / GOLDBEES / cash) — the timing rules add nothing; a plain 50/50 equity-gold portfolio has the good risk profile, and it is a diversification result, not an edge
+
+A different corner from every stock-selection entry: survivorship-free (the funds
+exist and always did), no lot-size wall (single shares), and no ranking of hundreds
+of names. `probe_etf_rotation.py` (docstring fixed before running): NIFTYBEES
+(equity), GOLDBEES (gold), LIQUIDBEES (cash proxy), 2009-01 to 2026-09 (200
+month-end decisions after a year of warm-up), decisions at the month-end close,
+filled at the NEXT close, 0.1% per leg on every change of holding, circular-
+rotation control on the decision series (2,000 draws, keeps how often each
+holding is chosen, breaks its timing). Pre-registered: A. dual momentum
+(Antonacci-style; higher trailing-L-month return of the two, cash if <= 0),
+L in {6, 9, 12}; B. per-asset trend gate (50/50, each half held only while its
+close > its L-day SMA, else cash), L in {100, 150, 200}.
+
+| | return/yr | max DD | Calmar | halves | quarters | p(final wealth) / p(Calmar) |
+|---|---|---|---|---|---|---|
+| NIFTYBEES buy&hold | 10.71% | 31.0% | 0.35 | +119/+147% | +33/+65/+70/+45% | - |
+| GOLDBEES buy&hold | 13.18% | 23.9% | 0.55 | +72/+352% | +66/+3/+60/+183% | - |
+| **50/50 monthly-rebalanced** | **12.76%** | **11.4%** | **1.12** | +106/+255% | +54/+34/+71/+107% | - |
+| dual momentum 6m | 12.97% | 18.5% | 0.70 | +130/+228% | +26/+82/+87/+76% | 0.147 / 0.073 |
+| dual momentum 9m | 11.28% | 18.2% | 0.62 | +109/+182% | +35/+55/+46/+92% | 0.319 / 0.107 |
+| dual momentum 12m | 13.25% | 18.6% | 0.71 | +132/+240% | +58/+48/+25/+171% | 0.172 / 0.046 |
+| trend gate SMA100 | 8.96% | 9.9% | 0.91 | +46/+184% | +20/+21/+56/+82% | 0.347 / 0.130 |
+| trend gate SMA150 | 9.62% | 11.3% | 0.85 | +72/+166% | +31/+31/+43/+86% | 0.300 / 0.306 |
+| trend gate SMA200 | 9.66% | 9.4% | 1.03 | +67/+176% | +33/+26/+47/+87% | 0.497 / 0.078 |
+
+**Neither timing family beats the static portfolio** (Calmar 0.62-0.71 for dual
+momentum, 0.85-1.03 for trend gates, vs 1.12 for 50/50) and none is distinguishable
+from rotating the same decisions randomly (p(final wealth) 0.15-0.50; the best
+p(Calmar) is 0.046 for dual momentum 12m, uncorrected and not near a corrected
+threshold). There is no timing edge here.
+
+**What the 50/50 is, checked directly.** Monthly-return correlation NIFTYBEES vs
+GOLDBEES -0.19. Sub-periods (50/50 | NIFTYBEES | GOLDBEES CAGR, 50/50 max DD):
+2009-2013 gold bull: 12.52% | 6.38% | 16.81%, DD 9.4%; 2013-10 to 2019-05 gold
+flat: **6.95%** | 12.59% | 0.47%, DD 10.0%; 2019-06 to 2026 gold bull: 17.72% |
+11.54% | 22.32%, DD 11.4%. Rolling 3-year CAGR: 50/50 worst +1.54%, median 10.74%,
+7% of windows below 5%/yr; NIFTYBEES worst -1.82%; GOLDBEES worst -8.21%, 37% of
+windows below 5%. So the portfolio's drawdown control (9-11% in every regime,
+including the gold-flat one) is robust to gold's regime, but its headline return
+is carried by the two gold-bull windows (in the flat one it trailed equity by ~5.6
+points/yr). This is the classic equity-gold diversification result, not a
+strategy; the number to remember is the drawdown (~11%), not the 12.8%.
+
+**Caveats.** (1) Drawdown is measured at month-end points. (2) `LIQUIDBEES`'
+Yahoo close returns only 3.03%/yr because it distributes/rolls its yield, so
+the cash leg is understated (real liquid-fund yield ~5-6%); this penalises the
+timing rules (which hold cash 26-34% of the time) by roughly 1-2 points/yr, not
+enough to close a Calmar gap of 0.1-0.5 but it means they are not tested at their
+best. (3) Gold has had one of its strongest runs on record in this sample
+(and the rupee's slide in 2025-26 adds to INR gold returns): the equal-weight
+portfolio has no protection against a long gold bear and the data contain only one
+gold-flat stretch (2013-2019). (4) 2009 start: the 2008 crash is not included.
+(5) Costs of 0.1% per leg are generous for these liquid funds but small next to
+the return gaps discussed.
+
+**Multiple comparisons.** 6 more p-values registered (m=112 + 84 unregistered
+scan cells); none significant. 213 tests pass (2 new: fill lag and turnover cost).
+**Net verdict: two more mechanisms rejected (dual momentum, per-asset trend
+gating, both with no timing edge over random); 62 mechanisms tested; the
+static equity-gold allocation is recorded as a risk-management observation, not
+a finding of alpha. IBS rotation remains the sole standing stock-selection
+finding; not declared tradable.**
