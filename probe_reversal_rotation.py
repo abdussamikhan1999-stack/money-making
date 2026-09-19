@@ -227,6 +227,53 @@ def gate_test(M, years, seeds):
                   f"DD {np.mean(dds):.1%}; p(return)={p:.3f}, p(drawdown as low)={pdd:.3f}")
 
 
+def index_gate_replication(seeds=2000):
+    """Out-of-sample check of the trend gate, independent of IBS: the same monthly rule
+    (hold the index next month iff its close > L-day SMA at this month-end; fill next
+    close, 0.2%/leg cost on each switch) on NIFTY 2008+ (includes 2008) and the S&P 500 1950+."""
+    import yfinance as yf
+    import probe_macro_analog as pm
+
+    def spx():
+        x = yf.Ticker("^GSPC").history(start="1950-01-01")["Close"]
+        x.index = pd.DatetimeIndex(x.index.date)
+        return x
+
+    for name, px in (("NIFTY 2008+", pm.load()["nifty"].dropna()), ("S&P 500 1950+", spx())):
+        px = px[~px.index.duplicated()]
+        me = np.flatnonzero(px.index.to_period("M").to_series().ne(px.index.to_period("M").to_series().shift(-1)).to_numpy())
+        p = px.to_numpy()
+        years = (px.index[-1] - px.index[0]).days / 365.25
+        rets = np.array([p[b + 1] / p[a + 1] - 1 for a, b in zip(me[:-1], me[1:]) if b + 1 < len(p)])
+        starts = [a for a, b in zip(me[:-1], me[1:]) if b + 1 < len(p)]
+        def stats(r):
+            eq = np.cumprod(1 + r)
+            return eq[-1], (1 - eq / np.maximum.accumulate(eq)).max()
+        bh_f, bh_dd = stats(rets)
+        yrs = len(rets) / 12
+        cg = lambda f: (f ** (1 / yrs) - 1) * 100
+        print(f"\n{name}: {len(rets)} months, buy&hold {cg(bh_f):.2f}%/yr, month-end maxDD {bh_dd:.1%}, Calmar {cg(bh_f) / (100 * bh_dd):.2f}")
+        for L in (100, 150, 200):
+            sma = pd.Series(p).rolling(L).mean().to_numpy()
+            on = np.array([(p[a] > sma[a]) if not np.isnan(sma[a]) else True for a in starts])
+            flips = np.abs(np.diff(np.concatenate([[1], on.astype(int)]))).sum()
+            g = np.where(on, rets, 0.0) - np.where(np.abs(np.diff(np.concatenate([[1], on.astype(int)]))) > 0, 0.002, 0.0)
+            gf, gdd = stats(g)
+            rng = np.random.default_rng(0)
+            n_off = int((~on).sum())
+            fin, dds = [], []
+            for _ in range(seeds):
+                m = np.ones(len(rets), bool)
+                m[rng.choice(len(rets), n_off, replace=False)] = False
+                f_, d_ = stats(np.where(m, rets, 0.0))
+                fin.append(f_)
+                dds.append(d_)
+            pdd = ((np.array(dds) <= gdd).sum() + 1) / (seeds + 1)
+            pret = ((np.array(fin) >= gf).sum() + 1) / (seeds + 1)
+            print(f"  SMA{L}: cash {n_off}/{len(rets)} months, {int(flips)} switches, {cg(gf):.2f}%/yr, maxDD {gdd:.1%}, "
+                  f"Calmar {cg(gf) / (100 * gdd):.2f}; vs random off-months: p(return)={pret:.3f}, p(DD)={pdd:.4f}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=1500)
@@ -235,8 +282,11 @@ def main():
     ap.add_argument("--overlap", action="store_true", help="how much is rev(21) just IBS?")
     ap.add_argument("--spread", action="store_true", help="price each pick's own Corwin-Schultz half spread")
     ap.add_argument("--gate", action="store_true", help="NIFTY SMA trend gate on IBS rotation")
+    ap.add_argument("--index-gate", action="store_true", help="trend gate on NIFTY 2008+ and S&P 1950+")
     ap.add_argument("--extend", action="store_true", help="EXPLORATORY: windows/top_k beyond the pre-registered grid")
     a = ap.parse_args()
+    if a.index_gate:
+        return index_gate_replication()
     M = load_matrices(stress=a.stress)
     years = (M["close"].index[M["me"][-1]] - M["close"].index[M["me"][0]]).days / 365.25
     print(f"universe {M['close'].shape[1]} stocks, {len(M['me'])} month-ends, {years:.1f}y")
@@ -250,6 +300,8 @@ def main():
         return spread_test(M, years, a.seeds)
     if a.gate:
         return gate_test(M, years, a.seeds)
+    if a.index_gate:
+        return index_gate_replication()
     if a.extend:
         print("=== EXPLORATORY extension past the pre-registered grid's edge (no p claimed as pre-registered) ===")
         for window, top_k in ((21, 12), (42, 8), (63, 8), (42, 12)):
