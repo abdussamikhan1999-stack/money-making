@@ -147,7 +147,10 @@ def fetch_etf_closes(start, end):
     df = yf.Ticker("NIFTYBEES.NS").history(
         start=start - datetime.timedelta(days=10), end=end + datetime.timedelta(days=10)
     )
-    return sorted((ts.date(), float(row["Close"])) for ts, row in df.iterrows())
+    out = sorted((ts.date(), float(row["Close"])) for ts, row in df.iterrows())
+    if not out:  # a failed pull must not masquerade as a null strategy result (review finding)
+        raise RuntimeError("NIFTYBEES.NS price fetch returned no rows (yfinance failure?)")
+    return out
 
 
 def price_on_or_after(closes, d):
@@ -208,7 +211,7 @@ def shift_control(series, closes, args, actual_total, n_seeds, seed=0):
         tr = simulate(shifted, closes, args.entry_threshold, args.exit_threshold,
                       args.window, args.max_hold_weeks)
         totals.append(sum(t["pnl"] for t in tr))
-    p = sum(1 for t in totals if t >= actual_total) / len(totals)
+    p = (sum(1 for t in totals if t >= actual_total) + 1) / (len(totals) + 1)  # never exactly 0
     mean = sum(totals) / len(totals)
     return p, mean
 
@@ -265,20 +268,30 @@ def main():
 
     import os
 
+    series = None
     if os.path.exists(args.cache):
-        print(f"Loading cached PCR series from {args.cache}")
-        series = []
+        cached = []
         with open(args.cache) as f:
             for line in f:
                 d, v = line.strip().split(",")
-                series.append((datetime.date.fromisoformat(d), float(v)))
-    else:
+                cached.append((datetime.date.fromisoformat(d), float(v)))
+        # the cache must cover the requested window (review finding: it used to be loaded silently regardless)
+        if cached and cached[0][0] <= start + datetime.timedelta(days=7) and cached[-1][0] >= end - datetime.timedelta(days=14):
+            print(f"Loading cached PCR series from {args.cache}")
+            series = [(d, v) for d, v in cached if start <= d <= end]
+        else:
+            print(f"Cache {args.cache} covers {cached[0][0] if cached else None}..{cached[-1][0] if cached else None}, "
+                  f"not {start}..{end}; refetching")
+    if series is None:
         print(f"Fetching weekly NIFTY PCR {start} to {end}...")
         series, errors = fetch_weekly_pcr(start, end)
         print(f"Fetched {len(series)} weeks OK, {len(errors)} errors")
-        with open(args.cache, "w") as f:
-            for d, v in series:
-                f.write(f"{d.isoformat()},{v}\n")
+        if errors:  # never cache a gappy series: every later run would reuse it silently
+            print(f"WARNING: {len(errors)} weeks failed; NOT writing the cache")
+        else:
+            with open(args.cache, "w") as f:
+                for d, v in series:
+                    f.write(f"{d.isoformat()},{v}\n")
 
     print(f"Fetching NIFTYBEES.NS closes...")
     closes = fetch_etf_closes(start, end)
