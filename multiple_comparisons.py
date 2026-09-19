@@ -178,6 +178,14 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("IBS rotation top_k=5, own half-spread x2 (Sixtieth)", 0.0653),
     ("Reversal(21) top_k=5, own half-spread x1 (Sixtieth)", 0.0793),
     ("Reversal(21) top_k=5, own half-spread x2 (Sixtieth)", 0.1006),
+    # Sixty-first entry: NIFTY SMA trend gate on IBS rotation. Registered claim = the
+    # DRAWDOWN reduction vs random off-months (its return p-values are 0.28-0.71).
+    ("Trend gate SMA100 top_k=5, drawdown (Sixty-first)", 0.040),
+    ("Trend gate SMA150 top_k=5, drawdown (Sixty-first)", 0.062),
+    ("Trend gate SMA200 top_k=5, drawdown (Sixty-first)", 0.116),
+    ("Trend gate SMA100 top_k=8, drawdown (Sixty-first)", 0.016),
+    ("Trend gate SMA150 top_k=8, drawdown (Sixty-first)", 0.100),
+    ("Trend gate SMA200 top_k=8, drawdown (Sixty-first)", 0.153),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number

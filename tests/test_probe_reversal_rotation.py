@@ -45,3 +45,13 @@ def test_own_half_spread_lowers_returns():
     S = pd.DataFrame({"A": 0.0, "B": 1.0, "C": 2.0}, index=M["close"].index)
     hs = pd.DataFrame(0.01, index=M["close"].index, columns=M["close"].columns)
     assert rr.simulate(M, S, 1, 1, hs=hs)["final"] < rr.simulate(M, S, 1, 1)["final"]
+
+
+def test_risk_off_gate_month_earns_zero_and_pays_no_cost():
+    M = _matrices()
+    S = pd.DataFrame({"A": 0.0, "B": 1.0, "C": 2.0}, index=M["close"].index)
+    gate = np.ones(len(M["close"]), bool)
+    gate[M["me"][0]] = False  # first month off
+    r = rr.simulate(M, S, 1, 1, gate=gate)
+    assert r["months"][0] == 0.0 and len(r["months"]) == 2
+    assert r["final"] == 100_000.0 * (1 + r["months"][1]) or abs(r["final"] - 100_000.0 * (1 + r["months"][1])) < 1e-6
