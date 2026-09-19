@@ -5120,3 +5120,84 @@ Sixty-fourth entry) is the remaining test. No count change; still not declared
 tradable. Remaining open threads: whether the effect is about the ENTRY day or
 the calendar of the HOLDING window (hold windows anchored on the calendar); an
 independent universe if a constituent list becomes available.
+
+
+## Sixty-sixth: where in the month the IBS edge accrues — the first ~5 trading days after a month-end entry; that short-hold version replicates on the earlier decade (p=0.0013) while the full-month hold does not (p=0.26), but its economics are thin
+
+Follow-up to the Sixty-fourth/Sixty-fifth entries' open thread (entry day vs
+holding window). Three steps, the first two exploratory on 2016-2026, the third
+an independent-sample test on 2007-2016 (`probe_reversal_rotation.py --horizon`,
+`--hold`, `--oos-horizon`; same 52 stocks, IBS(5), top_k=5, lag-1 fill).
+
+**1. Excess-return curve by holding horizon** (gross: IBS picks minus the
+equal-weight return of every eligible stock over the same days; enter at the
+lag-1 close after the ranking date; mean over ~119 months). Month-end entry (j=0),
+2016-2026: h=1 +0.20% (t=2.7), h=3 +0.39% (3.0), h=5 +0.45% (2.5), h=10 +0.62%
+(2.7), h=21 +0.55% (1.6), h=25 +0.71% (1.9); both halves positive at every h
+through 16. **Mid-month entry (j=9): zero to negative at every horizon** (h=5
+-0.19%, h=21 -0.40%). The whole month's gross excess (~+0.5-0.7%/month, i.e. the
+~6.5-point annual gap to random) accrues in the first 5-10 trading days; days
+10-25 add nothing.
+
+**2. Post-hoc policy: hold h days from the month-end entry, then cash** (net of
+costs, random control uses the identical hold; 1,500 seeds; top_k=5). 2016-2026:
+5d 6.15%/yr, DD 21.7%, p=0.0020; 8d 8.29%, DD 16.5%, p=0.0020; **10d 11.42%/yr,
+DD 20.3%, Calmar 0.56, all four quarters positive, p=0.0013 (random same-hold
+3.64%/yr)**; 13d 10.46%, p=0.021; 21d 18.65%, DD 38.7%, p=0.060 (the standing
+form). top_k=8: 5/8/10/13/21d p = 0.0033/0.0047/0.0127/0.0326/0.0360. With the
+Fortieth entry's four blowups added (56 stocks): hold 10d 17.64%/yr, DD 21.9%,
+Calmar 0.80, p=0.0007 (top_k=5) and 14.95%/yr, p=0.0007 (top_k=8). The short
+hold is far more significant than the full month because its random benchmark
+has half the market exposure: same ~0.5%/month excess, much less noise in the
+comparison. This is a statement about the TEST, not a bigger edge.
+
+**3. Independent-sample test, 2007-09 to 2016-09 (106 months; the hypothesis was
+formed on 2016-2026 only).** Horizon curve at month-end entry: h=1 +0.20% (t=2.2),
+h=3 +0.46% (2.5), **h=5 +0.61% (t=2.75, halves +0.51%/+0.72%)**, h=10 +0.39%
+(1.3), h=21 +0.31% (0.8) — same shape and, at h=5, the same size as the later
+decade (+0.45%). Mid-month entry: a 1-3 day bounce (h=3 +0.33%, t=1.8) that is
+gone by h=5 (-0.06%). Policy scored on the earlier decade: **hold 5d 3.82%/yr vs
+random same-hold -3.69%/yr, p=0.0013** (later decade p=0.0020); hold 10d p=0.079;
+hold 21d 16.39% vs 14.00%, **p=0.26**. So the data supports about 5 days better
+than 10, and the FULL-MONTH form of the standing candidate does not replicate
+out of sample while the short month-end bounce does.
+
+**How to read it.**
+- *Statistically:* a specific out-of-sample confirmation of a pre-stated
+  hypothesis (j=0, h=5) at p=0.0013; three horizons were looked at on that
+  sample (5, 10, 21), so a x3 correction gives ~0.004. That is a real
+  replication, the first in this project's rotation family. Against the global
+  ledger it is not: `multiple_comparisons.py` now holds 90 registered p-values
+  plus 84 unregistered scan cells; Bonferroni ~0.00056 (or ~0.0003 with the scan
+  cells) is below the 1,500-seed resolution floor of 0.00067, so nothing in the
+  rotation family CAN pass that bar with this test. Both views are stated because
+  neither alone is the honest one.
+- *Economically:* thin. 5-day hold nets 3.8%/yr (2007-16, DD 37%, first half -8%)
+  and 6.1%/yr (2016-26) on capital deployed ~25% of the time; the gross excess is
+  ~+0.45-0.6% per 5-day trade against an assumed 0.43% round-trip cost, so any
+  execution cost beyond the model (the Sixtieth entry's spread proxy cannot
+  rule out ~0.1% per leg) eats a large share of it. The random control pays the
+  same costs, so the p-values are unaffected, but the absolute P&L is what the
+  costs decide.
+- *Survivorship:* the earlier decade uses today's constituents and a
+  loser-bounce strategy is the most exposed to that bias (delisted losers are
+  absent), which inflates the 2007-16 result more than the later one; the
+  four-blowup stress is not informative for that window (those names were alive
+  and stable then).
+- *Mechanism:* the bounce concentrated in the first days after a month-end
+  entry fits a turn-of-month flow story but is untested; an unrelated 1-3 day
+  bounce exists at other times too (mid-month h=1-3 in the earlier decade).
+
+**Net verdict.** The month-end oversold-bounce is now the best-supported
+statistical statement about IBS rotation (confirmed on an independent decade
+after correction for the horizons looked at) and a materially different one from
+"~20%/yr rotation": it is a ~5-day, ~+0.5% gross-per-trade effect at the turn of
+the month, with thin net economics. The full-month standing candidate does not
+replicate out-of-sample. **Not declared tradable; no count change.** Concrete
+implications: (1) the paper trackers should also record the price at +5 and +10
+trading days after each month-end entry (currently they mark only at the next
+run) so the forward record tests the short-hold form directly; (2) a realistic
+execution-cost measurement for oversold names at the close (the one input
+that decides whether ~0.5% gross per trade is tradable) is now the most valuable
+missing data; (3) any live decision should be sized to a strategy that earns
+single-digit percent per year net, not ~20%. 210 tests pass (1 new: hold logic).
