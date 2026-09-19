@@ -194,6 +194,14 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Index gate S&P500 1950+ SMA100, drawdown (Sixty-second)", 0.0005),
     ("Index gate S&P500 1950+ SMA150, drawdown (Sixty-second)", 0.0005),
     ("Index gate S&P500 1950+ SMA200, drawdown (Sixty-second)", 0.0005),
+    # Sixty-third entry: 12-1 momentum and 52-week-high rotations, lag 1. p = P(random >= actual);
+    # values near 1 mean the strategy UNDERperforms random portfolios.
+    ("12-1 momentum rotation top_k=3 (Sixty-third)", 0.9540),
+    ("12-1 momentum rotation top_k=5 (Sixty-third)", 0.8195),
+    ("12-1 momentum rotation top_k=8 (Sixty-third)", 0.9374),
+    ("52-week-high rotation top_k=3 (Sixty-third)", 0.9900),
+    ("52-week-high rotation top_k=5 (Sixty-third)", 0.9727),
+    ("52-week-high rotation top_k=8 (Sixty-third)", 0.9973),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number
