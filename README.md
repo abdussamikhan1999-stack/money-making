@@ -28,7 +28,7 @@ are in CLAUDE.md's numbered entries (56-73 cover the latest work).
   concentrated in month-end entries and the first ~5 trading days after them
   (Entries 64-66); the 5-day version replicated on an earlier decade of the same
   stocks (p=0.0013) and on different stocks in that decade (p=0.009) but is absent
-  on different stocks in the recent decade (p=0.64), and the earlier-decade cells
+  on different NSE stocks (p=0.64) or US large caps (p=0.51) in the recent decade, and the earlier-decade cells
   are survivorship-inflated (Entries 68-69); the full-month hold does not
   replicate on 2007-16 (p=0.26). Net economics of the short hold: ~8-13%/yr on
   capital in the market 25-50% of the time, cost- and slippage-sensitive.

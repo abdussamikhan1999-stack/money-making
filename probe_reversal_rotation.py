@@ -38,6 +38,10 @@ UNIVERSE_B = ["AMBUJACEM", "BANKBARODA", "BEL", "BOSCHLTD", "CANBK", "CHOLAFIN",
               "CUMMINSIND", "ESCORTS", "FEDERALBNK", "GLENMARK", "IDFCFIRSTB", "LUPIN", "MUTHOOTFIN", "PAGEIND",
               "PETRONET", "TATACOMM", "INDUSINDBK", "M&M", "ADANIENT", "NMDC", "IGL", "SHREECEM"]
 SYMBOLS = None  # set by --universe-b
+US_UNIVERSE = ["AAPL", "MSFT", "AMZN", "JPM", "JNJ", "XOM", "WMT", "PG", "KO", "PEP", "CVX", "MRK", "PFE", "CSCO", "INTC",
+               "ORCL", "IBM", "T", "VZ", "HD", "MCD", "DIS", "BA", "CAT", "MMM", "GE", "HON", "UNH", "ABT", "AMGN", "GILD",
+               "BMY", "LLY", "TXN", "QCOM", "ADBE", "COST", "NKE", "SBUX", "LOW", "TGT", "UPS", "FDX", "DE", "MDT", "AXP",
+               "GS", "MS", "C", "BAC", "WFC", "USB"]
 CACHE = os.environ.get("REV_CACHE", "")
 
 
@@ -374,6 +378,47 @@ def anchor_test(M, seeds, kind="ibs", window=5, top_k=5):
           f"last-5-days-of-month anchors (j=0..4) mean {c[:5].mean():.2f} vs rest {c[5:].mean():.2f}")
 
 
+def load_us(period_start="2006-06-01"):
+    """Seventy-fourth entry: 52 current S&P-100-type US large caps on the S&P 500 trading calendar."""
+    import yfinance as yf
+    cal = yf.Ticker("^GSPC").history(start=period_start)["Close"].dropna()
+    idx = pd.DatetimeIndex(cal.index.date)
+    out = {}
+    raw = {t: yf.Ticker(t).history(start=period_start) for t in US_UNIVERSE}
+    for name in ("Close", "High", "Low"):
+        out[name.lower()] = pd.DataFrame({t: pd.Series(d[name].to_numpy(), index=pd.DatetimeIndex(d.index.date))
+                                          for t, d in raw.items() if len(d)}).reindex(idx).ffill()
+    ym = idx.to_period("M")
+    out["me"] = [int(i) for i in np.flatnonzero(ym != pd.Series(ym).shift(-1).to_numpy())][:-1]
+    return out
+
+
+def us_test(seeds):
+    """Same pre-declared month-end tests on US large caps: horizon curve j=0 vs j=9, hold 5/10/21 (top_k=5,
+    lag 1, US cost 0.05%/leg and no DP charge), both decades, same-hold random control."""
+    global COST_PCT, DP
+    COST_PCT, DP = 0.05, 0.0
+    M = load_us()
+    print(f"US universe {M['close'].shape[1]} stocks, {M['close'].index[0].date()} .. {M['close'].index[-1].date()}, {len(M['me'])} month-ends")
+    S = scores(M, "ibs", 5)
+    cut = M["close"].index.searchsorted(pd.Timestamp("2016-09-19"))
+    horizon_curve(M, js=(0, 9), hi=cut)
+    print("---- later decade ----")
+    horizon_curve(M, js=(0, 9), lo=cut)
+    for label, lo, hi in (("2007-16", 0, cut), ("2016-26", cut, len(M["close"]))):
+        Mx = dict(M)
+        Mx["me"] = [m for m in M["me"] if lo <= m and m + 30 < hi]
+        row = []
+        for h in (5, 10, 21):
+            r = simulate(Mx, S, 5, 1, hold=h)
+            yrs = len(r["months"]) / 12
+            rng = np.random.default_rng(0)
+            fin = np.array([simulate(Mx, S, 5, 1, rng=rng, hold=h)["final"] for _ in range(seeds)])
+            p = ((fin >= r["final"]).sum() + 1) / (seeds + 1)
+            row.append(f"hold {h:2d}d {cagr(r['final'], yrs):6.2f}%/yr (DD {r['max_dd']:.0%}, rnd {cagr(fin.mean(), yrs):5.2f}%, p={p:.4f})")
+        print(f"US {label}: " + " | ".join(row))
+
+
 def oos_horizon(split="2016-09-19"):
     """Sixty-sixth entry: the horizon-curve hypothesis (edge accrues in the ~10 trading days after a
     month-end entry) scored on the decade BEFORE the one it was found in, and on the later decade."""
@@ -498,10 +543,13 @@ def main():
     ap.add_argument("--oos-horizon", action="store_true", help="horizon curve on 2007-2016 vs 2016-2026")
     ap.add_argument("--universe-b", action="store_true", help="52 different NSE names (Sixty-eighth entry)")
     ap.add_argument("--cost", type=float, help="per-leg cost %% override (default 0.2; ~0.125 is nearer real NSE delivery costs)")
+    ap.add_argument("--us", action="store_true", help="month-end tests on US large caps (Seventy-fourth entry)")
     ap.add_argument("--extend", action="store_true", help="EXPLORATORY: windows/top_k beyond the pre-registered grid")
     a = ap.parse_args()
     if a.cost is not None:
         globals()["COST_PCT"] = a.cost
+    if a.us:
+        return us_test(a.seeds)
     if a.universe_b:
         global SYMBOLS
         SYMBOLS = UNIVERSE_B

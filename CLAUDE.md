@@ -5497,3 +5497,48 @@ the static equity/gold portfolio's return with a higher drawdown (18-35% vs
 published NSE charge schedules (not re-verified against a contract note), and
 slippage/impact (the Sixtieth entry could not size it) is not included. No p-value,
 count or verdict change. IBS remains unproven and not declared tradable.
+
+
+## Seventy-fourth: the month-end oversold-bounce on US large caps — a faint echo in the earlier decade, nothing in the recent one
+
+A third independence axis for the Sixty-sixth entry's short-hold effect: a different
+MARKET (different investors, calendar structure and flows). `probe_reversal_rotation.py
+--us`: 52 current S&P-100-type large caps (AAPL, MSFT, JPM, JNJ, XOM, ... USB) on the
+S&P 500 trading calendar, ~20 years, IBS(5), top_k=5, lag-1 fill, month-end entry, the
+identical pre-declared tests, US-appropriate costs (0.05%/leg, no DP charge), 1,000-seed
+same-hold random control. Same survivorship caveat as every earlier-decade cell.
+
+Horizon curve, gross excess of IBS picks over the equal-weight universe, month-end
+entry: 2007-16 h=1 +0.07% (t=1.4), h=5 +0.24% (t=1.8), h=10 +0.25% (t=1.3), h=21
+-0.10%; 2016-26 h=1 +0.02%, **h=5 +0.01% (t=0.08)**, h=10 +0.07%, **h=21 -0.71%
+(t=-2.3)**. Mid-month entry: ~0 throughout. Hold-then-cash vs same-hold random:
+2007-16 hold 5d 3.74%/yr (p=0.040), 10d 6.02% (p=0.056), 21d 6.61% vs 8.51% random
+(p=0.66); **2016-26 hold 5d 4.93% (p=0.51), 10d 8.96% (p=0.52), 21d 4.96% vs 14.51%
+random (p=0.997)**.
+
+**Combined table for the short-hold month-end effect (hold 5d p-values):**
+
+| universe | 2007-16 | 2016-26 |
+|---|---|---|
+| NSE original 52 | 0.0013 | 0.0020 (where found) |
+| NSE different 54 | 0.0093 | 0.64 |
+| US large caps 52 | 0.040 | 0.51 |
+
+Every universe shows something in the earlier decade (three of three); in the
+recent decade the only cell with an effect is the one it was found in (0 of 2
+independent replications). This is what survivorship inflation of a loser-bounce
+strategy on today's constituents in the years around the 2009 recovery predicts,
+and it is what a chance finding predicts. It is much less consistent with a
+robust market-wide turn-of-month oversold-bounce, which would appear in the recent
+decade on fresh stocks and on a different market. In the US universe the full-month
+oversold hold is actively worse than random in the recent decade (-9.5 points/yr,
+p=0.997), i.e. buying just-oversold large caps for a month has been a bad trade
+there, the opposite of the NSE sign.
+
+**Net.** Confidence in the short-hold month-end effect falls further: from
+"replicated 3 of 4" (Sixty-ninth) to "found once, echoing weakly in the earlier
+decade in all three universes and absent in the recent decade in both independent
+ones." It stays "unproven" and I would now weight it as more likely to be a
+finding of the discovery sample than a tradable effect. 6 more p-values registered
+(m~136 + 84 scan cells); 213 tests pass; no count change (64 mechanisms tested); not
+declared tradable. The forward record (Sixty-seventh entry) remains the arbiter.
