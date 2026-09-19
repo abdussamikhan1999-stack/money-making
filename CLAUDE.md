@@ -4663,3 +4663,88 @@ therefore NOT worth building. **The long-only IBS rotation remains this
 project's sole standing finding; 57 mechanisms tested, none has cleared the
 bar to trade.** (This entry adds no new mechanism count: it rejects its own
 predecessor's follow-ups.) 203 tests pass (3 new).
+
+
+## Fifty-ninth: closing the IBS backtest's same-bar-fill look-ahead (costs ~2 points a year, IBS survives), and testing the classic short-term reversal factor — a smooth-looking pass that survivorship stress destroys
+
+Two tasks in one probe (`probe_reversal_rotation.py`, a numpy re-implementation
+of the monthly rotation so a fill LAG can be applied identically to a strategy
+and to its random-portfolio control). It reproduces the family's existing IBS
+number before being trusted: lag 0, top_k=5, 52 stocks, 10y gives 22.29%/yr and
+38.2% max drawdown vs the Thirty-ninth/Fifty-fourth entries' 22.1-22.2% and
+38.2%.
+
+**Part A — the Fifty-first entry's still-open backtest look-ahead.** Every
+rotation backtest since the Thirty-eighth ranks on the month-end close and fills
+at that SAME close, which no real account can do (only the live trackers were
+fixed, in the Forty-ninth entry). `lag=1` fills at the first close after the
+ranking date. IBS(5) rotation, 52-stock WIDE_UNIVERSE, 1,500-seed lag-matched
+random control (random mean ~13.2-13.9%/yr either way):
+
+| top_k | lag 0 | lag 1 | p (lag 0 -> lag 1) |
+|---|---|---|---|
+| 3 | 22.84%/yr, DD 38.0% | 20.81%/yr, DD 39.7% | 0.044 -> 0.055 |
+| 5 | 22.29%/yr, DD 38.2% | 20.05%/yr, DD 39.5% | 0.015 -> 0.051 |
+| 8 | 21.03%/yr, DD 31.6% | 19.11%/yr, DD 33.3% | 0.009 -> 0.030 |
+
+The look-ahead was worth ~2.0-2.2 points of annual return and ~1-2 points of
+drawdown; both walk-forward halves and all four quarters stay positive at every
+size. It also pushes the uncorrected p-value at the project's standard top_k=5
+from 0.015 to 0.051 — the significance claim the Fifty-third entry already
+retired is now not even a raw p<0.05 once filled realistically. **The backtest
+numbers cited for IBS rotation (22%/yr) are best read as ~20%/yr going
+forward.** The two live paper trackers already use next-settled-bar data and
+are unaffected.
+
+**Part B — short-term reversal (Jegadeesh 1990 / Lehmann 1990), a real
+academic factor never tested directly here** (IBS and RSI-2 are proxies for
+it). Score = trailing N-day return, long the top_k biggest losers, monthly,
+same cost model, lag 1. Pre-registered grid: N in {5, 10, 21} x top_k in
+{3, 5, 8}, walk-forward halves + quarter-split + 1,500-seed lag-matched control.
+Full-period results (all 9 cells positive, all 4 quarters positive in 8 of 9):
+rev(5): 14.8/16.7/13.6%/yr, p 0.35/0.17/0.40; rev(10): 20.6/15.8/17.9%/yr,
+p 0.071/0.239/0.056; **rev(21): 14.8/19.0/20.9%/yr, p 0.326/0.066/0.0027**.
+The single standout, rev(21) top_k=8, has 20.93%/yr, 39.0% DD, halves
++174%/+143%, quarters +54/+80/+58/+51%, and its p=0.0027 clears the
+9-cell within-grid Bonferroni threshold (0.0056). Everything else does not.
+The surface is smooth (returns and p-values improve monotonically with both
+window and portfolio size) but the best cell sits at the CORNER of the grid,
+the usual warning that the peak may lie outside it. An exploratory extension
+(post hoc, all registered in the multiple-comparisons family) finds a
+plateau, not a taller peak: rev(21) top_k=12 18.2%/yr p=0.016; rev(42) top_k=8
+19.0% p=0.053; rev(63) top_k=8 18.0% p=0.090; rev(42) top_k=12 18.4% p=0.023.
+
+**Three checks, each of which the candidate fails:**
+1. *Survivorship stress* (the Fortieth entry's four real blowups, JETAIRWAYS/
+   YESBANK/RCOM/PCJEWELLER, added to the universe: 56 stocks). A reversal
+   strategy is the most exposed to survivorship bias there is (its universe of
+   "biggest losers" is missing every loser that kept falling to delisting).
+   rev(21) top_k=8 falls from 20.9%/yr to **15.6%/yr with a 57.3% drawdown and
+   p=0.112**; the other reversal cells collapse: rev(21) top_k=3/5 3.0%/7.4%
+   with 87.8%/76.1% drawdowns, rev(10) 1.0-7.1%/yr with 72-84% drawdowns and
+   p 0.79-0.94. **IBS(5) rotation, under the identical stress and lag,
+   IMPROVES** (21.87%/yr at top_k=5, p=0.015; 22.67%/yr at top_k=8, p=0.0027,
+   DD 33.5%): the "closed near today's low" signal harvests bounces without
+   buying cumulative losers into a collapse (the Fortieth entry's
+   bounce-harvest concern still applies to IBS, this just shows it is a
+   different, less fragile exposure than raw reversal).
+2. *Overlap with IBS.* Monthly-return correlation of rev(21) and IBS(5)
+   (top_k=8, lag 1) is **0.85** (0.83 under stress) although only ~31% of the
+   picks coincide; a 50/50 blend of the two return streams earns 20.2%/yr vs
+   rev 20.9% / IBS 19.1% — no diversification. Reversal is largely the same
+   short-term-reversal effect IBS already captures, not an independent one.
+3. *Multiple comparisons.* 16 more p-values registered (3 IBS lag-1, 9 grid,
+   4 post-hoc), family m=55, Bonferroni threshold 0.00091: rev(21) top_k=8
+   (p=0.0027) fails; nothing passes under either Bonferroni or BH.
+
+**Net verdict: rev(21) rotation rejected.** A real, published factor that
+reproduces in backtest and beats a random-portfolio control on the survivors-only
+universe, but its edge is largely IBS again (0.85 correlated) and disappears
+under the one bias reversal strategies are most vulnerable to, where IBS is
+unaffected. **IBS rotation remains the sole standing finding, now with a more
+honest expected return (~20%/yr, not 22%), still no surviving significance
+claim, and still not declared tradable.** New standing check for any future
+loser-buying/oversold-ranking candidate: run the four-blowup survivorship stress
+BEFORE reading its walk-forward or p-value; `--stress` in this probe does it.
+58 mechanisms tested; none has cleared the bar to trade. 205 tests pass (2 new,
+covering the fill-lag logic that is the point of this file).
