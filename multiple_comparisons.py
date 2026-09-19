@@ -105,6 +105,14 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Amihud illiquidity rotation top_k=3 (Fifty-fourth)", 0.5900),
     ("Amihud illiquidity rotation top_k=5 (Fifty-fourth)", 0.1047),
     ("Amihud illiquidity rotation top_k=8 (Fifty-fourth)", 0.0367),
+    # Nifty PCR contrarian long on NIFTYBEES (Fifty-sixth entry), 1,500-seed
+    # circular-shift control, 1-day fill lag, 5 of the 12 swept configs.
+    ("Nifty PCR entry=0.80 window=26 (Fifty-sixth)", 0.052),
+    ("Nifty PCR entry=0.85 window=26 (Fifty-sixth)", 0.051),
+    ("Nifty PCR entry=0.90 window=13 (Fifty-sixth)", 0.123),
+    ("Nifty PCR entry=0.90 window=26 (Fifty-sixth)", 0.084),
+    ("Nifty PCR entry=0.90 window=52 (Fifty-sixth)", 0.069),
+    ("Nifty PCR entry=0.95 window=26 (Fifty-sixth)", 0.327),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number
