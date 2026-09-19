@@ -81,7 +81,7 @@ def corwin_schultz_half_spread(M, smooth=3):
     return (spread.rolling(smooth, min_periods=1).mean() / 2)
 
 
-def simulate(M, S, top_k, lag, rng=None, capital=100_000.0, hs=None, hs_mult=1.0, gate=None):
+def simulate(M, S, top_k, lag, rng=None, capital=100_000.0, hs=None, hs_mult=1.0, gate=None, hold=None):
     """Long the top_k lowest-score names (random eligible names if rng given).
     hs: optional half-spread matrix (see corwin_schultz_half_spread); each pick pays
     ITS OWN half spread x hs_mult on both legs, so the asymmetry between
@@ -94,6 +94,8 @@ def simulate(M, S, top_k, lag, rng=None, capital=100_000.0, hs=None, hs_mult=1.0
     months, at, spreads = [], [], []
     for a, b in zip(me[:-1], me[1:]):
         ea, eb = a + lag, b + lag
+        if hold is not None:  # exit `hold` trading days after entry instead of at the next month-end; cash until then
+            eb = min(ea + hold, b + lag)
         if eb >= len(c):
             break
         if gate is not None and not gate[a]:  # risk-off month: sit in cash (0%, no cost)
@@ -347,6 +349,17 @@ def anchor_test(M, seeds, kind="ibs", window=5, top_k=5):
           f"last-5-days-of-month anchors (j=0..4) mean {c[:5].mean():.2f} vs rest {c[5:].mean():.2f}")
 
 
+def oos_horizon(split="2016-09-19"):
+    """Sixty-sixth entry: the horizon-curve hypothesis (edge accrues in the ~10 trading days after a
+    month-end entry) scored on the decade BEFORE the one it was found in, and on the later decade."""
+    M = load_matrices("20y")
+    cut = M["close"].index.searchsorted(pd.Timestamp(split))
+    print(f"EARLIER (out-of-sample) {M['close'].index[0].date()} .. {split}")
+    horizon_curve(M, hi=cut)
+    print(f"\nLATER (where it was found) {split} .. {M['close'].index[-1].date()}")
+    horizon_curve(M, lo=cut)
+
+
 def oos_anchor_test(period="20y", split="2016-09-19"):
     """Independent-in-time test of the Sixty-fourth entry's month-end hypothesis: the window
     (last 5 trading days, j=0..4) was defined on 2016-2026, so score it on the EARLIER decade.
@@ -384,6 +397,63 @@ def oos_anchor_test(period="20y", split="2016-09-19"):
         print(f"    quarter-by-quarter diff: {qs}")
 
 
+def horizon_curve(M, top_k=5, js=(0, 9), lo=0, hi=10**9):
+    """Where in the month does the IBS edge accrue? For each month, enter the top_k IBS picks at the
+    lag-1 close after the ranking date (j trading days before month-end) and record the GROSS mean
+    return over h trading days for h=1..25, minus the equal-weight return of every eligible stock over
+    the same days (the universe baseline). Gross on purpose: this is a shape, not a P&L."""
+    S = scores(M, "ibs", 5)
+    c, sc = M["close"].to_numpy(), S.to_numpy()
+    hs = (1, 2, 3, 5, 8, 10, 13, 16, 21, 25)
+    for j in js:
+        rows = {h: [] for h in hs}
+        for m in M["me"]:
+            a = m - j
+            if a < max(lo, 0) or a >= hi or a + 1 + max(hs) >= len(c):
+                continue
+            ok = ~np.isnan(sc[a]) & ~np.isnan(c[a + 1])
+            cand = np.flatnonzero(ok)
+            if len(cand) < top_k:
+                continue
+            pick = cand[np.argsort(sc[a][cand])[:top_k]]
+            for h in hs:
+                r = c[a + 1 + h] / c[a + 1] - 1
+                good = cand[~np.isnan(r[cand])]
+                pk = [i for i in pick if not np.isnan(r[i])]
+                if len(pk) == top_k and len(good) > top_k:
+                    rows[h].append(r[pick].mean() - r[good].mean())
+        print(f"\nj={j} ({'month-end entry' if j == 0 else 'mid-month entry, ~9 trading days before month-end'}): "
+              f"IBS picks minus equal-weight universe, gross, by holding horizon h (trading days)")
+        prev = 0.0
+        for h in hs:
+            x = np.array(rows[h])
+            t = x.mean() / (x.std(ddof=1) / np.sqrt(len(x)))
+            half = len(x) // 2
+            print(f"  h={h:2d}: excess {x.mean():+.2%} (t={t:5.2f}, n={len(x)}), halves {x[:half].mean():+.2%}/{x[half:].mean():+.2%}, "
+                  f"increment since previous h {x.mean() - prev:+.2%}")
+            prev = x.mean()
+
+
+def hold_test(M, years, seeds, stress=False):
+    """Post-hoc policy suggested by the Sixty-sixth entry's horizon curve: hold h days from the month-end
+    entry, then cash. Same costs, same lag, random control uses the identical hold."""
+    S = scores(M, "ibs", 5)
+    for top_k in (5, 8):
+        print(f"\ntop_k={top_k}, IBS(5), lag 1, month-end entry, exit after h trading days (cash otherwise, 0%):")
+        for h in (5, 8, 10, 13, 21):
+            r = simulate(M, S, top_k, 1, hold=h)
+            rng = np.random.default_rng(0)
+            finals = np.array([simulate(M, S, top_k, 1, rng=rng, hold=h)["final"] for _ in range(seeds)])
+            p = ((finals >= r["final"]).sum() + 1) / (seeds + 1)
+            mo = r["months"]
+            hh = len(mo) // 2
+            qs = [np.prod(1 + q) - 1 for q in np.array_split(mo, 4)]
+            cal = cagr(r["final"], years) / (100 * r["max_dd"]) if r["max_dd"] else float("nan")
+            print(f"  hold {h:2d}d: {cagr(r['final'], years):6.2f}%/yr, maxDD {r['max_dd']:.1%}, Calmar {cal:.2f}, halves "
+                  f"{np.prod(1 + mo[:hh]) - 1:+.0%}/{np.prod(1 + mo[hh:]) - 1:+.0%}, quarters {[f'{q:+.0%}' for q in qs]}, "
+                  f"random(same hold) {cagr(finals.mean(), years):.2f}%/yr, p={p:.4f}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=1500)
@@ -398,12 +468,17 @@ def main():
     ap.add_argument("--phase", action="store_true", help="IBS 21d-step phase offsets vs calendar month-end")
     ap.add_argument("--anchor", action="store_true", help="IBS/rev rebalance j days before month-end, j=0..20")
     ap.add_argument("--oos", action="store_true", help="month-end window on the pre-2016 decade")
+    ap.add_argument("--horizon", action="store_true", help="IBS excess-return curve by holding horizon")
+    ap.add_argument("--hold", action="store_true", help="post-hoc: hold h days from month-end entry then cash")
+    ap.add_argument("--oos-horizon", action="store_true", help="horizon curve on 2007-2016 vs 2016-2026")
     ap.add_argument("--extend", action="store_true", help="EXPLORATORY: windows/top_k beyond the pre-registered grid")
     a = ap.parse_args()
     if a.index_gate:
         return index_gate_replication()
     if a.oos:
         return oos_anchor_test()
+    if a.oos_horizon:
+        return oos_horizon()
     M = load_matrices(stress=a.stress)
     years = (M["close"].index[M["me"][-1]] - M["close"].index[M["me"][0]]).days / 365.25
     print(f"universe {M['close'].shape[1]} stocks, {len(M['me'])} month-ends, {years:.1f}y")
@@ -413,6 +488,10 @@ def main():
         return
     if a.overlap:
         return overlap(M, years)
+    if a.hold:
+        return hold_test(M, years, a.seeds)
+    if a.horizon:
+        return horizon_curve(M)
     if a.anchor:
         anchor_test(M, a.seeds)
         anchor_test(M, a.seeds, kind="rev", window=21, top_k=8)

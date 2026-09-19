@@ -65,3 +65,14 @@ def test_momentum_scores_sort_winners_first():
     for kind in ("mom", "hi52"):
         s = rr.scores(M, kind, 0).iloc[-1]
         assert s["up"] < s["down"]  # lowest score is picked first: the winner / the name at its high
+
+
+def test_hold_exits_after_h_days_not_at_next_month_end():
+    idx = pd.bdate_range("2024-01-01", periods=30)
+    c = pd.DataFrame({"A": 100.0, "B": 100.0}, index=idx)
+    c.iloc[8:, 0] = 130.0  # A jumps 7 trading days after the row-1 entry (row 1 = ranking 0 + lag 1)
+    M = dict(close=c, high=c, low=c, me=[0, 20])
+    S = pd.DataFrame({"A": 0.0, "B": 1.0}, index=idx)
+    short = rr.simulate(M, S, 1, 1, hold=5)["months"][0]   # exits before the jump
+    long_ = rr.simulate(M, S, 1, 1, hold=10)["months"][0]  # exits after it
+    assert abs(short) < 0.01 and long_ > 0.25

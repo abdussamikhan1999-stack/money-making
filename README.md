@@ -525,6 +525,16 @@ correlated with IBS and collapses to 15.6%/yr, 57% drawdown, p=0.11 once four
 real blowups are added to the universe (IBS improves under the same stress).
 Rejected. See CLAUDE.md's "Fifty-ninth" entry.
 
+**Update on IBS rotation's edge (Sixty-fourth to Sixty-sixth entries)** — the
+edge is concentrated in month-end entries and in the first ~5 trading days
+after them (+0.45-0.6% gross excess over the universe per trade; mid-month
+entries show none). A 5-day month-end hold beats same-hold random portfolios
+at p=0.0013 on an independent earlier decade (2007-16) and p=0.0020 on the
+decade it was found in; the standing full-month hold does NOT replicate on the
+earlier decade (p=0.26). Net economics of the short hold are thin (~4-6%/yr on
+capital deployed a quarter of the time, cost-sensitive). The paper trackers
+should be run at month-end. Not declared tradable.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an
