@@ -156,13 +156,49 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=2000)
     ap.add_argument("--multi", action="store_true")
-    ap.add_argument("--proxy", choices=("nifty", "spx"), help="long-history proxies instead of the NSE ETFs")
+    ap.add_argument("--alloc", action="store_true", help="descriptive static allocation grid on --proxy data")
+    ap.add_argument("--proxy", choices=("nifty", "sensex", "spx"), help="long-history proxies instead of the NSE ETFs")
     a = ap.parse_args()
     if a.multi:
         return multi(min(a.seeds, 1000))
+    if a.alloc:
+        for k in ("sensex", "spx"):
+            alloc_grid(proxy_prices(k), k)
+        return
     if a.proxy:
         return evaluate(proxy_prices(a.proxy), a.seeds, label=a.proxy)
     return evaluate(load(), a.seeds, label="NSE ETFs")
+
+
+def alloc_grid(px, label):
+    """Descriptive static-allocation grid (no timing, so no p-values): equity/gold weights and rebalance
+    frequency, month-end closes, 0.1% per leg on the rebalancing turnover. Annual = December month-ends."""
+    me = month_ends(px.index)
+    p = px.to_numpy()[me]
+    dates = px.index[me]
+    rel = p[1:] / p[:-1]          # monthly price relatives [N, G, C]
+    print(f"\n[{label}] static allocation grid, {dates[0].date()} .. {dates[-1].date()}, {len(rel)} months")
+    for name, w0 in (("30% equity / 70% gold", (0.3, 0.7, 0.0)), ("50/50", (0.5, 0.5, 0.0)), ("70% equity / 30% gold", (0.7, 0.3, 0.0)),
+                     ("40/40/20 cash", (0.4, 0.4, 0.2))):
+        for freq in ("monthly", "annual"):
+            w0a = np.array(w0)
+            hold = w0a.copy()                       # current weights (drift between rebalances)
+            rets = []
+            for i, r in enumerate(rel):
+                if freq == "monthly" or dates[i].month == 12 or i == 0:
+                    turnover = np.abs(w0a - hold).sum()
+                    cost = COST * turnover if i > 0 else 0.0
+                    hold = w0a.copy()
+                else:
+                    cost = 0.0
+                gross = float((hold * (r - 1)).sum())
+                rets.append(gross - cost)
+                hold = hold * r / (hold * r).sum()  # drift
+            rets = np.array(rets)
+            cagr, dd, _ = stats(rets)
+            roll = np.array([(np.prod(1 + rets[i:i + 36]) ** (1 / 3) - 1) * 100 for i in range(len(rets) - 35)])
+            print(f"  {name:22s} {freq:7s}: {cagr:5.2f}%/yr, maxDD {dd:5.1%}, Calmar {cagr / (100 * dd):4.2f}, worst rolling 3y {roll.min():6.2f}%, "
+                  f"windows <5%/yr {np.mean(roll < 5):.0%}")
 
 
 def proxy_prices(kind, cash_rate=0.04):
@@ -173,8 +209,8 @@ def proxy_prices(kind, cash_rate=0.04):
         x.index = pd.DatetimeIndex(x.index.date)
         return x
     gold = h("GC=F")
-    if kind == "nifty":
-        eq, fx = h("^NSEI"), h("INR=X")
+    if kind in ("nifty", "sensex"):
+        eq, fx = h("^NSEI" if kind == "nifty" else "^BSESN"), h("INR=X")
         df = pd.DataFrame({"N": eq, "G": gold, "F": fx}).dropna()
         df["G"] = df["G"] * df["F"]
         df = df.drop(columns="F")
