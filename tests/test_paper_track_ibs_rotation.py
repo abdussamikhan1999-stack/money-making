@@ -85,3 +85,17 @@ def test_latest_settled_date_unaffected_on_a_non_current_last_bar():
     "today" — must return it unchanged regardless of wall-clock time."""
     cal = _calendar(date(2020, 1, 1), date(2020, 1, 2))
     assert latest_settled_date(cal, now=datetime.combine(date(2026, 9, 17), time(12, 0))) == date(2020, 1, 2)
+
+
+def test_horizon_returns_use_lag1_fill_and_report_excess_over_universe():
+    from paper_track_ibs_rotation import horizon_returns
+    d = [date(2026, 1, 1) + timedelta(days=i) for i in range(12)]
+    dates_map = {"A": d, "B": d, "C": d}
+    # record date = d[0]; lag-1 fill is d[1]. A doubles between d[1] and d[6] (h=5); B, C flat.
+    closes_map = {"A": [100, 100, 100, 100, 100, 100, 200, 200, 200, 200, 200, 200],
+                  "B": [100.0] * 12, "C": [100.0] * 12}
+    rec = {"date": "2026-01-01", "picks": [{"symbol": "A"}]}
+    out = horizon_returns(rec, dates_map, closes_map, hs=(5, 10, 30))
+    assert abs(out["5"]["picks_mean"] - 1.0) < 1e-9 and abs(out["5"]["universe_mean"] - 1 / 3) < 1e-4
+    assert abs(out["5"]["excess"] - (1.0 - 1 / 3)) < 1e-4
+    assert "30" not in out  # horizon not yet elapsed is omitted, never guessed
