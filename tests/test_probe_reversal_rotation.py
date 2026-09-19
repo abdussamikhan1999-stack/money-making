@@ -29,3 +29,19 @@ def test_random_control_is_reproducible_and_ignores_scores():
     a = rr.simulate(M, S, 1, 1, rng=np.random.default_rng(5))["final"]
     b = rr.simulate(M, S, 1, 1, rng=np.random.default_rng(5))["final"]
     assert a == b
+
+
+def test_corwin_schultz_half_spread_is_nonnegative_and_grows_with_range():
+    idx = pd.bdate_range("2024-01-01", periods=30)
+    narrow = pd.DataFrame({"A": 100.0}, index=idx)
+    M = dict(close=narrow, high=narrow * 1.005, low=narrow * 0.995, me=[])
+    wide = dict(close=narrow, high=narrow * 1.03, low=narrow * 0.97, me=[])
+    hn, hw = rr.corwin_schultz_half_spread(M).iloc[5:], rr.corwin_schultz_half_spread(wide).iloc[5:]
+    assert (hn >= 0).all().all() and hw.mean().iloc[0] > hn.mean().iloc[0]
+
+
+def test_own_half_spread_lowers_returns():
+    M = _matrices()
+    S = pd.DataFrame({"A": 0.0, "B": 1.0, "C": 2.0}, index=M["close"].index)
+    hs = pd.DataFrame(0.01, index=M["close"].index, columns=M["close"].columns)
+    assert rr.simulate(M, S, 1, 1, hs=hs)["final"] < rr.simulate(M, S, 1, 1)["final"]
