@@ -5221,3 +5221,60 @@ one trading day has elapsed. 1 new test (lag-1 fill, universe baseline, unelapse
 horizons omitted); 211 tests pass. The hedged tracker is unchanged (its hedge
 leg changes the return being measured). No verdict change: 60 mechanisms tested,
 not declared tradable.
+
+
+## Sixty-eighth: the same tests on 54 different NSE stocks — the short-hold month-end effect does NOT appear, and it is diluted inside the original universe; the Sixty-sixth entry's confirmation is real in time but bound to one stock set
+
+The Sixty-sixth entry's short-hold effect replicated on the EARLIER DECADE of the
+same 52 stocks. The complementary independence test is different STOCKS in the
+same period. Universe B (`UNIVERSE_B` in `probe_reversal_rotation.py`, 54 names
+with data, ZERO overlap with the 52: Nifty-Next-50/mid-cap names such as
+AMBUJACEM, BANKBARODA, BEL, DLF, GAIL, HAVELLS, INDIGO, PFC, SIEMENS, ...; today's
+constituents, same survivorship caveat) was run through the identical tests with
+nothing re-tuned (`--universe-b`; lag-1 fills, 2016-2026, 1,500-seed control).
+
+**Universe B results.**
+- Full-month IBS(5) rotation: top_k=5 15.61%/yr (DD 37.1%, all four quarters
+  positive) vs random 12.62%, **p=0.187**; top_k=8 13.96% vs 11.88%, p=0.235.
+  Positive, not significant.
+- Horizon curve, month-end entry: h=1 +0.10% (t=1.5), **h=5 -0.06% (t=-0.4),
+  h=10 -0.12% (t=-0.6)**, h=21 +0.39% (t=1.3). The 5-10 day excess the original
+  universe showed is absent (mid-month is also ~0).
+- Hold-h-then-cash: 5d 0.33%/yr, **p=0.64**; 8d p=0.36; 10d p=0.70; 13d p=0.73;
+  21d 14.35% vs 11.69%, p=0.20.
+
+**Inside the original 52** (same window, the two sub-universes separately;
+random control within each): 40 large caps (top_k=5): hold 5d 3.61%/yr, **p=0.016**,
+10d p=0.30, 21d p=0.20; horizon excess at h=5 +0.28% (t=2.0), roughly half the
+combined figure. 12 small/mid caps (top_k=3): hold 5d p=0.14, 10d 9.12%/yr
+**p=0.076**, 21d 21.87% p=0.16; excess +0.47% at h=10 (t=1.5). The combined
+universe's p=0.0013 is stronger than either half's (0.016, 0.076): the effect is
+partly a property of the MIX, i.e. of ranking IBS across a heterogeneous
+large/small-cap set, not something either sub-universe delivers on its own.
+
+**Reading.** The short-hold month-end result (Sixty-sixth) has now been tested
+on two independence axes: time (same stocks, earlier decade: replicates,
+p=0.0013) and stocks (different names, same decade: absent, p=0.64). A generic
+"oversold stocks bounce in the first week of the month" effect would have to
+appear on both; it appears on one. The candidate explanations that remain
+are all uncomfortable: (a) the effect is real but specific to characteristics
+of this particular 52-name set (mix of index heavyweights and a few small/mids),
+(b) it is a chance finding whose earlier-decade "replication" benefits from
+survivorship bias that inflates loser-bounce strategies on today's constituents
+in exactly that decade (universe B suffers the same bias in the later decade
+and shows nothing, which weakens this explanation but does not remove it), or
+(c) it is a small real effect that the noisier universe B cannot resolve. The
+index-fund/ETF-flow story that motivated a large-cap-concentrated effect is NOT
+supported: the 40 large caps alone show about half the effect of the mix.
+**Confidence in the month-end short-hold effect drops from "replicated" to
+"unproven, stock-set-specific."** The full-month standing candidate is no better
+on B (p=0.19-0.24).
+
+**Multiple comparisons.** 13 more p-values registered (m=103), plus the 84
+unregistered scan cells; none of the new ones is significant except the
+large-cap 5d cell (0.016), which is not below any corrected threshold.
+211 tests pass. **No count change (60 mechanisms tested); IBS rotation remains
+the sole standing finding, now with a further-narrowed evidence base; not
+declared tradable.** What would change this: the forward record (Sixty-seventh
+entry now records the 5d/10d excess at every month-end) and any independent
+constituent list that includes delisted names.
