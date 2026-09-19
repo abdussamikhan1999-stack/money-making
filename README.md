@@ -16,12 +16,14 @@ responsible for any trades it places.
 Read this before any of the per-entry detail below. Full numbers and caveats
 are in CLAUDE.md's numbered entries (56-73 cover the latest work).
 
-- **64 mechanisms tested; none is declared tradable.** Across the ~130
-  registered significance tests (`multiple_comparisons.py`, plus 84 phase-scan
-  cells noted but not registered) nothing in the stock-rotation family can clear
-  a family-wise corrected bar; the only Bonferroni pass is the trend gate's
-  drawdown effect on the S&P 500 since 1950 (a known effect, and a risk overlay,
-  not alpha).
+- **64 mechanisms tested; none is declared tradable.** Across the 148 registered
+  significance tests plus 84 phase-scan cells noted but not registered
+  (`multiple_comparisons.py`, honest family m=232, Bonferroni threshold 0.00022)
+  nothing in the stock-rotation family clears a family-wise corrected bar; the
+  only rows that pass are the trend gate's drawdown effect on the S&P 500 since
+  1950 (p <= 1e-4 at 20,000 draws; a known effect and a risk overlay, not alpha).
+  Three independent code reviews of the analysis scripts (Entries 76-78) found
+  and fixed 21 issues, several of which had biased results toward a finding.
 - **The one surviving stock-selection candidate is IBS rotation, and it is
   unproven.** With realistic next-close fills its backtest is ~20%/yr (~21% at
   ~0.25% round-trip cost) at a ~39% month-end drawdown, but: the edge is
