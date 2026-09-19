@@ -4334,3 +4334,83 @@ cleanly enough on its own checks not to need one). **The long-only IBS
 rotation (Thirty-eighth through Forty-first entries) remains this
 project's sole standing finding; 55 mechanisms tested, no mechanism has
 yet cleared the bar to actually trade.**
+
+
+## Fifty-sixth: Nifty options put-call ratio (PCR) as a contrarian positioning signal, traded long-only on NIFTYBEES — rejected: the raw result was flattered by a look-ahead fill, and the corrected one doesn't beat a matched random-timing control
+
+Picked up from an automated Tier-2 run that stalled `blocked` before writing
+anything up (worktree `pcr-signal`, never committed); its data fetch and
+first probe were reused, its simulation was fixed, everything else here is
+new. First signal in this project derived from OPEN INTEREST (options
+positioning) rather than price, volume, or a fundamental factor. Weekly
+NIFTY PCR = total put OI / total call OI across all strikes and expiries,
+from real NSE F&O bhavcopy (557 weeks, 2016-01 to 2026-09, 0 fetch errors,
+reusing `probe_iron_condor_real_data.py`'s fetcher; cached in
+`pcr_weekly_series.csv`). "Extreme" = trailing-window percentile rank
+(no lookahead), long NIFTYBEES when high PCR (fear, contrarian bullish),
+exit when the percentile falls back to 0.5 or after 8 weeks. Long side
+only (no SLB/short cost modeled anywhere in this project). Traded via the
+ETF, so it is NOT blocked by the fixed-lot capital-tier wall that closed
+every prior Nifty-derivative idea.
+
+**Bug fixed before any number was trusted:** the inherited probe filled
+at the SAME day's close as the bhavcopy. OI is published after the close,
+so that is look-ahead — exactly the flaw the Fifty-first entry's council
+found in the IBS backtest. Fills are now at the first close strictly after
+the signal date (`lag_days=1`). Effect on the base config (entry=0.90,
+window=26): 4.41%/yr -> 3.99%/yr; second-half P&L Rs 8,922 -> Rs 9,564 is
+noise, but Q4 (most recent quarter) went from Rs -81 to Rs +539, i.e. flat
+either way.
+
+**Results (Rs 100k fixed notional per trade, standard equity cost model,
+lagged fills), 12-config perturbation sweep:** all 12 have positive net
+P&L and 12/12 pass a 2-way walk-forward split, with a smooth surface (no
+cliffs) from Rs 20k to Rs 56k. Taken alone that looks like a pass. It
+isn't, because this is a long-only strategy on an ETF that gained 239%
+(about 12.9%/yr) over the same window:
+
+- **Time in market is 17-33%**, so the 3.99%/yr base-config figure (on the
+  full Rs 100k, idle cash earning 0) is not comparable to the ETF's
+  ~12.9%/yr. Per unit of time invested it is roughly 17%/yr (3.99/0.23),
+  which looks like it beats the ETF — but that is the raw number the control
+  below exists to deflate, since a long-only rule that is in the market only
+  during a rising decade earns positive P&L from drift alone.
+- **Circular-shift significance control** (new `shift_control()` in the
+  probe): rotate the PCR series against the price dates by a random offset
+  >= 1 year and rerun the identical rule, 1,500 seeds. This keeps the
+  signal's autocorrelation and trade cadence but destroys any real timing
+  link, so it measures "what this rule earns on a rising ETF by drift
+  alone." Random mean is Rs 15k-21k per config, so drift explains roughly a
+  third of the raw P&L by itself. Uncorrected p(random >= actual):
+  0.80/26 -> 0.052; 0.85/26 -> 0.051; 0.90/52 -> 0.069; **0.90/26 (base)
+  -> 0.084**; 0.90/13 -> 0.123; 0.95/26 -> 0.327. **None clears even an
+  uncorrected 0.05.** The best two miss it by 0.001-0.002, which is
+  reported as a miss, not rounded into a pass.
+- **Decay in the recent quarter**, config-dependent: base config Q4
+  Rs 539 (flat), 0.90/52 Rs 39, 0.95/26 Rs -1,544; only 0.85/26 and
+  0.90/13 hold Q4 at ~Rs 9k. Base config first-half/second-half Rs 33,027
+  / Rs 9,564 — the same shape as most prior rejections here.
+
+Added the 6 p-values above to `multiple_comparisons.py`'s broad family
+(now m=16, up from m=10); Bonferroni threshold 0.0031, **0/16 survive**,
+BH also 0/16. This doesn't change the standing verdict, it keeps the
+running count honest. 3 new unit tests (`tests/test_probe_pcr_signal.py`)
+cover the bhavcopy parser, the no-lookahead percentile, and the lagged
+fill; full suite 196 passed.
+
+**Net verdict: rejected.** Not because the raw numbers were bad — 12/12
+walk-forward-consistent looks better than most prior candidates' raw
+numbers — but because (a) the original fill was look-ahead, (b) the
+raw P&L is mostly explained by being long a rising ETF part of the time, and (c) once beta drift is controlled for, no config is
+distinguishable from random timing. This is the FIRST rejection in this
+project caused by a beta-drift confound rather than decay, concentration,
+capital-tier walls, or cost drag — worth applying as a standing check to
+any future long-only-on-an-index-ETF idea: run the circular-shift control
+before reading the walk-forward result. `probe_pcr_signal.py` stays a
+probe script; no council review (reserved for genuinely promising
+results). Two limits worth naming: PCR here is total-OI over all expiries
+(front-expiry-only or OI-change variants weren't tried, and trying them
+now would be a fresh search inflating the family), and the series is
+weekly, so any faster positioning signal is untested. **The long-only IBS
+rotation remains this project's sole standing finding; 56 mechanisms
+tested, none has cleared the bar to trade.**

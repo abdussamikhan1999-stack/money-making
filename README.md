@@ -482,6 +482,17 @@ rotation, it's closer to a near-static tilt toward the same dozen
 small/mid-cap names, dressed up as a cross-sectional rank. See CLAUDE.md's
 "Fifty-fifth" entry for the full breakdown.
 
+**Nifty put-call ratio (PCR) contrarian long, tested and rejected (Fifty-sixth
+entry, `probe_pcr_signal.py`)** — the project's first open-interest
+(options-positioning) signal: go long NIFTYBEES when weekly Nifty PCR hits a
+trailing-window extreme high. All 12 swept configs are net-positive and
+walk-forward-consistent, but a same-day-close fill in the first draft was
+look-ahead (fixed: fills are 1 day after the signal), and a circular-shift
+random-timing control (1,500 seeds) shows no config beats drift-plus-luck:
+uncorrected p = 0.051-0.327 across the configs tested, none under 0.05
+(0/16 survive correction in the now-16-test broad family). See CLAUDE.md's
+"Fifty-sixth" entry.
+
 ## Other mechanisms explored as standalone probe scripts (not ported into the architecture)
 
 `probe_gap_fill.py` (intraday gap-fill mean reversion — bet that an
