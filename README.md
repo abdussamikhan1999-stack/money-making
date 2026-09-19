@@ -557,12 +557,13 @@ market has priced this shock as calm, which historically it was not. Not
 declared tradable. See CLAUDE.md's "Fifty-seventh" entry.
 
 **Update (Fifty-eighth entry):** the fear-buy's headline was partly the monthly
-decision grid's luck. Taking every spike's first day (23 events) gives +2.4%
-per 21 days, p=0.063, one -28.5% loss; a "wait for persistence" refinement
-did not replicate on the S&P 500 since 1990 (74 events, p=0.14); IBS rotation
-is not this trade in disguise. Downgraded to a weak, sample-specific effect;
-the descriptive finding (calm VIX during an oil shock) stands. See CLAUDE.md's
-"Fifty-eighth" entry.
+decision grid's luck. Taking every spike's first day (14 events after the
+Seventy-seventh entry's declustering fix; it was 23) gives +1.0% per 21 days vs
++0.9% unconditional, p=0.50, one -28.5% loss; a "wait for persistence"
+refinement did not replicate on the S&P 500 since 1990 (38 events, p=0.59);
+IBS rotation is not this trade in disguise. Now a null, not merely weak; the
+descriptive finding (calm VIX during an oil shock) stands. See CLAUDE.md's
+"Fifty-eighth" and "Seventy-seventh" entries.
 
 **Fill-lag fix and short-term reversal (Fifty-ninth entry,
 `probe_reversal_rotation.py`)** — IBS rotation's backtest filled at the same

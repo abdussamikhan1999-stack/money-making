@@ -50,16 +50,16 @@ def run(px, weights, me):
         w = weights[i]
         turnover = np.abs(w - prev).sum()
         rets.append(float((w * r).sum() - COST * turnover))
-        # weights drift within the month; approximate next month's starting weights by rebalanced target
-        prev = w
+        prev = w * (1 + r) / (w * (1 + r)).sum()  # weights DRIFT over the month, so a static 50/50 pays its rebalancing cost
     return np.array(rets)
 
 
 def stats(r):
-    eq = np.cumprod(1 + r)
+    eq = np.cumprod(np.concatenate([[1.0], 1 + r]))[1:]
+    peak = np.maximum.accumulate(np.concatenate([[1.0], eq]))[1:]  # starting capital 1.0 is part of the peak
     yrs = len(r) / 12
     cagr = (eq[-1] ** (1 / yrs) - 1) * 100
-    dd = (1 - eq / np.maximum.accumulate(eq)).max()
+    dd = (1 - eq / peak).max()
     return cagr, dd, eq[-1]
 
 
@@ -125,7 +125,8 @@ def multi(seeds):
             if b >= len(p):
                 break
             rets.append(float((W[i] * (p[b] / p[a] - 1)).sum() - COST * np.abs(W[i] - prev).sum()))
-            prev = W[i]
+            r_ = p[b] / p[a] - 1
+            prev = W[i] * (1 + r_) / (W[i] * (1 + r_)).sum() if W[i].sum() else W[i]
         return np.array(rets)
 
     def weights(kind, L, k):

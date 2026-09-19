@@ -33,7 +33,9 @@ import random
 import numpy as np
 import pandas as pd
 
-CACHE = "macro_cache.csv"
+_HERE = os.path.dirname(os.path.abspath(__file__))
+CACHE = os.path.join(_HERE, "macro_cache.csv")            # committed, reproducible backtest data
+LIVE_CACHE = os.path.join(_HERE, "macro_cache_live.csv")  # refreshed by --state-only (git-ignored)
 OFFSET = 0  # grid phase of the non-overlapping monthly decision rows
 COST_ROUNDTRIP = 0.004  # 0.2% each way, same equity cost model as prior probes
 HOLD = 21
@@ -51,7 +53,20 @@ def download():
     return pd.DataFrame(cols)
 
 
-def load():
+def load(refresh=False):
+    """refresh=True (used by --state-only): redownload, drop a still-forming today bar, save to the live cache
+    (never the committed one), and fall back to the committed cache with a warning if the network fails.
+    Review finding: without this the monthly state report silently printed stale data forever."""
+    if refresh:
+        try:
+            df = download()
+            today = pd.Timestamp(datetime.date.today())
+            if df.index[-1] >= today and datetime.datetime.now().hour < 16:  # NSE closes 15:30 IST
+                df = df.iloc[:-1]
+            df.to_csv(LIVE_CACHE)
+            return df
+        except Exception as e:  # noqa: BLE001 - report and fall back, never crash a state report
+            print(f"WARNING: refresh failed ({e}); using the committed cache, which may be stale")
     if os.path.exists(CACHE):
         return pd.read_csv(CACHE, index_col=0, parse_dates=True)
     df = download()
@@ -127,7 +142,7 @@ def shift_p(sig, rets, n_seeds, seed=0, min_shift=12):
     for _ in range(n_seeds):
         k = rng.randrange(min_shift, n - min_shift)
         tot.append(pnl_from_signal(np.roll(sig, k), rets))
-    return actual, float(np.mean(tot)), sum(1 for t in tot if t >= actual) / n_seeds
+    return actual, float(np.mean(tot)), (sum(1 for t in tot if t >= actual) + 1) / (n_seeds + 1)  # (count+1)/(n+1): never exactly 0
 
 
 def subset_p(sig, rets, n_draws=200_000, seed=1):
@@ -247,6 +262,14 @@ def state_report(f, k=8):
 def robustness(f, seeds):
     """Grid-phase, concentration and feature-ablation checks (added after the
     first pass showed p~0 for the fear-buy, which needed explaining)."""
+    try:
+        return _robustness(f, seeds)
+    finally:  # module globals are mutated below; always restore them
+        globals()["OFFSET"] = 0
+        FEATURES[:] = ["brent60", "inr60", "nifty60", "nifty_dd", "ivix", "vix", "us10y60", "dxy60"]
+
+
+def _robustness(f, seeds):
     global OFFSET
     print("\n=== grid-phase robustness (21 offsets) ===")
     res = {"A k=15": [], "C ivix>=1.5": [], "C vix>=1.5": []}
@@ -290,7 +313,7 @@ def main():
     ap.add_argument("--robust", action="store_true")
     ap.add_argument("--episodes", action="store_true")
     a = ap.parse_args()
-    f = build(load())
+    f = build(load(refresh=a.state_only))
     if a.episodes:
         return oil_shock_episodes()
     state_report(f)
