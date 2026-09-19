@@ -202,6 +202,21 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("52-week-high rotation top_k=3 (Sixty-third)", 0.9900),
     ("52-week-high rotation top_k=5 (Sixty-third)", 0.9727),
     ("52-week-high rotation top_k=8 (Sixty-third)", 0.9973),
+    # Sixty-sixth entry: hold-h-days-from-month-end policy (post hoc from the horizon curve), IBS(5), lag 1,
+    # random control uses the same hold. Later decade 2016-26 (where found), then the earlier decade (OOS).
+    ("IBS month-end hold 5d top_k=5, 2016-26 (Sixty-sixth)", 0.0020),
+    ("IBS month-end hold 8d top_k=5, 2016-26 (Sixty-sixth)", 0.0020),
+    ("IBS month-end hold 10d top_k=5, 2016-26 (Sixty-sixth)", 0.0013),
+    ("IBS month-end hold 13d top_k=5, 2016-26 (Sixty-sixth)", 0.0213),
+    ("IBS month-end hold 21d top_k=5, 2016-26 (Sixty-sixth)", 0.0600),
+    ("IBS month-end hold 5d top_k=8, 2016-26 (Sixty-sixth)", 0.0033),
+    ("IBS month-end hold 8d top_k=8, 2016-26 (Sixty-sixth)", 0.0047),
+    ("IBS month-end hold 10d top_k=8, 2016-26 (Sixty-sixth)", 0.0127),
+    ("IBS month-end hold 13d top_k=8, 2016-26 (Sixty-sixth)", 0.0326),
+    ("IBS month-end hold 21d top_k=8, 2016-26 (Sixty-sixth)", 0.0360),
+    ("IBS month-end hold 5d top_k=5, 2007-16 OOS (Sixty-sixth)", 0.0013),
+    ("IBS month-end hold 10d top_k=5, 2007-16 OOS (Sixty-sixth)", 0.0793),
+    ("IBS month-end hold 21d top_k=5, 2007-16 OOS (Sixty-sixth)", 0.2645),
     # NOT individually registered (Sixty-fourth entry): 84 further cells, 21 fixed-step phase offsets
     # and 21 calendar-anchored offsets x {IBS(5) top_k=5, rev(21) top_k=8}. Counting them, an honest
     # Bonferroni family is m>=161 (threshold ~0.0003); the smallest p among them is 0.003.
