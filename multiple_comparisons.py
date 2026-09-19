@@ -202,6 +202,9 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("52-week-high rotation top_k=3 (Sixty-third)", 0.9900),
     ("52-week-high rotation top_k=5 (Sixty-third)", 0.9727),
     ("52-week-high rotation top_k=8 (Sixty-third)", 0.9973),
+    # NOT individually registered (Sixty-fourth entry): 84 further cells, 21 fixed-step phase offsets
+    # and 21 calendar-anchored offsets x {IBS(5) top_k=5, rev(21) top_k=8}. Counting them, an honest
+    # Bonferroni family is m>=161 (threshold ~0.0003); the smallest p among them is 0.003.
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number

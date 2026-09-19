@@ -279,6 +279,74 @@ def index_gate_replication(seeds=2000):
                   f"Calmar {cg(gf) / (100 * gdd):.2f}; vs random off-months: p(return)={pret:.3f}, p(DD)={pdd:.4f}")
 
 
+def freq_test(M, seeds):
+    """Rebalance-frequency sweep for IBS(5), top_k=5, lag 1: every 5, 10 or 21 trading days
+    (pre-registered). Same costs per rebalance, so higher frequency pays more turnover."""
+    S = scores(M, "ibs", 5)
+    n = len(M["close"])
+    for step in (5, 10, 21):
+        Mf = dict(M)
+        Mf["me"] = list(range(M["me"][0], n - 2, step))
+        r = simulate(Mf, S, 5, 1)
+        yrs = len(r["months"]) * step / 252
+        rng = np.random.default_rng(0)
+        finals = np.array([simulate(Mf, S, 5, 1, rng=rng)["final"] for _ in range(seeds)])
+        p = ((finals >= r["final"]).sum() + 1) / (seeds + 1)
+        mo = r["months"]
+        h = len(mo) // 2
+        qs = [np.prod(1 + q) - 1 for q in np.array_split(mo, 4)]
+        print(f"every {step:2d}d ({len(mo)} rebalances, {yrs:.1f}y): {cagr(r['final'], yrs):6.2f}%/yr, maxDD {r['max_dd']:.1%}, "
+              f"halves {np.prod(1 + mo[:h]) - 1:+.0%}/{np.prod(1 + mo[h:]) - 1:+.0%}, quarters {[f'{q:+.0%}' for q in qs]}, "
+              f"random mean {cagr(finals.mean(), yrs):.2f}%/yr, p={p:.4f}")
+
+
+def phase_test(M, seeds, kind="ibs", window=5, top_k=5, step=21):
+    """Is the monthly rotation's edge specific to CALENDAR month-end dates? Same signal, same 21-day
+    step, every phase offset 0..20 from the first month-end, vs the calendar month-end grid itself."""
+    S = scores(M, kind, window)
+    n = len(M["close"])
+    cal = simulate(M, S, top_k, 1)
+    print(f"{kind}({window}) top_k={top_k}: calendar month-end grid {cagr(cal['final'], len(cal['months']) / 12):.2f}%/yr")
+    res = []
+    for off in range(step):
+        Mf = dict(M)
+        Mf["me"] = list(range(M["me"][0] + off, n - 2, step))
+        r = simulate(Mf, S, top_k, 1)
+        yrs = len(r["months"]) * step / 252
+        rng = np.random.default_rng(0)
+        finals = np.array([simulate(Mf, S, top_k, 1, rng=rng)["final"] for _ in range(seeds)])
+        p = ((finals >= r["final"]).sum() + 1) / (seeds + 1)
+        res.append((off, cagr(r["final"], yrs), cagr(finals.mean(), yrs), p))
+    for off, c, rc, p in res:
+        print(f"  offset {off:2d}d: {c:6.2f}%/yr vs random {rc:5.2f}%  p={p:.3f}")
+    cs = np.array([r[1] for r in res])
+    print(f"  across 21 phases: mean {cs.mean():.2f}%/yr, median {np.median(cs):.2f}, min {cs.min():.2f}, max {cs.max():.2f}; "
+          f"phases with p<0.05: {sum(1 for r in res if r[3] < 0.05)}/21")
+
+
+def anchor_test(M, seeds, kind="ibs", window=5, top_k=5):
+    """Calendar-ANCHORED phase: rebalance on the j-th trading day BEFORE each month-end (j=0 is the
+    calendar month-end used everywhere else; j~10 is mid-month). Unlike a fixed 21-day step this does
+    not drift against the calendar, so it asks directly: is the edge a turn-of-month effect?"""
+    S = scores(M, kind, window)
+    print(f"{kind}({window}) top_k={top_k}, rebalance j trading days before each month-end (lag-1 fills):")
+    rows = []
+    for j in range(0, 21):
+        Mj = dict(M)
+        Mj["me"] = [m - j for m in M["me"] if m - j > 260 * 0 and m - j >= 0]
+        r = simulate(Mj, S, top_k, 1)
+        yrs = len(r["months"]) / 12
+        rng = np.random.default_rng(0)
+        finals = np.array([simulate(Mj, S, top_k, 1, rng=rng)["final"] for _ in range(seeds)])
+        p = ((finals >= r["final"]).sum() + 1) / (seeds + 1)
+        rows.append((j, cagr(r["final"], yrs), cagr(finals.mean(), yrs), p, r["max_dd"]))
+        print(f"  j={j:2d}: {rows[-1][1]:6.2f}%/yr vs random {rows[-1][2]:5.2f}%, maxDD {rows[-1][4]:.1%}, p={p:.3f}")
+    c = np.array([r[1] for r in rows])
+    print(f"  across 21 anchors: mean {c.mean():.2f}%/yr, median {np.median(c):.2f}, min {c.min():.2f}, max {c.max():.2f}; "
+          f"anchors with p<0.05: {sum(1 for r in rows if r[3] < 0.05)}/21; "
+          f"last-5-days-of-month anchors (j=0..4) mean {c[:5].mean():.2f} vs rest {c[5:].mean():.2f}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=1500)
@@ -289,6 +357,9 @@ def main():
     ap.add_argument("--gate", action="store_true", help="NIFTY SMA trend gate on IBS rotation")
     ap.add_argument("--index-gate", action="store_true", help="trend gate on NIFTY 2008+ and S&P 1950+")
     ap.add_argument("--momentum", action="store_true", help="12-1 momentum and 52-week-high rotation")
+    ap.add_argument("--freq", action="store_true", help="IBS rebalance frequency 5/10/21 days")
+    ap.add_argument("--phase", action="store_true", help="IBS 21d-step phase offsets vs calendar month-end")
+    ap.add_argument("--anchor", action="store_true", help="IBS/rev rebalance j days before month-end, j=0..20")
     ap.add_argument("--extend", action="store_true", help="EXPLORATORY: windows/top_k beyond the pre-registered grid")
     a = ap.parse_args()
     if a.index_gate:
@@ -302,6 +373,16 @@ def main():
         return
     if a.overlap:
         return overlap(M, years)
+    if a.anchor:
+        anchor_test(M, a.seeds)
+        anchor_test(M, a.seeds, kind="rev", window=21, top_k=8)
+        return
+    if a.phase:
+        phase_test(M, a.seeds)
+        phase_test(M, a.seeds, kind="rev", window=21, top_k=8)
+        return
+    if a.freq:
+        return freq_test(M, a.seeds)
     if a.momentum:
         print(f"=== basket-wide momentum rotations, lag 1, {a.seeds}-seed control (pre-registered 2 signals x top_k 3/5/8) ===")
         for kind in ("mom", "hi52"):

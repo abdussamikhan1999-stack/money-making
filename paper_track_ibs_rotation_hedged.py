@@ -4,7 +4,10 @@ paper_track_ibs_rotation.py (entry 41), PLUS a short NIFTYBEES.NS leg sized
 to 0.5x the strategy's regression beta -- the drawdown-minimizing point
 inside the Forty-seventh entry's validated 0.375-0.625 robust range.
 
-Run this ONCE A MONTH, same cadence as paper_track_ibs_rotation.py. This is
+Run this ONCE A MONTH, same cadence as paper_track_ibs_rotation.py. (Sixty-fourth entry: run on the LAST FEW TRADING DAYS of the calendar month --
+the backtest's edge is concentrated in month-end entries; the first record,
+2026-09-17, was mid-month, the backtest's worst phase.)
+This is
 a SEPARATE, parallel forward record -- it does not touch or replace that
 script's log. Both trackers should be checked/extended monthly going
 forward; they represent this project's two live candidates (unhedged and
