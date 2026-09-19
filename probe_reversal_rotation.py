@@ -497,8 +497,11 @@ def main():
     ap.add_argument("--hold", action="store_true", help="post-hoc: hold h days from month-end entry then cash")
     ap.add_argument("--oos-horizon", action="store_true", help="horizon curve on 2007-2016 vs 2016-2026")
     ap.add_argument("--universe-b", action="store_true", help="52 different NSE names (Sixty-eighth entry)")
+    ap.add_argument("--cost", type=float, help="per-leg cost %% override (default 0.2; ~0.125 is nearer real NSE delivery costs)")
     ap.add_argument("--extend", action="store_true", help="EXPLORATORY: windows/top_k beyond the pre-registered grid")
     a = ap.parse_args()
+    if a.cost is not None:
+        globals()["COST_PCT"] = a.cost
     if a.universe_b:
         global SYMBOLS
         SYMBOLS = UNIVERSE_B
