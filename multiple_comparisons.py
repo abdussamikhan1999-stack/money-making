@@ -101,7 +101,9 @@ IBS_ROTATION_PVALUES = [
 # on a circular-rotation control's resolution floor (~0.0073), and BH's step-up
 # rule lets a cluster of small p-values lift everyone else's critical value.
 # Bonferroni is the operative criterion; IBS's retired significance claim
-# (Fifty-third entry) is NOT reinstated by this table.
+# (Fifty-third entry) is NOT reinstated by this table. (The flip disappears at
+# m=39 once the Fifty-eighth entry's honest grid-free rows are added, which
+# confirms it was an artifact of the floor-valued rows, not signal.)
 ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("RSI-2 rotation top_k=3 (Forty-second)", 0.1987),
     ("RSI-2 rotation top_k=5 (Forty-second)", 0.2840),
@@ -138,6 +140,19 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Fear-buy US-VIX>=1.4 (Fifty-seventh, rotation floor)", 0.0073),
     ("Fear-buy US-VIX>=1.5 (Fifty-seventh, rotation floor)", 0.0073),
     ("Fear-buy US-VIX>=1.7 (Fifty-seventh, rotation floor)", 0.0073),
+    # Fifty-eighth entry: grid-free re-test of the same trigger (one entry per
+    # 21d spike cluster, random-day null) - the honest replacement for the six
+    # rotation-floor rows above - and the S&P 500 1990+ replication.
+    ("Fear-buy grid-free india-VIX>=1.4 (Fifty-eighth)", 0.1937),
+    ("Fear-buy grid-free india-VIX>=1.5 (Fifty-eighth)", 0.0631),
+    ("Fear-buy grid-free india-VIX>=1.7 (Fifty-eighth)", 0.0263),
+    ("Fear-buy grid-free US-VIX>=1.4 (Fifty-eighth)", 0.2565),
+    ("Fear-buy grid-free US-VIX>=1.5 (Fifty-eighth)", 0.3104),
+    ("Fear-buy grid-free US-VIX>=1.7 (Fifty-eighth)", 0.4304),
+    ("Fear-buy S&P500 1990+ enter+0d (Fifty-eighth)", 0.2220),
+    ("Fear-buy S&P500 1990+ enter+5d (Fifty-eighth)", 0.1995),
+    ("Fear-buy S&P500 1990+ enter+10d (Fifty-eighth)", 0.1356),
+    ("Fear-buy S&P500 1990+ enter+15d (Fifty-eighth)", 0.0602),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number
