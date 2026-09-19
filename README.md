@@ -16,9 +16,9 @@ responsible for any trades it places.
 Read this before any of the per-entry detail below. Full numbers and caveats
 are in CLAUDE.md's numbered entries (56-73 cover the latest work).
 
-- **64 mechanisms tested; none is declared tradable.** Across the 148 registered
+- **72 mechanisms tested; none is declared tradable.** Across the 178 registered
   significance tests plus 84 phase-scan cells noted but not registered
-  (`multiple_comparisons.py`, honest family m=232, Bonferroni threshold 0.00022)
+  (`multiple_comparisons.py`, honest family m=262, Bonferroni threshold 0.00019)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
   only rows that pass are the trend gate's drawdown effect on the S&P 500 since
   1950 (p <= 1e-4 at 20,000 draws; a known effect and a risk overlay, not alpha).
@@ -44,6 +44,12 @@ are in CLAUDE.md's numbered entries (56-73 cover the latest work).
   decades at a cost of 1-3 points/yr of return; on the S&P it also keeps more
   return than equally-costly random cash months (p=0.002 at SMA200) but not on
   NIFTY, and its best length differs by market (Entries 61-62, 76).
+- **Famous-fund approaches, public versions (Entries 79-80).** CTA time-series momentum,
+  unlevered risk parity, volatility-managed equity: drawdown tools, no Sharpe gain over a
+  broad index. Halloween: real on the S&P since 1950 (p=0.0003) but decaying and absent in
+  India. Currency carry: +2.1%/yr, Sharpe 0.31, -27% in 2008, borderline vs random (p=0.07).
+  Sector-ETF pairs, Larry Williams' breakout, short-vol timing (since 2018): null. Their
+  actual edge in these constructions is leverage and breadth that a retail account lacks.
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship
