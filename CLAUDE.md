@@ -5466,3 +5466,34 @@ samples but the 9-13% figure is post-2009. Timing rules still add nothing reliab
 extend the Seventieth entry's, they are not new mechanisms). Not declared tradable.
 Untested: cash yield above 4%, dividends, taxes, and a gold bear longer than
 2013-19 (the 1980-2000 gold bear is outside the available data).
+
+
+## Seventy-third: cost calibration for the IBS hold policies — real NSE delivery costs are ~0.25% round trip, not 0.4%, which adds ~2 points a year and changes no p-value
+
+The probe family's cost model charges 0.2% per leg (0.4% round trip) plus Rs16 per
+pick. Actual NSE cash-delivery charges are roughly 0.13% on the buy (STT 0.1%,
+stamp 0.015%, exchange/SEBI fees, GST) and 0.11% on the sell (STT 0.1%, fees),
+about 0.25% round trip plus the ~Rs16 DP charge; the old figure was ~0.15
+points conservative per round trip. Added `--cost` to `probe_reversal_rotation.py`
+and reran the IBS(5) top_k=5, lag-1, month-end hold policies at 0.125% per leg
+(random control pays the same cost, so excess-vs-random and every p-value are
+unchanged; only absolute returns move):
+
+| hold | 2016-26 at 0.2% -> 0.125%/leg | 2007-16 at 0.2% -> 0.125%/leg |
+|---|---|---|
+| 5 days | 6.13% -> 8.11%/yr (DD 22% -> 18%) | 3.82% -> 5.77% (DD 37% -> 35%) |
+| 10 days | 11.38% -> 13.44% (DD 20%) | 3.83% -> 5.79% (DD 49% -> 48%) |
+| 21 days | 18.75% -> 20.92% (DD 39% -> 38%) | 16.39% -> 18.53% (DD 62% -> 61%) |
+
+Random same-hold controls rise by about the same ~2 points, so the ~6-point-per-year
+excess of the 5-10 day holds over random is untouched. Two consequences: (1) the
+"thin economics" line in the Sixty-sixth entry is somewhat less thin: ~8%/yr
+(5d) and ~13.4%/yr (10d) net in the later decade, but 5.8% in both short holds in
+the earlier, survivorship-inflated decade, on capital deployed 25-50% of the time;
+(2) if the idle capital sat in a liquid fund at ~5-6%, a 5-day hold would add
+roughly 4 more points a year (75% of the time x ~5.5%), which is comparable to
+the static equity/gold portfolio's return with a higher drawdown (18-35% vs
+12-29%). This is arithmetic, not a new test; the ~0.125% figure is my estimate from
+published NSE charge schedules (not re-verified against a contract note), and
+slippage/impact (the Sixtieth entry could not size it) is not included. No p-value,
+count or verdict change. IBS remains unproven and not declared tradable.
