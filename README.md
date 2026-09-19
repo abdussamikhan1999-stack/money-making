@@ -39,8 +39,9 @@ are in CLAUDE.md's numbered entries (56-73 cover the latest work).
   but its return
   is carried by gold bull runs and no timing rule on top of it helps reliably
   (Entries 70-72); (2) a NIFTY/S&P trend gate roughly halves index drawdown over
-  decades at a cost of 1-3 points/yr of return and no alpha; its best length
-  differs by market (Entries 61-62).
+  decades at a cost of 1-3 points/yr of return; on the S&P it also keeps more
+  return than equally-costly random cash months (p=0.002 at SMA200) but not on
+  NIFTY, and its best length differs by market (Entries 61-62, 76).
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship

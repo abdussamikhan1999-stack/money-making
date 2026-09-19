@@ -5591,3 +5591,74 @@ count change (64 mechanisms tested). Its use is as the risk-management baseline 
 future candidate should be compared against: a 50/50 annual-rebalance
 equity/gold portfolio earned ~9.5-14.6%/yr at a ~24-27% drawdown with no signal at
 all.
+
+
+## Seventy-sixth: fixing the bugs an independent code review found in `probe_reversal_rotation.py` — three change published numbers, none reverses a conclusion, one strengthens the trend gate and one weakens the month-end concentration
+
+An independent `/code-review` (medium) of the probe file behind Entries 59-75
+found eight issues. Each was verified against the code; the three that affect
+reported results were rerun with the fix.
+
+**1. `gate_test` forced early months into cash (Entry 61).** `(nifty > sma).fillna(True)` never
+fills anything (comparison with a NaN SMA is False, not NaN), and the SMA was
+computed after NIFTY was cut to the 10-year matrix, so the first 100-200 rows had a
+NaN SMA and the first 5-9 month-ends were counted as risk-off. Fixed: the SMA is
+computed on the full NIFTY history and NaN is treated as risk-on. Corrected results
+(52 stocks; months in cash 37/33/29 instead of 40/38/38):
+
+| top_k / SMA | return/yr (was) | max DD | Calmar (was) | p(DD) (was) |
+|---|---|---|---|---|
+| 5 / 100 | 15.78% (15.11) | 13.5% | 1.17 (1.12) | 0.027 (0.040) |
+| 5 / 150 | 15.24% (14.79) | 14.8% | 1.03 (1.00) | 0.031 (0.062) |
+| 5 / 200 | 15.27% (13.97) | 17.8% | 0.86 (0.78) | 0.077 (0.116) |
+| 8 / 100 | 13.79% (13.58) | 11.4% | 1.21 (1.19) | 0.013 (0.016) |
+| 8 / 150 | 13.62% (12.48) | 16.1% | 0.85 (0.77) | 0.054 (0.100) |
+| 8 / 200 | 13.80% (10.75) | 17.5% | 0.79 (0.60) | 0.078 (0.153) |
+
+Under the blowup-stress universe: top_k=5 SMA100/150/200 now 18.74/19.13/19.29%/yr,
+DD 20.8/14.8/15.1%, Calmar 0.90/1.29/1.27 (ungated 0.60), p(DD) 0.124/0.018/0.019;
+top_k=8 unchanged in kind (Calmar 0.87/0.61/0.56 vs ungated 0.68: only SMA100 helps,
+p(DD) 0.09/0.33/0.39). **The conclusion stands and gets slightly stronger:** Calmar
+roughly doubles at top_k=5 in both universes, is not robust at top_k=8 under stress.
+
+**2. The index-gate control paid no switching cost (Entry 62).** The gated series was
+charged 0.2% per flip; the random-off-months control was not. Fixed: both pay it. The
+drawdown p-values barely move (NIFTY 0.055/0.010/0.160; S&P 0.0005 at all three).
+**But the return comparison changes, and Entry 62's sentence "the gate does not time
+returns better than random months" is withdrawn for the S&P:** with equal costs the
+S&P gate's return beats random cash months at SMA150 (p=0.010) and SMA200 (p=0.002)
+(SMA100 p=0.281); NIFTY 2008+ p 0.15-0.40, still not significant. So on 70 years of
+S&P data the gate has a modest, statistically supported timing value at 150-200 days
+on top of its drawdown effect; on NIFTY it is only a drawdown device. Six return
+p-values registered.
+
+**3. Positional alignment in `oos_anchor_test` (Entry 65).** Anchor streams that drop
+different first months at the window edge were averaged by array position, pairing
+non-matching months. Fixed: streams are keyed by calendar month and only common
+months are compared. Corrected: 2007-16 last-5-days +1.98%/mo vs mid/late +1.66%/mo,
+diff **+0.32%, paired t=0.49** (was +0.37%, t=0.59), A beats B in 45% of months;
+2016-26 (118 months) diff **+1.01%, paired t=1.90** (was t=2.79), 49% of months.
+Quarter differences 2007-16: +0.41/+0.84/+0.55/-0.56%; 2016-26: +0.53/+1.29/+1.46/
++0.78%. Random portfolios still show no phase effect. **The month-end concentration is
+weaker in its own discovery sample than the Sixty-fourth/Sixty-fifth entries
+reported (t 1.9, not 2.8) and the earlier-decade support is weaker still (t 0.5);**
+this feeds into the Sixty-eighth to Seventy-fourth entries' conclusion that the
+short-hold effect is unproven. (The Sixty-fourth entry's inline paired t=2.09 used the
+same positional alignment; treat it as ~1.9-2.1.)
+
+**Other fixes.** The REV_CACHE pickle key now includes the period, stress and universe
+suffixes, so a 20y run can no longer read a 10y cache (the earlier-decade results were
+produced with separate cache paths and are unaffected; the review's scenario did not
+occur here); `--us` now honours `--cost` and `--index-gate` honours `--seeds`;
+`load_matrices` fetches the calendar once; `load_us` retries a failed ticker three times
+and reports exclusions; a duplicate unreachable `--index-gate` branch and a dead
+`260 * 0` were removed. Not done: the reviewer's suggestion to factor the eight copies
+of the seeded-random-control block into one helper (worth doing before adding a ninth).
+
+**Independent cross-check (before the review returned):** a from-scratch plain-python
+reimplementation using the original family's own `avg_ibs` reproduces the headline
+lag-1 IBS(5) number: 20.30%/yr, 39.5% DD vs 20.05%, 39.5% here, so the core simulate/
+score/cost logic is not where the errors were. 213 tests pass. No count change (64
+mechanisms tested); no verdict change (IBS rotation unproven, nothing declared
+tradable); the trend gate's evidence is somewhat better than reported, the month-end
+concentration's somewhat worse.
