@@ -5080,3 +5080,43 @@ Next 50 / midcaps if a constituent list becomes available) or to earlier years
 if a point-in-time universe ever exists; (3) test whether the effect is really
 about the FIRST days of the month (holding period ends) rather than the entry
 day: hold windows anchored on the calendar, not just entries.
+
+
+## Sixty-fifth: testing the Sixty-fourth entry's month-end window on the decade BEFORE it was found — same sign, about a third the size, not significant
+
+The Sixty-fourth entry's "last 5 trading days of the month" window was defined
+on 2016-2026 after seeing a 21-anchor scan, so it is a hypothesis. The only
+independent-in-time sample available is the earlier decade (`--oos`: same 52
+stocks, ~20 years of Yahoo history, 46 of 52 with prices by 2008; today's
+constituents, so survivorship is worse early — it lifts every rebalance phase
+alike, and the quantity tested is the phase DIFFERENCE plus a random-portfolio
+phase control). IBS(5), top_k=5, lag-1 fill, monthly, mean monthly return of the
+last-5-days anchors (j=0..4) vs the mid/late-month anchors (j=7-9, 15-18):
+
+| period | months | last-5-days | mid/late | difference | paired t | A>B | random portfolios (same windows) |
+|---|---|---|---|---|---|---|---|
+| 2007-09 to 2016-09 (OUT of sample) | 106 | +2.04%/mo | +1.66%/mo | **+0.37%** | 0.59 | 52% | +1.44% vs +1.40% |
+| 2016-09 to 2026-09 (where found) | 119 | +1.86%/mo | +0.85%/mo | +1.01% | 2.79 | 62% | +1.21% vs +1.20% |
+
+Out-of-sample quarter-by-quarter differences: +0.81%, +0.60%, +0.30%, -0.24%
+(three of four positive, decaying toward the later years). **Reading:** the
+sign replicates and the random-portfolio control is again flat, so the timing
+dependence still belongs to the IBS-picked stocks, but the size is a third of
+the in-sample figure and is statistically indistinguishable from zero (t=0.59).
+That is what regression to the mean after post-hoc selection of the best window
+looks like, and it is also what a modest real turn-of-month effect looks like;
+120 further months cannot tell them apart. Also worth recording: IBS earns
++1.66%/month even in its worst-phase months in the early decade (~22%/yr), and
+random portfolios earn +1.40%/month (~18%/yr) — the 2007-2016 universe is
+heavily survivorship-flattered (2009 recovery, today's winners), so absolute
+returns from that sample must not be compared with the later decade.
+
+**Net effect on the standing candidate.** The month-end concentration is
+supported in direction by an independent sample but not confirmed; the honest
+description is "IBS rotation's edge is *larger* at month-end entries, by an
+amount that is ~+1.0 points/month in the decade it was found and ~+0.4 points/
+month (t=0.6) before that." The forward record (now to be logged at month-end,
+Sixty-fourth entry) is the remaining test. No count change; still not declared
+tradable. Remaining open threads: whether the effect is about the ENTRY day or
+the calendar of the HOLDING window (hold windows anchored on the calendar); an
+independent universe if a constituent list becomes available.

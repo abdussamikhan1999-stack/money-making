@@ -347,6 +347,43 @@ def anchor_test(M, seeds, kind="ibs", window=5, top_k=5):
           f"last-5-days-of-month anchors (j=0..4) mean {c[:5].mean():.2f} vs rest {c[5:].mean():.2f}")
 
 
+def oos_anchor_test(period="20y", split="2016-09-19"):
+    """Independent-in-time test of the Sixty-fourth entry's month-end hypothesis: the window
+    (last 5 trading days, j=0..4) was defined on 2016-2026, so score it on the EARLIER decade.
+    Survivorship is worse in the early years (today's constituents) but it lifts every phase alike;
+    the tested quantity is the phase DIFFERENCE, plus a random-portfolio phase control."""
+    M = load_matrices(period)
+    S = scores(M, "ibs", 5)
+    cut = M["close"].index.searchsorted(pd.Timestamp(split))
+    print(f"universe {M['close'].shape[1]} stocks, {M['close'].index[0].date()} .. {M['close'].index[-1].date()}, split at {split}")
+    print(f"stocks with a price by 2008: {int(M['close'].iloc[250:300].notna().any().sum())}")
+
+    def stream(j, lo, hi, rng=None):
+        Mj = dict(M)
+        Mj["me"] = [m - j for m in M["me"] if lo <= m - j < hi]
+        return simulate(Mj, S, 5, 1, rng=rng)["months"]
+
+    windows = {"last-5-days (j=0-4)": list(range(0, 5)), "mid/late (j=7-9,15-18)": [7, 8, 9, 15, 16, 17, 18]}
+    for label, lo, hi in (("EARLIER (out-of-sample) ", 0, cut), ("LATER (where it was found)", cut, len(M["close"]))):
+        out = {}
+        for name, js in windows.items():
+            xs = [stream(j, lo, hi) for j in js]
+            n = min(len(x) for x in xs)
+            out[name] = np.mean([x[:n] for x in xs], axis=0)
+        A, B = out["last-5-days (j=0-4)"], out["mid/late (j=7-9,15-18)"]
+        n = min(len(A), len(B))
+        A, B = A[:n], B[:n]
+        d = A - B
+        rng = np.random.default_rng(3)
+        ra = np.mean([np.mean([stream(j, lo, hi, rng)[:n].mean() for _ in range(100)]) for j in windows["last-5-days (j=0-4)"]])
+        rb = np.mean([np.mean([stream(j, lo, hi, rng)[:n].mean() for _ in range(100)]) for j in windows["mid/late (j=7-9,15-18)"]])
+        print(f"{label}: {n} months | IBS last-5-days {A.mean():+.2%}/mo vs mid/late {B.mean():+.2%}/mo, diff {d.mean():+.2%}, "
+              f"paired t={d.mean() / (d.std(ddof=1) / np.sqrt(n)):.2f}, A>B in {(A > B).mean():.0%} of months | "
+              f"random portfolios {ra:+.2%} vs {rb:+.2%}")
+        qs = [f"{a.mean() - b.mean():+.2%}" for a, b in zip(np.array_split(A, 4), np.array_split(B, 4))]
+        print(f"    quarter-by-quarter diff: {qs}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=1500)
@@ -360,10 +397,13 @@ def main():
     ap.add_argument("--freq", action="store_true", help="IBS rebalance frequency 5/10/21 days")
     ap.add_argument("--phase", action="store_true", help="IBS 21d-step phase offsets vs calendar month-end")
     ap.add_argument("--anchor", action="store_true", help="IBS/rev rebalance j days before month-end, j=0..20")
+    ap.add_argument("--oos", action="store_true", help="month-end window on the pre-2016 decade")
     ap.add_argument("--extend", action="store_true", help="EXPLORATORY: windows/top_k beyond the pre-registered grid")
     a = ap.parse_args()
     if a.index_gate:
         return index_gate_replication()
+    if a.oos:
+        return oos_anchor_test()
     M = load_matrices(stress=a.stress)
     years = (M["close"].index[M["me"][-1]] - M["close"].index[M["me"][0]]).days / 365.25
     print(f"universe {M['close'].shape[1]} stocks, {len(M['me'])} month-ends, {years:.1f}y")
