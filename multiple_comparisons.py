@@ -95,6 +95,13 @@ IBS_ROTATION_PVALUES = [
 # run, so re-deriving all of them together in one sitting is more honest
 # than mixing numbers logged in different sessions. See CLAUDE.md's
 # "Fifty-third" entry for the raw script output each of these came from.
+# CAUTION (Fifty-seventh entry): at m>=29 the Benjamini-Hochberg column flips
+# IBS rotation top_k=5/8 to PASS. That is an ARTIFACT, not new evidence: the
+# Fifty-seventh entry's rows are near-identical nested configs, several sitting
+# on a circular-rotation control's resolution floor (~0.0073), and BH's step-up
+# rule lets a cluster of small p-values lift everyone else's critical value.
+# Bonferroni is the operative criterion; IBS's retired significance claim
+# (Fifty-third entry) is NOT reinstated by this table.
 ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("RSI-2 rotation top_k=3 (Forty-second)", 0.1987),
     ("RSI-2 rotation top_k=5 (Forty-second)", 0.2840),
@@ -113,6 +120,24 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Nifty PCR entry=0.90 window=26 (Fifty-sixth)", 0.084),
     ("Nifty PCR entry=0.90 window=52 (Fifty-sixth)", 0.069),
     ("Nifty PCR entry=0.95 window=26 (Fifty-sixth)", 0.327),
+    # Macro-regime probe (Fifty-seventh entry), circular-rotation control, phase 0.
+    # A = analog forecaster k=8/15/30; B = oil+rupee stress filter (4 cells);
+    # C = VIX-spike fear-buy. C is registered at the ROTATION control's
+    # resolution floor (~1/137 = 0.0073 for 160 monthly decisions), the
+    # conservative reading; its random-subset p (5e-5 for India VIX) is in the entry.
+    ("Macro analog k=8 (Fifty-seventh)", 0.060),
+    ("Macro analog k=15 (Fifty-seventh)", 0.007),
+    ("Macro analog k=30 (Fifty-seventh)", 0.009),
+    ("Macro stress brent>=20%,inr>=1% (Fifty-seventh)", 0.188),
+    ("Macro stress brent>=20%,inr>=3% (Fifty-seventh)", 0.339),
+    ("Macro stress brent>=30%,inr>=1% (Fifty-seventh)", 0.058),
+    ("Macro stress brent>=30%,inr>=3% (Fifty-seventh)", 0.339),
+    ("Fear-buy india-VIX>=1.4 (Fifty-seventh, rotation floor)", 0.0073),
+    ("Fear-buy india-VIX>=1.5 (Fifty-seventh, rotation floor)", 0.0073),
+    ("Fear-buy india-VIX>=1.7 (Fifty-seventh, rotation floor)", 0.0073),
+    ("Fear-buy US-VIX>=1.4 (Fifty-seventh, rotation floor)", 0.0073),
+    ("Fear-buy US-VIX>=1.5 (Fifty-seventh, rotation floor)", 0.0073),
+    ("Fear-buy US-VIX>=1.7 (Fifty-seventh, rotation floor)", 0.0073),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number
