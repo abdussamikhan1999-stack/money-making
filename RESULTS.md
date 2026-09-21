@@ -1,4 +1,4 @@
-# Results report — research entries 56–81 (2026-09-21)
+# Results report — research entries 56–84 (2026-09-22)
 
 One-page consolidation of the research run. Full numbers, caveats and the reasoning behind every
 line live in `CLAUDE.md` (numbered entries) and the significance ledger in
@@ -7,11 +7,14 @@ financial advice.
 
 ## Headline
 
-- **72 mechanisms tested. None is declared tradable.**
-- Significance ledger: **232 registered p-values + 384 scan cells noted but not registered =
-  m 616, honest Bonferroni threshold 0.00008.** The only rows that pass are the S&P 500 1950+
+- **75 mechanisms tested. None is declared tradable.**
+- Significance ledger: **328 registered p-values + 414 scan cells noted but not registered =
+  m 742, honest Bonferroni threshold 0.00007.** The only rows that pass are the S&P 500 1950+
   trend-gate *drawdown* effects at SMA150/SMA200 (p <= 5e-5 at 20,000 draws; SMA100 at 1e-4 no longer
   passes at this family size): a well-known risk overlay, not alpha.
+- Entries 82-84 (daily cross-sectional IC, two disjoint universes): NSE delivery % has a replicated but
+  tiny signal (IC ~0.02, top-5 edge 0.10-0.16%/5d vs 0.25% cost); volume, overnight, MAX null; the known
+  5-day reversal is an intraday effect. Nothing advances.
 - Entry 81 (oil-shock regimes, 1947-2026): no tilt or timing rule is supported; energy stocks beat the
   market in 8 of 12 episodes but lagged in the current one's first quarter; two apparently significant
   results (bonds, gold) were monthly-average measurement artifacts caught by code review.
@@ -139,15 +142,16 @@ $103.9. These are readings, not recommendations. `python probe_macro_analog.py -
 
 #5 (Entry 56) -> #6 (57) -> #7 (58) -> #8 (59) -> #9 (60) -> #10 (61–62) -> #11 (63) -> #12 (64) -> #13 (65)
 -> #14 (66) -> #15 (67) -> #16 (68) -> #17 (69) -> #18 (70) -> #19 (71) -> #20 (72) -> #21 (73) -> #22 (74)
--> #23 (75) -> #24 (76) -> #25 (77) -> #26 (78) -> #27 (79) -> #28 (80) -> #29 (81, including this report).
+-> #23 (75) -> #24 (76) -> #25 (77) -> #26 (78) -> #27 (79) -> #28 (80) -> #29 (81) -> #30 (82-84, including this report).
 An automated research run will not start while any PR is open.
 
 ## Reproduce
 
-Probe scripts (`probe_*.py`), tests (`pytest`, 229 passing) and the ledger (`python multiple_comparisons.py`)
+Probe scripts (`probe_*.py`), tests (`pytest`, 239 passing) and the ledger (`python multiple_comparisons.py`)
 are in this repo. Key entry points: `probe_reversal_rotation.py` (IBS/reversal/momentum/gate/phase/US/universe
 tests, flags `--hold --gate --anchor --oos --us --universe-b --index-gate --spread --cost`),
 `probe_etf_rotation.py` (`--proxy nifty|sensex|spx`, `--alloc`, `--multi`), `probe_macro_analog.py`
 (`--state-only`, `--robust`, `--episodes`), `probe_fear_followup.py`, `probe_pcr_signal.py`,
 `probe_famous_strategies.py` and `probe_famous_strategies2.py` (`--only ...`), `probe_vol_breakout.py`,
-`probe_regime_longhist.py` (`--scan`, `--refresh`).
+`probe_regime_longhist.py` (`--scan`, `--refresh`), `probe_delivery_signal.py` (`--fetch`, `--spanning`),
+`probe_volume_signal.py`, `probe_ohlc_signals.py`.

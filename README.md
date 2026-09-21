@@ -11,14 +11,14 @@ accredited financial specialist before risking real capital. Backtest and
 paper-trade thoroughly before ever running this live. You are solely
 responsible for any trades it places.
 
-## Where things stand (2026-09-21)
+## Where things stand (2026-09-22)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-81 cover the latest work).
+are in CLAUDE.md's numbered entries (56-84 cover the latest work).
 
-- **72 mechanisms tested; none is declared tradable.** Across the 232 registered
-  significance tests plus 384 scan cells noted but not registered
-  (`multiple_comparisons.py`, honest family m=616, Bonferroni threshold 0.00008)
+- **75 mechanisms tested; none is declared tradable.** Across the 328 registered
+  significance tests plus 414 scan cells noted but not registered
+  (`multiple_comparisons.py`, honest family m=742, Bonferroni threshold 0.00007)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
   only rows that pass are the trend gate's drawdown effect on the S&P 500 since
   1950 at SMA150/SMA200 (p <= 5e-5 at 20,000 draws; SMA100, p=1e-4, passed at the
@@ -59,6 +59,13 @@ are in CLAUDE.md's numbered entries (56-81 cover the latest work).
   beat the market in 8 of 12 episodes (+8.5pp/12m, p=0.07, not corrected) but lagged it by 28
   points in the first quarter of the current episode. 0 of 54 registered tests pass a corrected bar.
   A study, not a strategy.
+- **Daily cross-sectional signals on two disjoint NSE universes (Entries 82-84).** NSE delivery
+  percentage (new data for this project): abnormal delivery has a replicated but tiny rank IC
+  (~0.02) that is only partly independent of reversal and volume and whose top-5 edge (0.10-0.16%
+  per 5 days) is below the 0.25% round-trip cost: information without economics. Abnormal volume
+  (20 years, two periods): null. Overnight persistence, gap reversal, MAX: null. The known 5-day
+  reversal is an intraday effect (not overnight gaps), also below cost in the recent period. Nothing
+  advances under the pre-registered rule.
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship
