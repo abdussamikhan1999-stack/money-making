@@ -5888,3 +5888,80 @@ retail-accessible return source, and the funds' actual edge in these constructio
 Ledger: 6 more p-values registered (178 registered + 84 unregistered = m=262, Bonferroni 0.00019); the only rows
 passing are still the three S&P index-gate drawdown effects. 219 tests pass (2 new). 69 -> 72 mechanisms tested;
 nothing is declared tradable.
+
+
+## Eighty-first: which sectors, factors and assets did better after past oil-shock regimes? A long-history (1947-2026) descriptive study — no timing tilt is statistically supported, the one mechanism-coherent tilt (energy equities) is a coin flip in the current episode's first quarter, and two results that looked significant were measurement artifacts
+
+Requested direction: keep testing, analyse current geopolitical/market conditions, and find what worked in similar
+political and financial eras. Entry 57 already tested analog matching (no skill) and described S&P/Sensex returns after
+10 Brent-shock episodes 1989-2022; it never asked which SECTORS/FACTORS/ASSETS did well, and 2007+ NSE data holds almost
+no oil-shock-plus-tightening episodes. `probe_regime_longhist.py` (pre-registered in its docstring before any return was
+computed; independent code review BEFORE this write-up) uses monthly US data 1926-2026: Ken French factors and 48
+industries, FRED WTI (1946+), GS10 and DGS10, and the datasets/gold-prices monthly file. Data cached in
+`longhist_cache.csv` (French/FRED revise history; committed for reproducibility).
+
+**Current conditions (2026-09-21).** Web-sourced, kept OUT of every test (aggregator text, some of it internally
+inconsistent): Brent back above $100 in September after a ~20% jump on Middle East shipping risk, an ongoing Iran
+conflict, a Fed hike to 3.75-4.00% in September with ECB (2.5%) and BoJ also tightening, US midterms ahead. From price
+data (`probe_macro_analog.py --state-only`, 2026-09-18): NIFTY 23,346, -11% from its 252d high and below its SMA100/150/200
+(gate RISK-OFF), Brent +36%/60d (96th pct), US 10y up (86th pct), India VIX 11.4 (5th pct: fear absent). NIFTY's nearest
+2007+ analogs are poor (each differs by 0.7-1.2 sd on Brent) precisely because that sample contains no comparable shock.
+
+**Regimes, at month-end t (data through t only; forward windows start t+1; declustered >= 12 months):**
+A = WTI monthly average +30% over 3 months AND a 12-month high. B = A and GS10 +0.50pp over 6 months. A flags 12 completed
+episodes 1948-2022 (1948-01, 74-01, 79-07, 89-01, 90-08, 94-06, 99-04, 2003-02, 04-10, 07-11, 2021-01, 22-03) plus the CURRENT
+onset 2026-03; B flags 5 (79-10, 94-06, 99-04, 2021-02, 22-03). 2021-01/02 is the post-COVID oil rebound, not a supply
+shock; the mechanical rule counts it and it was kept. B has only 4-5 events, so it is close to powerless. Statistic: mean
+forward 3/6/12-month compounded return after events minus the same series' mean over all eligible months; two-sided p from
+20,000 draws of the same number of eligible months under the same spacing (seeded). Registered: 9 series x 3 horizons x 2
+regimes = 54 tests; plus a 288-cell industry scan (each of 48 industries minus the market).
+
+**Results, regime A (12 complete episodes; forward return after events vs all months, 12m unless noted; p uncorrected).**
+Market total return +9.5% vs +12.9% (p=0.46; positive in 9 of 12; the three losers are 1974, 2007-11 and 2022); size, value
+and momentum factors: nothing (12m p 0.95/0.65/0.36); trend-gated market (10-month average): +10.7% vs +11.3% (p=0.86), i.e.
+the same as holding; gold 6m +5.4pp (p=0.23), 12m p=0.66; 10y Treasuries 3m -0.6% vs +1.4% (p=0.079), 6m p=0.052, 12m
+p=0.50; defense stocks vs market: -4.8pp (p=0.43); **energy stocks minus market: +8.5pp over 12m (p=0.073), positive in 8
+of 12 episodes, median +6.7pp** (the four negatives are 1990, 1994, 1999, 2003, i.e. the years of transient spikes, a
+post-hoc reading). Regime B (n=5): market, size, value, trend-gate all null; momentum +9.7pp/12m (p=0.105); energy vs market
++13.2pp/12m (p=0.092); bonds 3m -3.3pp (p=0.078); gold 3m +9.5pp (p=0.041) is ONE episode (1979-10, +69.6%; the other four
+average -2.3%). **Industry scan: 20 of 288 cells under p<0.05 uncorrected vs ~14 expected by chance; best p=0.0011 (semis
+after regime-B events, i.e. 1999 and 2021 tech booms coinciding with oil rebounds, not an oil channel); 0 pass the honest
+family threshold.** 0 of the 54 registered p-values pass Bonferroni against m=616 (0.00008), or against the 54 alone
+(0.00093).
+
+**Current episode, descriptive (first 3 months after the 2026-03 flag, Apr-Jun 2026; n=1, no test):** market +15.1%, momentum
+factor +16.2%, gold -13.7%, 10y bonds ~0, **energy equities -27.9% relative to the market.** Energy had already run
++40% relative to the market in Jan-Mar (before the mechanical flag) and gave it back in Apr-Jun while the broad market
+rebounded 10%+5%. So in the one episode we are living through, the flag arrived AFTER producers had repriced, the opposite of
+the 2004, 2007, 2021 and 2022 pattern. Not evidence against the tilt (3 months, one episode), but not confirmation either.
+
+**Independent code review (4 findings, all valid, all fixed and rerun; two changed registered numbers).**
+1. *BOND10 leaked in-flag-month drift.* GS10 is a monthly AVERAGE, so a "forward" return from the month-t average already
+   contains yield movement inside month t, known at the flag date, and yields are trending by construction in regime B.
+   This manufactured p=0.0095/0.0118 (B, 3m/6m) and 0.033 (A, 3m); with month-end DGS10 they are 0.078/0.090/0.079. I had
+   noticed the averaging artifact and added a month-end side row, but the biased series was the one registered; now the
+   registered BOND10 is month-end and the original is reported as unregistered `BOND10AVG`.
+2. *The month-end bond series counted the still-forming September as a full month* (its n was 12, not 11); truncated to
+   complete months.
+3. *The gold file is a monthly average too* (correlation 0.995 with an average of COMEX closes, 0.59 with month-end closes;
+   lag-1 autocorrelation +0.17 vs -0.08 for month-end returns). GOLD's forward window now skips month t+1 (`SKIP`); the
+   unskipped version is unregistered `GOLDAVG`. Effect small (regime B 3m p 0.041 either way).
+4. *The scan's Bonferroni threshold was hardcoded (m=604)*; now read from `multiple_comparisons.py` (m=616).
+Also fixed before the review, by my own check: `trend_series` used a NaN-moving-average comparison that is False, not NaN, the
+same bug class as Entry 76's gate; early months were silently "risk-off". An independent loop-based reimplementation
+(no probe helpers) reproduced the event list and the market's 3m/12m numbers exactly. Lesson, now the fourth time: a
+"monthly" series from FRED or a data-file that is really an average must never be the base of a forward return.
+
+**Ledger.** 54 p-values registered; UNREGISTERED_SCAN_CELLS is now 84 + 288 + 12 = 384 (industry scan plus the 12 leaky
+BOND10AVG/GOLDAVG rows); honest family m=616, Bonferroni threshold 0.00008. Consequence: the S&P 1950+ SMA100 gate row
+(p=1e-4) no longer clears it; only the SMA150 and SMA200 rows (<=5e-5) do. 229 tests pass (10 new).
+
+**Net verdict.** Descriptive and low-powered by construction (n=12 and n=5, permutation controls that cannot resolve
+anything near a corrected threshold). What it says: after oil-shock regimes the broad market, size, value, momentum, gold and a
+trend gate showed nothing reliably different from any other period; bonds tended to lose over the following 3-6 months but
+not significantly on clean data; energy equities beat the market in most episodes (8 of 12) at a magnitude dominated by
+five episodes, and the current episode's first quarter went the other way. **No strategy or tilt is supported; the count of
+mechanisms stays 72 (this is a study of existing assets, not a new mechanism); nothing is declared tradable.** Untested and
+not attempted: an India-only energy-versus-consumer tilt (n would be ~4 Brent shocks since 2007), using daily rather than
+monthly data to time entries after the flag, and conditioning on the VIX regime (India VIX is at the 5th percentile now,
+unlike every prior shock).

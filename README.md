@@ -11,17 +11,19 @@ accredited financial specialist before risking real capital. Backtest and
 paper-trade thoroughly before ever running this live. You are solely
 responsible for any trades it places.
 
-## Where things stand (2026-09-19)
+## Where things stand (2026-09-21)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-73 cover the latest work).
+are in CLAUDE.md's numbered entries (56-81 cover the latest work).
 
-- **72 mechanisms tested; none is declared tradable.** Across the 178 registered
-  significance tests plus 84 phase-scan cells noted but not registered
-  (`multiple_comparisons.py`, honest family m=262, Bonferroni threshold 0.00019)
+- **72 mechanisms tested; none is declared tradable.** Across the 232 registered
+  significance tests plus 384 scan cells noted but not registered
+  (`multiple_comparisons.py`, honest family m=616, Bonferroni threshold 0.00008)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
   only rows that pass are the trend gate's drawdown effect on the S&P 500 since
-  1950 (p <= 1e-4 at 20,000 draws; a known effect and a risk overlay, not alpha).
+  1950 at SMA150/SMA200 (p <= 5e-5 at 20,000 draws; SMA100, p=1e-4, passed at the
+  smaller family of Entry 78 and no longer does; a known effect and a risk
+  overlay, not alpha).
   Three independent code reviews of the analysis scripts (Entries 76-78) found
   and fixed 21 issues, several of which had biased results toward a finding.
 - **The one surviving stock-selection candidate is IBS rotation, and it is
@@ -50,6 +52,13 @@ are in CLAUDE.md's numbered entries (56-73 cover the latest work).
   India. Currency carry: +2.1%/yr, Sharpe 0.31, -27% in 2008, borderline vs random (p=0.07).
   Sector-ETF pairs, Larry Williams' breakout, short-vol timing (since 2018): null. Their
   actual edge in these constructions is leverage and breadth that a retail account lacks.
+- **Oil-shock regimes on 1947-2026 data (Entry 81).** After 12 past oil shocks (WTI +30%/3m at a
+  12m high) the market, size/value/momentum, gold and a trend-gated market did nothing reliably
+  different from other periods; 10y bonds tended to lose over the next 3-6 months (p~0.05-0.09 on
+  clean month-end yields; the first version's p~0.01 was a monthly-average artifact); energy stocks
+  beat the market in 8 of 12 episodes (+8.5pp/12m, p=0.07, not corrected) but lagged it by 28
+  points in the first quarter of the current episode. 0 of 54 registered tests pass a corrected bar.
+  A study, not a strategy.
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship
