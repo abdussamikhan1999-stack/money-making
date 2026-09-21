@@ -4,3 +4,5 @@ __pycache__/
 .env
 *.log
 macro_cache_live.csv
+volume_panel_cache.pkl
+ohlc_panel_cache.pkl
