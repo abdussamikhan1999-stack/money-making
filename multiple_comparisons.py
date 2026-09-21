@@ -104,8 +104,9 @@ IBS_ROTATION_PVALUES = [
 # HONEST family size (registered rows + UNREGISTERED_SCAN_CELLS, printed below) is the operative criterion, and
 # IBS rotation's retired significance claim (Fifty-third entry) is NOT reinstated by any BH PASS.
 # Cells that were run and reported but never registered row-by-row: the Sixty-fourth entry's 84 phase/anchor scan
-# cells (21 fixed-step phases + 21 calendar anchors, x IBS(5) and rev(21)).
-UNREGISTERED_SCAN_CELLS = 84
+# cells (21 fixed-step phases + 21 calendar anchors, x IBS(5) and rev(21)), plus the Eighty-first entry's 288-cell
+# industry scan and 12 monthly-average bond/gold robustness cells.
+UNREGISTERED_SCAN_CELLS = 84 + 288 + 12  # + Eighty-first: 48-industry scan (288) + leaky BOND10AVG/GOLDAVG robustness rows (12)
 
 ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("RSI-2 rotation top_k=3 (Forty-second)", 0.1987),
@@ -319,6 +320,63 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Sector-ETF pairs (SSD top-5), P&L vs random pairs (Eightieth)", 0.6771),
     ("SVXY when VIX/VIX3M<1.0, Sharpe exact rotation (Eightieth)", 0.1044),
     ("SVXY when VIX/VIX3M<0.9, Sharpe exact rotation (Eightieth)", 0.0728),
+    # Eighty-first entry: oil-shock regimes 1947-2026, 9 pre-registered series x 3 horizons x 2 regimes (54 tests, permutation null).
+    # Regime A = WTI +30%/3m at a 12m high; B = A and GS10 +0.50pp/6m. BOND10 = month-end DGS10, GOLD skips month t+1 (code review).
+    # The 288-cell industry scan and the 12 leaky BOND10AVG/GOLDAVG rows are UNREGISTERED scan cells.
+    ("Regime A MKT h=3m vs random spaced months (Eighty-first)", 0.7676),
+    ("Regime A MKT h=6m vs random spaced months (Eighty-first)", 0.8155),
+    ("Regime A MKT h=12m vs random spaced months (Eighty-first)", 0.4550),
+    ("Regime A SMB h=3m vs random spaced months (Eighty-first)", 0.8010),
+    ("Regime A SMB h=6m vs random spaced months (Eighty-first)", 0.7704),
+    ("Regime A SMB h=12m vs random spaced months (Eighty-first)", 0.9479),
+    ("Regime A HML h=3m vs random spaced months (Eighty-first)", 0.3826),
+    ("Regime A HML h=6m vs random spaced months (Eighty-first)", 0.6330),
+    ("Regime A HML h=12m vs random spaced months (Eighty-first)", 0.6509),
+    ("Regime A MOM h=3m vs random spaced months (Eighty-first)", 0.7828),
+    ("Regime A MOM h=6m vs random spaced months (Eighty-first)", 0.3409),
+    ("Regime A MOM h=12m vs random spaced months (Eighty-first)", 0.3623),
+    ("Regime A GOLD h=3m vs random spaced months (Eighty-first)", 0.8594),
+    ("Regime A GOLD h=6m vs random spaced months (Eighty-first)", 0.2264),
+    ("Regime A GOLD h=12m vs random spaced months (Eighty-first)", 0.6620),
+    ("Regime A BOND10 h=3m vs random spaced months (Eighty-first)", 0.0789),
+    ("Regime A BOND10 h=6m vs random spaced months (Eighty-first)", 0.0524),
+    ("Regime A BOND10 h=12m vs random spaced months (Eighty-first)", 0.4957),
+    ("Regime A OILREL h=3m vs random spaced months (Eighty-first)", 0.5836),
+    ("Regime A OILREL h=6m vs random spaced months (Eighty-first)", 0.1660),
+    ("Regime A OILREL h=12m vs random spaced months (Eighty-first)", 0.0734),
+    ("Regime A GUNSREL h=3m vs random spaced months (Eighty-first)", 0.7688),
+    ("Regime A GUNSREL h=6m vs random spaced months (Eighty-first)", 0.5678),
+    ("Regime A GUNSREL h=12m vs random spaced months (Eighty-first)", 0.4299),
+    ("Regime A TREND h=3m vs random spaced months (Eighty-first)", 0.9477),
+    ("Regime A TREND h=6m vs random spaced months (Eighty-first)", 0.7235),
+    ("Regime A TREND h=12m vs random spaced months (Eighty-first)", 0.8647),
+    ("Regime B MKT h=3m vs random spaced months (Eighty-first)", 0.8772),
+    ("Regime B MKT h=6m vs random spaced months (Eighty-first)", 0.4130),
+    ("Regime B MKT h=12m vs random spaced months (Eighty-first)", 0.7383),
+    ("Regime B SMB h=3m vs random spaced months (Eighty-first)", 0.2764),
+    ("Regime B SMB h=6m vs random spaced months (Eighty-first)", 0.8079),
+    ("Regime B SMB h=12m vs random spaced months (Eighty-first)", 0.8151),
+    ("Regime B HML h=3m vs random spaced months (Eighty-first)", 0.4447),
+    ("Regime B HML h=6m vs random spaced months (Eighty-first)", 0.2453),
+    ("Regime B HML h=12m vs random spaced months (Eighty-first)", 0.2502),
+    ("Regime B MOM h=3m vs random spaced months (Eighty-first)", 0.1713),
+    ("Regime B MOM h=6m vs random spaced months (Eighty-first)", 0.1402),
+    ("Regime B MOM h=12m vs random spaced months (Eighty-first)", 0.1051),
+    ("Regime B GOLD h=3m vs random spaced months (Eighty-first)", 0.0413),
+    ("Regime B GOLD h=6m vs random spaced months (Eighty-first)", 0.9472),
+    ("Regime B GOLD h=12m vs random spaced months (Eighty-first)", 0.7344),
+    ("Regime B BOND10 h=3m vs random spaced months (Eighty-first)", 0.0784),
+    ("Regime B BOND10 h=6m vs random spaced months (Eighty-first)", 0.0899),
+    ("Regime B BOND10 h=12m vs random spaced months (Eighty-first)", 0.2034),
+    ("Regime B OILREL h=3m vs random spaced months (Eighty-first)", 0.3035),
+    ("Regime B OILREL h=6m vs random spaced months (Eighty-first)", 0.4821),
+    ("Regime B OILREL h=12m vs random spaced months (Eighty-first)", 0.0919),
+    ("Regime B GUNSREL h=3m vs random spaced months (Eighty-first)", 0.6714),
+    ("Regime B GUNSREL h=6m vs random spaced months (Eighty-first)", 0.0838),
+    ("Regime B GUNSREL h=12m vs random spaced months (Eighty-first)", 0.6168),
+    ("Regime B TREND h=3m vs random spaced months (Eighty-first)", 0.4550),
+    ("Regime B TREND h=6m vs random spaced months (Eighty-first)", 0.4880),
+    ("Regime B TREND h=12m vs random spaced months (Eighty-first)", 0.8500),
     # NOT individually registered (Sixty-fourth entry): 84 further cells, 21 fixed-step phase offsets
     # and 21 calendar-anchored offsets x {IBS(5) top_k=5, rev(21) top_k=8}. Counting them, an honest
     # Bonferroni family is m>=161 (threshold ~0.0003); the smallest p among them is 0.003.
