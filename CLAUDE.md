@@ -6325,3 +6325,88 @@ instruments of a similar kind (gold's own instrument class — MCX commodities/F
 flagged, not claimed as found, the same treatment IBS's and SuperTrend's lone survivors received
 while still unconfirmed. 80 mechanisms tested; IBS rotation remains the sole standing finding;
 nothing is declared tradable.
+
+
+## Ninetieth: DMI/ADX (Wilder's directional-movement/trend-strength system) — a chance-level 2/12 hit rate, but the survivor that matters clears every check, and gold keeps reappearing as a survivor across unrelated mechanisms
+
+The last major indicator from Wilder's own 1978 book ("New Concepts in Technical Trading Systems")
+not yet tried in this project (RSI, ATR, and Parabolic SAR are already here). Genuinely different
+mechanic from every trend-follower tried so far: Donchian is a fixed N-day channel, SuperTrend an
+ATR-multiple ratchet band, Parabolic SAR an accelerating trailing stop — none of them separate trend
+STRENGTH from trend DIRECTION. DMI/ADX does: +DI/-DI measure which direction is winning (derived
+from how much of today's high/low move is a genuinely new directional extreme, via Wilder's own
++DM/-DM/TR construction), and ADX measures how strongly EITHER direction is winning, independent of
+which one — a trend-strength FILTER layered on top of a directional signal, a shape nothing else
+here has.
+
+Implemented as `probe_dmi_adx.py`, standalone (same full-OHLC dependency as SuperTrend/SAR/
+Stochastic). Smoothing uses this project's own established plain-rolling-average convention (not
+Wilder's exponential smoothing) — the same deliberate choice already made for SuperTrend's ATR,
+disclosed rather than silently substituted. Rule (the simplest, level-based version, matching this
+project's now-standard "try the plain textbook rule first" convention): long when ADX >=
+`adx_threshold` (25, Wilder's own "trending market" line) AND +DI > -DI; exit on the opposite
+crossover, ADX falling back under the threshold, or `max_hold_days` timeout. Short side is this
+project's own symmetric extension, unconfirmed by literature, the same caveat attached to every
+other short side added here. ATR-based stop, capped by the Twenty-third entry's own Carver-style
+ATR sizing from the start (not retrofitted after a review caught it missing, as happened with
+Parabolic SAR) — though, as the independent review below noted, that cap is mathematically inert
+here whenever `stop_atr_multiple >= 1` (the default is 2.0), since an ATR-scaled stop already makes
+`risk_amount/risk_per_unit < risk_amount/atr` by construction — exactly the "already redundant by
+construction" finding the Twenty-third entry itself reached for every other ATR-scaled-stop
+strategy in this project. Two synthetic sanity checks (a strong monotonic uptrend, and a choppy
+flat-drift series) confirmed +DI dominates with ADX=100 in the first case and ADX stays under 25 in
+the second, before any real backtest number was trusted. Independent `/code-review` (medium) before
+this write-up: no findings — correctly guards against every bug class this project's three most
+recent probes were each caught on (same-bar reentry, close-only stop checks, unfloored sizing).
+
+**Screening result (the same 12-instrument set, `--walk-forward`, default params): 2/12 pass**
+(`WIPRO.NS`, `GC=F`) — 16.7%, matching MACD's own hit rate exactly, at the low end of this project's
+established chance-level band (sector sweep 18%, MACD 16.7%). 3 of 12 are consistent losers
+(`INFY.NS`, `HDFCBANK.NS`, `AXISBANK.NS`); the other 7 sign-flip between halves.
+
+**`WIPRO.NS` fails on the very next check.** Quarter-split: Q1 -0.23% / Q2 +4.05% / Q3 +2.76% /
+**Q4 -2.31%** — 2 of 4 quarters negative, and Q4 (2024-2026, the most recent and most
+relevant window) is one of them — the recent-quarter-decay signature this project has repeatedly
+used to disqualify a coarse-screen "passer" (Donchian/BTC, momentum rotation, low-volatility, IBS's
+52-week-high survivors). Dropped without a perturbation sweep, per this project's own established
+"stop at the first clear crack" practice.
+
+**`GC=F` (gold) clears every subsequent check.** Quarter-split: +1.38% / +2.09% / -1.21% / **+1.28%**
+— 3 of 4 positive, and Q4 is positive, the "single-instrument, Q4-favorable" signature this project
+associates with real (if thin) effects rather than decay. Perturbation: `adx_threshold`
+(15/20/25/30 all pass, only the wide 35 fails — 4/5) and `dmi_period`/`adx_period` (10/14/28 pass,
+only 20 dips inconsistent — 3/4) together clear 7/9 cells, with no cliff sitting at the exact
+default in either dimension (unlike the single-point-fit red flags this project has flagged
+elsewhere — `AXISBANK.NS`'s SuperTrend `st_period`, the regime gate's `vol_period`). **Sizing
+genuinely helps, not dilutes**: 0.5% risk gives 0.95%/year (4.1% max DD, 142 trades); 1% risk gives
+**2.14%/year (7.5% DD)** — a real ~2.25x scaling on the same trade count, not the "return and
+drawdown dilute together" pattern RSI-2/volume-CMF/Parabolic SAR's own `GC=F` survivor all showed;
+2% breaks it (drawdown-halted at 11.8% DD, trade count collapsing 142->99) — 1% is near the safe
+ceiling, not a floor to push past, the same shape every other "sizing helps" candidate in this
+project has had.
+
+**Worth naming explicitly: gold has now turned up as a survivor across FOUR separate, unrelated
+mechanisms in this project** — IBS (Thirteenth entry), CMF+OBV volume confirmation (Sixteenth),
+Parabolic SAR (Eighty-ninth), and now DMI/ADX. None of the four mechanisms shares a construction
+with any other (same-day range position, volume-direction confirmation, an accelerating trailing
+stop, and now a directional-strength filter), which weakens (though doesn't eliminate) the "one
+lucky instrument from a chance-level sweep" explanation each individual entry has had to apply on
+its own — four independent chance-level sweeps landing on the SAME instrument is itself a mild
+positive signal about gold specifically, worth flagging as a pattern even though no single one of
+the four clears this project's bar alone, and even though the capital-tier investigation (Twenty-
+fifth/Twenty-sixth/Twenty-ninth entries) already found gold's real MCX contract sizes block every
+one of these at this project's target capital regardless of whether the underlying signal is real.
+
+**Net verdict.** Ninetieth mechanism, and — like the Parabolic SAR entry immediately before it — a
+below-chance-level hit rate (16.7%) with one survivor whose internals (quarter-split, perturbation,
+AND sizing) are cleaner than most lone survivors in this project's history, landing closer to
+Turtle Soup's `AXISBANK.NS` or SuperTrend's original `CL=F` reading than to a thin, no-lever
+"real-but-negligible" result. Per this project's own established standard (the SuperTrend/
+Eighteenth entries' retest precedent), still not independently confirmed — a single-instrument
+survivor from a chance-level sweep needs retesting against more instruments of a similar kind before
+being called found, and the accumulating gold-across-mechanisms pattern above is exactly the kind of
+cross-check that retest should specifically account for rather than treating each entry's gold
+survivor as an isolated coincidence. Not done in this entry. Also separately blocked by the
+capital-tier wall already established for gold at this project's target scale, independent of
+whether the signal itself is eventually confirmed. 81 mechanisms tested; IBS rotation remains the
+sole standing finding; nothing is declared tradable.

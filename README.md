@@ -14,9 +14,9 @@ responsible for any trades it places.
 ## Where things stand (2026-09-24)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-89 cover the latest work).
+are in CLAUDE.md's numbered entries (56-90 cover the latest work).
 
-- **80 mechanisms tested; none is declared tradable.** Across the 414 registered
+- **81 mechanisms tested; none is declared tradable.** Across the 414 registered
   significance tests plus 484 scan cells noted but not registered
   (`multiple_comparisons.py`, honest family m=898, Bonferroni threshold 0.00006)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
@@ -88,6 +88,12 @@ are in CLAUDE.md's numbered entries (56-89 cover the latest work).
   bug (unfloored qty as SAR's stop converges on price) changed which instrument
   survives once fixed. The survivor's internals look cleaner than most lone
   survivors here, but sizing doesn't scale past 0.5% risk — flagged, not found.
+- **DMI/ADX (Entry 90).** 2/12 pass; `WIPRO.NS` fails quarter-split decay,
+  `GC=F` clears quarter-split/perturbation/sizing cleanly (1% risk gives
+  2.14%/yr at 7.5% DD) — the cleanest lone-survivor internals of any recent
+  entry. Gold is now a survivor across 4 unrelated mechanisms here (IBS,
+  CMF+OBV, Parabolic SAR, this one); still not independently confirmed, and
+  separately capital-blocked regardless.
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship
@@ -817,6 +823,22 @@ look cleaner than most lone survivors here, but sizing doesn't scale
 past the 0.5% default (drawdown-halts at 1%+) and it's flagged, not
 found, pending a retest against more instruments of gold's own class —
 see CLAUDE.md's "Eighty-ninth" entry.
+
+`probe_dmi_adx.py` (Wilder's DMI/ADX — a trend-strength filter (+DI/-DI
+direction, ADX strength) genuinely different from every channel/band
+trend-follower already tried) found **2/12 passing walk-forward**
+(`WIPRO.NS`, `GC=F`) — 16.7%, matching MACD's own hit rate. `WIPRO.NS`
+fails the next check (Q4 quarter-decay); `GC=F` clears quarter-split
+(3/4 positive, Q4 favorable), a 7/9 perturbation sweep with no
+single-point-fit, and sizing that genuinely scales (0.5%->1% risk
+roughly doubles the return to 2.14%/year at 7.5% drawdown) — the
+cleanest lone-survivor internals of any recent entry. Gold has now
+turned up as a survivor across four unrelated mechanisms in this
+project (IBS, CMF+OBV, Parabolic SAR, this one) — a mild positive
+signal worth naming even though none of the four independently clears
+this project's bar, and even though gold's own MCX contract sizes
+already block it at this project's target capital regardless. See
+CLAUDE.md's "Ninetieth" entry.
 
 ## Two variants
 
