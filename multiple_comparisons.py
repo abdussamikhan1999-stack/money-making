@@ -581,6 +581,19 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("skew(63) top_k=3 (Eighty-seventh)", 0.3031),
     ("skew(63) top_k=5 (Eighty-seventh)", 0.7035),
     ("skew(63) top_k=8 (Eighty-seventh)", 0.9680),
+    # Ninety-second entry: day-of-week effect, 5,000-draw random-same-size-subset control, 2
+    # independent long-history markets (NIFTY 20y, S&P 500 since inception). 5 weekdays x 2
+    # markets = 10 tests, pre-registered before any return was scored.
+    ("NIFTY Mon (Ninety-second)", 0.9348),
+    ("NIFTY Tue (Ninety-second)", 0.3163),
+    ("NIFTY Wed (Ninety-second)", 0.0394),
+    ("NIFTY Thu (Ninety-second)", 0.7756),
+    ("NIFTY Fri (Ninety-second)", 0.3581),
+    ("S&P500 Mon (Ninety-second)", 0.0252),
+    ("S&P500 Tue (Ninety-second)", 0.1748),
+    ("S&P500 Wed (Ninety-second)", 0.0008),
+    ("S&P500 Thu (Ninety-second)", 0.3005),
+    ("S&P500 Fri (Ninety-second)", 0.0816),
     # NOT individually registered (Sixty-fourth entry): 84 further cells, 21 fixed-step phase offsets
     # and 21 calendar-anchored offsets x {IBS(5) top_k=5, rev(21) top_k=8}. Counting them, an honest
     # Bonferroni family is m>=161 (threshold ~0.0003); the smallest p among them is 0.003.
