@@ -106,7 +106,7 @@ IBS_ROTATION_PVALUES = [
 # Cells that were run and reported but never registered row-by-row: the Sixty-fourth entry's 84 phase/anchor scan
 # cells (21 fixed-step phases + 21 calendar anchors, x IBS(5) and rev(21)), plus the Eighty-first entry's 288-cell
 # industry scan, 12 monthly-average bond/gold robustness cells, and 30 Entry 82-84 robustness cells.
-UNREGISTERED_SCAN_CELLS = 84 + 288 + 12 + 30  # + Eighty-first: industry scan (288) + leaky bond/gold rows (12); + 82-84: spanning (8), reversal positive control (16), IBS-vs-I5 (6)
+UNREGISTERED_SCAN_CELLS = 84 + 288 + 12 + 30 + 64  # + Eighty-first: industry scan (288) + leaky bond/gold rows (12); + 82-84: spanning (8), reversal positive control (16), IBS-vs-I5 (6); + Eighty-fifth: OI1E/OI2E/PC2E/OI2X unregistered robustness variants (64)
 
 ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("RSI-2 rotation top_k=3 (Forty-second)", 0.1987),
@@ -476,6 +476,98 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("OHLC MAX P2 h=1d univ B (Eighty-fourth)", 0.0002),
     ("OHLC MAX P2 h=5d univ B (Eighty-fourth)", 0.2644),
     ("OHLC MAX P2 h=21d univ B (Eighty-fourth)", 0.3874),
+    # Eighty-fifth entry: stock-futures OI "buildup" + options put/call signals, daily cross-sectional
+    # rank IC, same shift-circular-shift null and framework as Entries 82-84. 4 signals (OI1, OI2, PC1,
+    # PC2) x 4 h x 2 universes x 2 periods = 64 tests. Registered p = max(p_shift, p_nw) per the probe's
+    # own decision rule (persistent signals need both tests to pass, not just the shift null). Decision
+    # rule found nothing advancing (registered or unregistered). 64 further cells (OI1E/OI2E/PC2E/OI2X,
+    # unregistered robustness variants) are NOT individually listed here, only counted below.
+    ("OI1 P1 h=1d univ A (Eighty-fifth)", 0.4736),
+    ("OI1 P1 h=5d univ A (Eighty-fifth)", 0.2172),
+    ("OI1 P1 h=10d univ A (Eighty-fifth)", 0.3490),
+    ("OI1 P1 h=21d univ A (Eighty-fifth)", 0.0988),
+    ("OI2 P1 h=1d univ A (Eighty-fifth)", 0.6154),
+    ("OI2 P1 h=5d univ A (Eighty-fifth)", 0.6293),
+    ("OI2 P1 h=10d univ A (Eighty-fifth)", 0.4656),
+    ("OI2 P1 h=21d univ A (Eighty-fifth)", 0.9715),
+    ("PC1 P1 h=1d univ A (Eighty-fifth)", 0.3527),
+    ("PC1 P1 h=5d univ A (Eighty-fifth)", 0.1627),
+    ("PC1 P1 h=10d univ A (Eighty-fifth)", 0.2534),
+    ("PC1 P1 h=21d univ A (Eighty-fifth)", 0.2494),
+    ("PC2 P1 h=1d univ A (Eighty-fifth)", 0.7133),
+    ("PC2 P1 h=5d univ A (Eighty-fifth)", 0.3717),
+    ("PC2 P1 h=10d univ A (Eighty-fifth)", 0.5749),
+    ("PC2 P1 h=21d univ A (Eighty-fifth)", 0.0745),
+    ("OI1 P2 h=1d univ A (Eighty-fifth)", 0.7506),
+    ("OI1 P2 h=5d univ A (Eighty-fifth)", 0.9041),
+    ("OI1 P2 h=10d univ A (Eighty-fifth)", 0.9200),
+    ("OI1 P2 h=21d univ A (Eighty-fifth)", 0.5556),
+    ("OI2 P2 h=1d univ A (Eighty-fifth)", 0.5505),
+    ("OI2 P2 h=5d univ A (Eighty-fifth)", 0.4839),
+    ("OI2 P2 h=10d univ A (Eighty-fifth)", 0.4569),
+    ("OI2 P2 h=21d univ A (Eighty-fifth)", 0.5204),
+    ("PC1 P2 h=1d univ A (Eighty-fifth)", 0.5042),
+    ("PC1 P2 h=5d univ A (Eighty-fifth)", 0.1500),
+    ("PC1 P2 h=10d univ A (Eighty-fifth)", 0.2979),
+    ("PC1 P2 h=21d univ A (Eighty-fifth)", 0.2249),
+    ("PC2 P2 h=1d univ A (Eighty-fifth)", 0.1687),
+    ("PC2 P2 h=5d univ A (Eighty-fifth)", 0.5498),
+    ("PC2 P2 h=10d univ A (Eighty-fifth)", 0.8550),
+    ("PC2 P2 h=21d univ A (Eighty-fifth)", 0.7158),
+    ("OI1 P1 h=1d univ B (Eighty-fifth)", 0.8872),
+    ("OI1 P1 h=5d univ B (Eighty-fifth)", 0.3849),
+    ("OI1 P1 h=10d univ B (Eighty-fifth)", 0.1730),
+    ("OI1 P1 h=21d univ B (Eighty-fifth)", 0.2698),
+    ("OI2 P1 h=1d univ B (Eighty-fifth)", 0.3104),
+    ("OI2 P1 h=5d univ B (Eighty-fifth)", 0.2347),
+    ("OI2 P1 h=10d univ B (Eighty-fifth)", 0.7013),
+    ("OI2 P1 h=21d univ B (Eighty-fifth)", 0.2907),
+    ("PC1 P1 h=1d univ B (Eighty-fifth)", 0.7574),
+    ("PC1 P1 h=5d univ B (Eighty-fifth)", 0.3217),
+    ("PC1 P1 h=10d univ B (Eighty-fifth)", 0.0577),
+    ("PC1 P1 h=21d univ B (Eighty-fifth)", 0.0525),
+    ("PC2 P1 h=1d univ B (Eighty-fifth)", 0.1368),
+    ("PC2 P1 h=5d univ B (Eighty-fifth)", 0.0515),
+    ("PC2 P1 h=10d univ B (Eighty-fifth)", 0.9185),
+    ("PC2 P1 h=21d univ B (Eighty-fifth)", 0.3154),
+    ("OI1 P2 h=1d univ B (Eighty-fifth)", 0.3105),
+    ("OI1 P2 h=5d univ B (Eighty-fifth)", 0.7214),
+    ("OI1 P2 h=10d univ B (Eighty-fifth)", 0.2889),
+    ("OI1 P2 h=21d univ B (Eighty-fifth)", 0.9943),
+    ("OI2 P2 h=1d univ B (Eighty-fifth)", 0.1360),
+    ("OI2 P2 h=5d univ B (Eighty-fifth)", 0.5194),
+    ("OI2 P2 h=10d univ B (Eighty-fifth)", 0.5514),
+    ("OI2 P2 h=21d univ B (Eighty-fifth)", 0.9283),
+    ("PC1 P2 h=1d univ B (Eighty-fifth)", 0.3087),
+    ("PC1 P2 h=5d univ B (Eighty-fifth)", 0.5156),
+    ("PC1 P2 h=10d univ B (Eighty-fifth)", 0.8465),
+    ("PC1 P2 h=21d univ B (Eighty-fifth)", 0.3667),
+    ("PC2 P2 h=1d univ B (Eighty-fifth)", 0.1290),
+    ("PC2 P2 h=5d univ B (Eighty-fifth)", 0.0969),
+    ("PC2 P2 h=10d univ B (Eighty-fifth)", 0.1760),
+    ("PC2 P2 h=21d univ B (Eighty-fifth)", 0.3642),
+    # Eighty-sixth entry: dividend month premium (DIV1, Hartzmark-Solomon) and trailing dividend
+    # yield (DYLD) as monthly cross-sectional signals, same 2-universe/2-period framework. DIV1's
+    # shift null is centred, so its registered p is the pre-registered shift p; DYLD's ~0.8
+    # twelve-month autocorrelation makes the shift null non-centred (mean -1.9 to -2.4 sd from
+    # zero), so its registered p is the Newey-West t-test instead (disclosed in the probe's own
+    # docstring before scoring). (DIV1 x 1 + DYLD x 3) x 2 universes x 2 periods = 16 tests.
+    ("DIV1 P1 h=1m univ A (Eighty-sixth)", 0.7273),
+    ("DYLD P1 h=1m univ A (Eighty-sixth)", 0.6355),
+    ("DYLD P1 h=3m univ A (Eighty-sixth)", 0.6321),
+    ("DYLD P1 h=12m univ A (Eighty-sixth)", 0.9352),
+    ("DIV1 P2 h=1m univ A (Eighty-sixth)", 0.1475),
+    ("DYLD P2 h=1m univ A (Eighty-sixth)", 0.2197),
+    ("DYLD P2 h=3m univ A (Eighty-sixth)", 0.2560),
+    ("DYLD P2 h=12m univ A (Eighty-sixth)", 0.5231),
+    ("DIV1 P1 h=1m univ B (Eighty-sixth)", 0.1775),
+    ("DYLD P1 h=1m univ B (Eighty-sixth)", 0.6021),
+    ("DYLD P1 h=3m univ B (Eighty-sixth)", 0.6278),
+    ("DYLD P1 h=12m univ B (Eighty-sixth)", 0.3466),
+    ("DIV1 P2 h=1m univ B (Eighty-sixth)", 0.0157),
+    ("DYLD P2 h=1m univ B (Eighty-sixth)", 0.9379),
+    ("DYLD P2 h=3m univ B (Eighty-sixth)", 0.9006),
+    ("DYLD P2 h=12m univ B (Eighty-sixth)", 0.9197),
     # NOT individually registered (Sixty-fourth entry): 84 further cells, 21 fixed-step phase offsets
     # and 21 calendar-anchored offsets x {IBS(5) top_k=5, rev(21) top_k=8}. Counting them, an honest
     # Bonferroni family is m>=161 (threshold ~0.0003); the smallest p among them is 0.003.

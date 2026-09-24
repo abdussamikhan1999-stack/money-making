@@ -11,14 +11,14 @@ accredited financial specialist before risking real capital. Backtest and
 paper-trade thoroughly before ever running this live. You are solely
 responsible for any trades it places.
 
-## Where things stand (2026-09-22)
+## Where things stand (2026-09-24)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-84 cover the latest work).
+are in CLAUDE.md's numbered entries (56-86 cover the latest work).
 
-- **75 mechanisms tested; none is declared tradable.** Across the 328 registered
-  significance tests plus 414 scan cells noted but not registered
-  (`multiple_comparisons.py`, honest family m=742, Bonferroni threshold 0.00007)
+- **77 mechanisms tested; none is declared tradable.** Across the 408 registered
+  significance tests plus 478 scan cells noted but not registered
+  (`multiple_comparisons.py`, honest family m=886, Bonferroni threshold 0.00006)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
   only rows that pass are the trend gate's drawdown effect on the S&P 500 since
   1950 at SMA150/SMA200 (p <= 5e-5 at 20,000 draws; SMA100, p=1e-4, passed at the
@@ -66,6 +66,12 @@ are in CLAUDE.md's numbered entries (56-84 cover the latest work).
   (20 years, two periods): null. Overnight persistence, gap reversal, MAX: null. The known 5-day
   reversal is an intraday effect (not overnight gaps), also below cost in the recent period. Nothing
   advances under the pre-registered rule.
+- **Stock-futures OI buildup, options put/call, dividend signals (Entries 85-86).**
+  Daily cross-sectional OI1/OI2/PC1/PC2 (64 tests, persistence-corrected via
+  max(shift-null p, Newey-West p)): clean null, 0 of 64 clear even an
+  uncorrected p<0.05. Monthly dividend-month-premium/trailing-yield (16 tests):
+  also null (one lone significant cell fails the both-universes-both-periods
+  rule outright).
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship

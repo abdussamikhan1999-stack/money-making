@@ -1,4 +1,5 @@
 .venv/
+.claude/
 __pycache__/
 *.pyc
 .env
@@ -6,3 +7,5 @@ __pycache__/
 macro_cache_live.csv
 volume_panel_cache.pkl
 ohlc_panel_cache.pkl
+dividend_panel_cache.pkl
+oi_panel_cache.pkl

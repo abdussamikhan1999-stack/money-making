@@ -47,6 +47,7 @@ POST-REVIEW CORRECTIONS (independent code review, before the write-up; disclosed
 import argparse
 import datetime as dt
 import io
+import math
 import os
 import time
 import urllib.error
@@ -93,8 +94,8 @@ def fetch(start=FIRST, end=None, sleep=0.25, save_every=100):
     new, done = [], 0
 
     def save():
-        pd.concat([old] + new).drop_duplicates(["date", "symbol"]).to_csv(CACHE, index=False)
-        open(CHECKED, "w").write("\n".join(sorted(checked)))
+        write_atomic(pd.concat([old] + new).drop_duplicates(["date", "symbol"]), CACHE)
+        write_text_atomic("\n".join(sorted(checked)), CHECKED)
 
     d = start
     while d <= end:
@@ -184,24 +185,80 @@ def ic_rows(Sz, Fz):
         return (Sz * Fz).sum(1) / den
 
 
-def ic_test(S, F, rng, draws=DRAWS, min_shift=60):
-    """Mean rank IC of S against F and its circular-shift p. Returns (mean_ic, p, n_days, ic_series)."""
+def write_atomic(df, path):
+    """Write a CSV via a temp file + rename, so an interrupt can never truncate an existing cache (review fix)."""
+    tmp = path + ".tmp"
+    df.to_csv(tmp, index=False)
+    os.replace(tmp, path)
+
+
+def write_text_atomic(text, path):
+    tmp = path + ".tmp"
+    open(tmp, "w").write(text)
+    os.replace(tmp, path)
+
+
+def apply_rule(res, cost=COST_RT, alpha=0.05):
+    """The pre-registered decision rule, in code (Entry 85 review: it had only been applied by eye).
+    res: rows with universe, period, signal, h, ic, p, p_nw, ic_h1, ic_h2 and top5_excess (or gross_excess).
+    A (signal, h) ADVANCES only if in EVERY universe x period cell present: IC > 0, max(p, p_nw) < alpha (both tests),
+    both halves > 0, and the gross excess exceeds `cost`. Returns one row per (signal, h) with the counts."""
+    ex = "top5_excess" if "top5_excess" in res.columns else "gross_excess"
+    r = res.copy()
+    r["p_reg"] = r[["p", "p_nw"]].max(axis=1)
+    r["stat"] = (r.ic > 0) & (r.p_reg < alpha) & (r.ic_h1 > 0) & (r.ic_h2 > 0)
+    r["econ"] = r[ex] > cost
+    out = r.groupby(["signal", "h"]).agg(cells=("ic", "size"), stat_pass=("stat", "sum"),
+                                         econ_pass=("econ", "sum"),
+                                         both=("stat", lambda s: int((s & r.loc[s.index, "econ"]).sum())))
+    out["advance"] = (out.both == out.cells) & (out.cells > 0)
+    return out.reset_index()
+
+
+def nw_p(ic, lag):
+    """Mean IC's t-statistic with a Newey-West (Bartlett) standard error, and a two-sided normal-approximation p.
+    Valid for PERSISTENT signals, where the circular-shift null is not centred at zero (Entry 86 review): it tests the level
+    of the IC series directly and needs no shift null. lag should cover overlapping forward windows."""
+    x = np.asarray(pd.Series(ic).dropna(), dtype=float)
+    n = len(x)
+    if n < 30:
+        return np.nan, np.nan
+    e = x - x.mean()
+    v = e @ e / n
+    for l in range(1, min(lag, n - 1) + 1):
+        v += 2 * (1 - l / (lag + 1)) * (e[l:] @ e[:-l]) / n
+    t = x.mean() / math.sqrt(max(v, 1e-30) / n)
+    return t, math.erfc(abs(t) / math.sqrt(2))
+
+
+def ic_test(S, F, rng, draws=DRAWS, min_shift=60, min_rows=200, avoid_mod=None):
+    """Mean rank IC of S against F and its circular-shift p. Returns (mean_ic, p, n_days, ic_series).
+    min_rows: fewer valid rows -> NaN (monthly panels have ~110 rows). avoid_mod: skip shifts that are multiples of it
+    (a seasonal signal shifted by a whole number of years would reproduce the observed alignment exactly)."""
     Sz, ns = zrank(S)
     Fz, nf = zrank(F)
     T = len(Sz)
     ok = (ns >= MIN_NAMES) & (nf >= MIN_NAMES)
     ic = ic_rows(Sz, Fz)
-    if ok.sum() < 200:
+    if ok.sum() < min_rows:
         return np.nan, np.nan, int(ok.sum()), pd.Series(np.where(ok, ic, np.nan), index=S.index)
     obs = np.nanmean(ic[ok])
     null = np.empty(draws)
-    for i, k in enumerate(rng.integers(min_shift, T - min_shift, size=draws)):
+    shifts = rng.integers(min_shift, T - min_shift, size=draws)
+    if avoid_mod:
+        bad = shifts % avoid_mod == 0
+        while bad.any():
+            shifts[bad] = rng.integers(min_shift, T - min_shift, size=int(bad.sum()))
+            bad = shifts % avoid_mod == 0
+    for i, k in enumerate(shifts):
         oks = (np.roll(ns, k) >= MIN_NAMES) & (nf >= MIN_NAMES)
         v = ic_rows(np.roll(Sz, k, axis=0), Fz)[oks]
-        null[i] = np.nanmean(v) if oks.sum() >= 200 else np.nan
+        null[i] = np.nanmean(v) if oks.sum() >= min_rows else np.nan
     null = null[~np.isnan(null)]
     p = (1 + (np.abs(null) >= abs(obs) - 1e-15).sum()) / (1 + len(null))
-    return obs, p, int(ok.sum()), pd.Series(np.where(ok, ic, np.nan), index=S.index)
+    out = pd.Series(np.where(ok, ic, np.nan), index=S.index)
+    out.attrs["null_z0"] = float(null.mean() / null.std()) if len(null) > 1 and null.std() > 0 else np.nan
+    return obs, p, int(ok.sum()), out
 
 
 def residualize(Y, Xs):
@@ -274,7 +331,9 @@ def run_signals(S, close, horizons, periods, rng):
                 mic, p, n, ic = ic_test(Xp, Fp, rng)
                 v = ic.dropna()
                 half = len(v) // 2
-                rows.append(dict(period=label, signal=sig, h=h, days=n, ic=mic, p=p,
+                t_nw, p_nw = nw_p(ic, h + 5)  # daily: forward windows overlap h days, signals use 5
+                rows.append(dict(period=label, signal=sig, h=h, days=n, ic=mic, p=p, p_nw=p_nw, t_nw=t_nw,
+                                 null_z0=ic.attrs.get("null_z0", np.nan),
                                  ic_h1=v.iloc[:half].mean() if len(v) else np.nan,
                                  ic_h2=v.iloc[half:].mean() if len(v) else np.nan,
                                  top5_excess=top_excess(Xp, Fp)))
