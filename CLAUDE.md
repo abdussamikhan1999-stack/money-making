@@ -6410,3 +6410,48 @@ survivor as an isolated coincidence. Not done in this entry. Also separately blo
 capital-tier wall already established for gold at this project's target scale, independent of
 whether the signal itself is eventually confirmed. 81 mechanisms tested; IBS rotation remains the
 sole standing finding; nothing is declared tradable.
+
+
+## Ninety-first: retesting DMI/ADX's gold survivor against 8 more commodities/FX pairs — 0/8, the exact same fate SuperTrend's oil survivor met, closing the loop the prior entry flagged
+
+Direct follow-up on the Ninetieth entry's own flagged next step, no new code: `probe_dmi_adx.py`
+(unchanged) run against the same 8-instrument commodity/FX extension set this project has used twice
+before for exactly this kind of retest (the Eighteenth entry's SuperTrend follow-up, the
+Twenty-fifth's IBS/FX follow-up) — `NG=F`/`HG=F`/`SI=F`/`PL=F` on MCX-equivalent futures, `USDINR=X`/
+`EURINR=X`/`GBPINR=X`/`JPYINR=X` on the currency segment — specifically because gold is itself a
+commodity and this is the natural instrument class to look for corroboration in, the same reasoning
+the Eighteenth entry used for oil.
+
+**Result: 0/8 pass** (both walk-forward halves positive). 3 of 8 are consistent losers on both
+halves (`NG=F`, `SI=F`, `PL=F` — `SI=F`/`PL=F` also drawdown-halted out-of-sample); the other 5
+sign-flip between halves (`HG=F`, `USDINR=X`, `EURINR=X`, `GBPINR=X`, `JPYINR=X`). Not one cell comes
+close to `GC=F`'s own clean quarter-split/perturbation/sizing profile.
+
+**This is the identical outcome SuperTrend's `CL=F` survivor met under the same retest (Eighteenth
+entry: 0/8) and IBS's own FX retest met before the lot-size problem even had to be invoked
+(Twenty-fifth entry's headline numbers were later retracted on capital-tier grounds, but the
+underlying FX signal itself was never independently corroborated across the set either).** `GC=F`
+isn't corroborated by nearby instruments the way a real cross-instrument commodity/FX mechanism
+would be — it was the one lucky draw the Ninetieth entry's own 16.7% chance-level screen already
+implied might exist, same as `CL=F` was for SuperTrend.
+
+**Read together with the Ninetieth entry's "gold across four mechanisms" observation, this
+sharpens rather than erases it.** The pattern isn't "gold generalizes across the commodity/FX class"
+(this retest rules that out cleanly, the same way the Eighteenth entry ruled it out for oil) — it's
+specifically instrument-level: something about GOLD ITSELF, not commodities/FX broadly, keeps
+producing a lone survivor across unrelated technical constructions (same-day range position, volume
+confirmation, an accelerating trailing stop, a directional-strength filter), while the immediately
+neighboring instruments in its own asset class consistently don't. That's still not evidence any
+one of those four mechanisms is individually real (a chance-level sweep landing on the same
+instrument four times could itself be a property of gold's own return distribution — e.g. its
+historically lower volatility/cleaner trending character relative to silver/platinum/FX pairs
+inflating walk-forward pass rates generically, not a signal-specific effect) — a question this
+entry doesn't resolve and flags rather than chases further, since answering it would need a test
+of "does ANY simple trend/mean-reversion rule pass more often on gold than on a matched-volatility
+random-walk control," a different and larger undertaking than a single-mechanism retest.
+
+**Net verdict.** No count change (not a new mechanism — a retest of the Ninetieth entry's own
+finding, same convention as the Eighteenth/Twenty-fifth entries' own retests). Closes the DMI/ADX
+line the same way SuperTrend's oil line was closed: real, sanity-checked, correctly-implemented
+code; one clean-looking survivor; zero corroboration from the instrument class it belongs to. 81
+mechanisms tested; IBS rotation remains the sole standing finding; nothing is declared tradable.
