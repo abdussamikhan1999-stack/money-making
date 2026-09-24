@@ -14,11 +14,11 @@ responsible for any trades it places.
 ## Where things stand (2026-09-24)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-86 cover the latest work).
+are in CLAUDE.md's numbered entries (56-87 cover the latest work).
 
-- **77 mechanisms tested; none is declared tradable.** Across the 408 registered
-  significance tests plus 478 scan cells noted but not registered
-  (`multiple_comparisons.py`, honest family m=886, Bonferroni threshold 0.00006)
+- **78 mechanisms tested; none is declared tradable.** Across the 414 registered
+  significance tests plus 484 scan cells noted but not registered
+  (`multiple_comparisons.py`, honest family m=898, Bonferroni threshold 0.00006)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
   only rows that pass are the trend gate's drawdown effect on the S&P 500 since
   1950 at SMA150/SMA200 (p <= 5e-5 at 20,000 draws; SMA100, p=1e-4, passed at the
@@ -72,6 +72,11 @@ are in CLAUDE.md's numbered entries (56-86 cover the latest work).
   uncorrected p<0.05. Monthly dividend-month-premium/trailing-yield (16 tests):
   also null (one lone significant cell fails the both-universes-both-periods
   rule outright).
+- **Realized-skewness rotation (Entry 87).** Amaya-Christoffersen-Jacobs-Vasquez
+  2015 (low realized skewness => higher future return), monthly cross-sectional,
+  6 tests: clean null, every cell underperforms its own random-portfolio control
+  (p 0.30-0.97), and gets worse under survivorship stress — the opposite of IBS
+  rotation's own stress result.
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship
