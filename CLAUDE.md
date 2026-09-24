@@ -6244,3 +6244,84 @@ mean-reversion signals with a genuinely short/same-day character) and its Twenty
 Twenty-eighth entries (Bollinger Bands' pure band-touch mean reversion, with or without a trend
 filter, also failed cleanly). 79 mechanisms tested; IBS rotation remains the sole standing finding;
 nothing is declared tradable.
+
+
+## Eighty-ninth: Parabolic SAR — this project's first always-in-market strategy, an 8% hit rate (the lowest yet), and one lone survivor with real internals but thin, sizing-limited magnitude
+
+Wilder's Parabolic SAR ("New Concepts in Technical Trading Systems", 1978 — the same book RSI and
+ATR, both already used throughout this project, come from). Genuinely different trend-following
+construction from Donchian (a fixed N-day channel) and SuperTrend (an ATR-multiple band that
+ratchets but never accelerates): SAR's acceleration factor grows every time price makes a new
+extreme in the trend's direction, so the stop tightens progressively as a trend matures — "the
+parabola catches up to price." It is also the first ALWAYS-IN-MARKET strategy tried anywhere in
+this project: every other strategy here has flat periods between signals; a stop-and-reverse system
+has no flat state by construction.
+
+Implemented as `probe_parabolic_sar.py`, standalone (same shape-mismatch reasoning as every other
+full-OHLC-dependent probe here). Wilder's own recurrence: `SAR_i = SAR_{i-1} + AF*(EP_{i-1} -
+SAR_{i-1})`, with the no-penetration rule (SAR never set past the prior two bars' low/high in an
+uptrend/downtrend) and the classic 0.02/0.02/0.20 start/step/max acceleration-factor triple. On a
+reversal, SAR resets to the abandoned extreme point and AF resets to `start_af`. Bootstrap (no
+natural "day 0" state exists for a stop-and-reverse system) is disclosed rather than hidden: initial
+trend from a simple `close_1 >= close_0` test — NOT the "which side of a wide band is price already
+on" heuristic the SuperTrend entry found was a near-always-true tautology, since a one-day close
+comparison carries no such structural bias. A synthetic sanity check (a monotonic uptrend, then a
+sharp reversal) confirmed SAR tracks correctly below/above price, AF accelerates on new extremes,
+and a reversal resets both SAR and AF exactly as Wilder's algorithm specifies, before any real
+backtest number was generated.
+
+**A real position-sizing bug, caught by an independent `/code-review` before any number was
+trusted.** SAR is *designed* to converge on price as AF accelerates — unlike every ATR-scaled stop
+already used in this project (RSI-2/Squeeze/Bollinger/MACD/SuperTrend all size off a stop that stays
+roughly `multiplier x ATR` away from price), SAR's own stop distance can legitimately shrink toward
+zero in a mature trend. The first draft sized `qty = risk_amount / |close - stop|` with no floor, so
+a near-zero stop distance could blow qty up to an arbitrary multiple of the intended
+`risk_per_trade_pct` — exactly the situation the Twenty-third entry's `volatility_position_size()`
+(Carver-style ATR cap) already exists to catch, just never wired into this specific probe. Fixed by
+capping `qty` at `min(stop_based_qty, risk_amount / ATR)`, the same `min()`-of-two-sizing-methods
+convention that entry established. **This materially changed which instrument survives**: before
+the fix, `WIPRO.NS` was the lone passer; after it, `WIPRO.NS` flips to INCONSISTENT and `GC=F` (gold)
+becomes the lone passer instead — a concrete demonstration of why this bug mattered, not just a
+theoretical concern.
+
+**Screening result (the same 12-instrument set used throughout Entries 12-21, `--walk-forward`,
+default params, POST-fix): 1/12 pass** (both halves positive) — `GC=F` only, an 8.3% hit rate, the
+LOWEST of any strategy tried in this project (below Bollinger's/Stochastic's 0/12 only in the sense
+that at least one instrument passed here at all, but below every other strategy's nonzero hit rate:
+MACD 16.7%, sector sweep 18%, Squeeze/Turtle Soup 25%, volume 30%, SuperTrend 33%). 4 of 12 are
+consistent losers (`^NSEI`, `INFY.NS`, `HDFCBANK.NS`, `ITC.NS`, `AXISBANK.NS` — both halves
+negative), the rest sign-flip between halves.
+
+**`GC=F`'s internals are genuinely better than the hit rate alone suggests, unlike most lone
+survivors in this project's history.** Quarter-split: +3.05% / -2.09% / +0.29% / **+2.68%** — 3 of 4
+positive, and Q4 (2024-2026, the most recent and most relevant window) is positive and relatively
+strong, the "single-instrument, Q4-favorable" signature the Cross-mechanism synthesis entry
+associates with real (if thin) effects, not the "historic run now flat" decay pattern that
+disqualified several other lone survivors (Donchian/BTC, momentum rotation, low-volatility).
+Perturbation on the AF triple (0.01/0.015/0.02/0.03/0.04, step=start in each case): 4 of 5 pass
+(only the tightest, 0.01, flips inconsistent) — no single-point-fit at the exact default, unlike
+`AXISBANK.NS`'s SuperTrend `st_period` sweep or the regime gate's `vol_period` sweep.
+
+**But sizing doesn't help past the default, closing off the one lever that turned several other
+thin survivors into something more substantial (3-bar breakout, Squeeze, SuperTrend, Turtle Soup,
+52-week-high all had this lever; RSI-2 and volume-CMF+OBV's `GC=F` survivor did not).** At the
+default 0.5% risk-per-trade: 1.32%/year at 9.3% max drawdown (206 trades, no halt) — thin, in the
+same bucket as CMF+OBV's own `GC=F` survivor (1.30%/year, Sixteenth entry) and RSI-2's verdict. At
+1% risk it drawdown-halts (10.3% DD, trade count collapsing 206->51); at 2% it also halts, despite a
+higher raw annualized figure (3.37%/year on far fewer completed trades before the halt) — the
+"dilutes/halts rather than compounds" shape, not the clean scaling 3-bar breakout or SuperTrend's
+oil survivor showed.
+
+**Net verdict.** Eighty-ninth mechanism, and — like IBS's original single-instrument gold survivor
+(Thirteenth entry) and SuperTrend's oil survivor before its own retest disproved it (Seventeenth/
+Eighteenth entries) — a real research trail with a credible mechanism (Wilder's own accelerating
+trailing stop, correctly implemented and sanity-checked) that produced exactly one instrument
+clearing the bar, at the lowest hit rate of any strategy tried here. The internals (quarter-split,
+perturbation) look cleaner than most lone survivors' do, but per this project's own established
+standard (see the SuperTrend/Eighteenth entries' own retest precedent), a single-instrument survivor
+from a below-chance-level sweep isn't independently confirmed until retested against more
+instruments of a similar kind (gold's own instrument class — MCX commodities/FX — the same class
+`CL=F`'s SuperTrend survivor was retested against and failed 0/8 on). Not done in this entry —
+flagged, not claimed as found, the same treatment IBS's and SuperTrend's lone survivors received
+while still unconfirmed. 80 mechanisms tested; IBS rotation remains the sole standing finding;
+nothing is declared tradable.
