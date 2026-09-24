@@ -73,3 +73,48 @@ def test_residualize_removes_the_control_and_keeps_independent_content():
     rc_x = R.rank(axis=1).corrwith(X.rank(axis=1), axis=1).mean()         # (re-ranking the residual adds a little back)
     rc_z = R.rank(axis=1).corrwith(Z.rank(axis=1), axis=1).mean()
     assert exact < 1e-9 and abs(rc_x) < 0.1 and rc_z > 0.5
+
+
+def test_nw_p_respects_autocorrelation_and_detects_a_real_mean():
+    rng = np.random.default_rng(2)
+    n = 400
+    e = rng.normal(size=n)
+    ar = np.zeros(n)
+    for i in range(1, n):
+        ar[i] = 0.9 * ar[i - 1] + e[i]                       # strongly persistent, true mean 0
+    t_naive = ar.mean() / (ar.std() / np.sqrt(n))
+    t_nw, p_nw = d.nw_p(pd.Series(ar), lag=20)
+    assert abs(t_nw) < abs(t_naive) and p_nw > 0.01          # HAC widens the SE for persistence (naive t is overconfident)
+    t2, p2 = d.nw_p(pd.Series(rng.normal(0.3, 1.0, n)), lag=5)
+    assert t2 > 4 and p2 < 1e-4                              # a real mean is detected
+    assert np.isnan(d.nw_p(pd.Series([0.1] * 10), lag=2)[1])  # too short -> NaN, not a spurious p
+
+
+def test_ic_test_reports_the_null_centre_for_a_persistent_signal():
+    rng = np.random.default_rng(6)
+    T, N = 300, 40
+    idx = pd.bdate_range("2019-01-01", periods=T)
+    cols = [f"S{i}" for i in range(N)]
+    static = rng.normal(size=N)
+    S = pd.DataFrame(np.tile(static, (T, 1)), index=idx, columns=cols)           # a static ranking
+    F = pd.DataFrame(rng.normal(size=(T, N)) + 0.4 * static, index=idx, columns=cols)   # returns tilted toward it
+    ic, p, n, ser = d.ic_test(S, F, np.random.default_rng(1), draws=300)
+    assert ser.attrs["null_z0"] > 3                          # shifting a static ranking cannot move the null off its tilt
+
+
+def test_apply_rule_requires_every_cell_both_tests_both_halves_and_the_cost_gate():
+    def cell(u, per, ic=0.02, p=0.01, pnw=0.02, h1=0.01, h2=0.01, ex=0.004):
+        return dict(universe=u, period=per, signal="S", h=5, ic=ic, p=p, p_nw=pnw, ic_h1=h1, ic_h2=h2, top5_excess=ex)
+    good = [cell("A", "P1"), cell("A", "P2"), cell("B", "P1"), cell("B", "P2")]
+    assert d.apply_rule(pd.DataFrame(good)).advance.iloc[0]
+    for bad in (cell("B", "P2", ic=-0.01), cell("B", "P2", p=0.2), cell("B", "P2", pnw=0.2),   # sign / shift p / NW p
+                cell("B", "P2", h2=-0.001), cell("B", "P2", ex=0.001)):                           # a negative half / below cost
+        res = d.apply_rule(pd.DataFrame(good[:3] + [bad]))
+        assert not res.advance.iloc[0] and res.cells.iloc[0] == 4
+
+
+def test_write_atomic_never_leaves_a_truncated_target(tmp_path):
+    target = str(tmp_path / "c.csv")
+    d.write_atomic(pd.DataFrame({"a": [1, 2]}), target)
+    d.write_atomic(pd.DataFrame({"a": [3, 4, 5]}), target)
+    assert pd.read_csv(target).a.tolist() == [3, 4, 5] and not (tmp_path / "c.csv.tmp").exists()

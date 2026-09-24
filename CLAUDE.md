@@ -6008,3 +6008,119 @@ Head-to-head in the same window (Entry 83, P1): abnormal volume V1 has IC <= 0.0
 **Descriptive finding: the reversal is an intraday effect.** Stocks that fell (rose) between open and close over the last 5 days bounce (fade) afterwards; stocks that gapped overnight do not. Consistent with overnight moves carrying information and intraday moves carrying liquidity/noise, but that mechanism is not tested here. **Relation to IBS (this project's flagship signal):** mean daily rank correlation of I5 with -IBS(5) is +0.71 (A, 2019-26), so I5 is related but not the same. On the same daily all-days footing IBS(5) has IC +0.006 (p=0.46) at h=5 vs I5's +0.016 (p=0.06): IBS's daily IC over 2019-26 is ~0, which fits Entry 64's finding that its edge sits only in month-end entries (one universe, one period, 2,000 draws; a cross-check, not a test).
 
 **Ledger.** 48 registered; 12 of 48 under 0.05 is the largest excess over chance in Entries 82-84, and it is one known effect (reversal) decomposed, not a new one. The four earlier-decade I5 cells are also the ones a loser-bounce effect is most inflated in by today's-constituents survivorship. 75 mechanisms tested; nothing is declared tradable.
+
+
+## Eighty-fifth: stock-futures open-interest "buildup" and options put/call signals — a clean null, 0 of 64 cells clear even an uncorrected p<0.05
+
+Continuing the daily cross-sectional rank-IC framework validated in Entries 82-84, on a signal
+dimension never touched here: LEVERAGED derivative positioning rather than price, volume, or
+delivery. "Long/short buildup" (price and open interest moving together) is one of the most
+popular retail signals in Indian trading commentary and had never been tested in this project.
+Scope was widened from futures-only to include stock OPTIONS put/call ratios before any data was
+fetched or scored (the same F&O bhavcopy files hold both, at no extra fetch cost).
+
+`probe_oi_signal.py` (pre-registered in its own docstring before any signal was scored; independent
+review already applied to its shared `ds` = `probe_delivery_signal` helpers). Data: NSE F&O bhavcopy,
+2016-01 through today (2,639 trading days), FUTSTK/OPTSTK (old format) and STF/STO (new format) rows,
+summed over all listed expiries/strikes per symbol per day, on the same two disjoint universes (A:
+`WIDE_UNIVERSE`, 46-52 names with futures; B: `UNIVERSE_B`, 54) and two periods (P1 = 2019-10+, P2 =
+2016-2019-09, an independent EARLIER period this project's delivery data can't reach since NSE's
+delivery archive only goes back to 2019-10) as Entries 82-84. Signals at close t (direction fixed in
+advance, high => higher future return, the retail "bullish buildup" reading): OI1 = 5-day OI change
+normalized by its own 60-day mean (positioning build, side unknown); OI2 = OI1 restricted to the
+OI-up quadrants x sign of the 5-day return (the classic long/short-buildup reading; the original
+implementation, which also scored OI-down days with the opposite sign to the retail "short
+covering" reading, is kept as unregistered `OI2X` — a review finding disclosed in the probe's own
+docstring, before any cell was scored); PC1 = -ln(put OI / call OI) (informed-options-trading
+direction, per Pan-Poteshman); PC2 = the 5-day change in that ratio. Forward returns lag 1 (enter
+next close), h in {1, 5, 10, 21}. Registered: 4 signals x 4 h x 2 universes x 2 periods = 64 tests.
+
+**Persistence correction, disclosed before scoring (the probe's own "PRE-SCORING AMENDMENTS"):** OI
+levels and put/call ratios persist day to day (unlike delivery %, which mean-reverts), so the
+circular-shift null used everywhere in Entries 82-84 is not centred at zero here. Every cell
+therefore reports both the shift p and a Newey-West t-test p (lag h+5) plus `null_z0` (how far off
+centre the shift null sat — up to 0.9 sd for `PC1`), and **the registered p is `max(p_shift,
+p_nw)`**: a cell counts as a candidate only if BOTH tests clear 0.05, not either one alone. This
+matters concretely: several cells (e.g. `PC1 h=10/21 univ B`, shift p=0.058/0.053) sit just under an
+uncorrected 0.05 on the shift test alone and fail once the NW test is required too (p_nw=0.042/0.028
+— actually lower there, but the max rule still requires both, and other cells flip the other way).
+
+**A real bug, found and fixed before any result could be trusted (not a pre-registration
+amendment — a runtime crash in the unregistered-robustness code path).** The unregistered
+expiry-window variants (`OI1E`/`OI2E`/`PC2E`, which null out the 5-day window whenever it straddles
+a monthly options/futures expiry — OI and put/call ratios collapse ~85-90% at expiry, and that roll
+is a persistent per-name fixed effect the shift null doesn't control) crashed with `ValueError: Array
+conditional must be same shape as self`: `keep = ~roll.reindex(...).to_numpy()[:, None]` produced a
+`(T, 1)` numpy array, and pandas' `DataFrame.where()` requires an array-like conditional of the
+EXACT same shape as the frame it's applied to — unlike numpy, it does not broadcast a `(T, 1)` array
+against a `(T, N)` frame. Fixed by passing the boolean Series directly with `.where(keep, axis=0)`,
+which is pandas' own supported broadcasting path for a row-wise mask. This blocked the entire probe
+from completing (`main()` computes registered and unregistered signals together, so the whole run
+failed) — every number below is from the fixed script, verified against 9 unit tests
+(`tests/test_probe_oi_signal.py`) that were passing against the isolated function calls even while
+`main()`'s end-to-end path was broken.
+
+**Results: a clean null, cleaner than chance predicts.** 0 of 64 registered cells clear
+max(p_shift, p_nw) < 0.05 (uncorrected chance alone would produce ~3.2). The decision rule (fixed in
+advance: BOTH universes AND BOTH periods need IC > 0 with p < 0.05 under both tests, both halves
+positive, and the top-5 gross excess exceeding the 0.25% round-trip cost) finds nothing advancing.
+Unregistered robustness (`OI2X`, `OI1E`, `OI2E`, `PC2E`, 64 more cells, expiry-window-excluded and the
+original OI2 implementation): 2 of 64 under the max rule (`OI2X h=5 univ A P1`, `PC2E h=5 univ B P1`,
+both p_nw just under 0.05, neither replicating across period or universe) — also no advance. Data
+audit before scoring, per the probe's own disclosure: 2,639 of 2,641 `^NSEI` days present in the
+cache, no duplicates, no NaN totals; one day (2021-03-30) is a genuine NSE 404, tolerated by the
+4-of-5/55-of-60 windows.
+
+**Ledger.** 64 registered p-values added (honest family: 408 registered + 478 unregistered scan
+cells — including these 64 unregistered OI robustness cells — = m=886, Bonferroni threshold
+0.00006). Nothing here comes close to either the entry's own 64-test threshold (0.00078) or the
+honest one. 76 mechanisms tested; IBS rotation remains the sole standing finding; nothing is
+declared tradable.
+
+
+## Eighty-sixth: dividend month premium and trailing dividend yield — the first fundamentals-adjacent signal tested here, and a clean null
+
+This project has never had fundamentals data, so no value or yield factor was testable until Yahoo's
+per-share dividend histories (available from ~1999-2002, 30-40 payments per name in this universe)
+made two classics testable for the first time: Hartzmark & Solomon (2013), "The dividend month
+premium" — stocks earn abnormal returns in the calendar months they're PREDICTED to pay a dividend
+(predicted from the same month a year earlier), a demand/price-pressure effect needing no
+fundamentals — and trailing dividend yield as the simplest quality-free value proxy (high yield =>
+higher return). Unlike the daily families of Entries 82-85, these are MONTHLY decisions (~100-130
+per period), so the pre-registration is tighter: 16 tests, not 64.
+
+`probe_dividend_signal.py` (pre-registered; independent review already applied via the shared `ds`
+helpers). Data: Yahoo `history(period="max", auto_adjust=False)` per stock — `Adj Close`
+(dividend-and-split-adjusted, total return) for returns, `Close` (split- but not dividend-adjusted,
+same basis as the raw `Dividends` column) for yield, ex-dividend dates from `Dividends`. Same two
+universes as every other Entry-82-onward probe. Decision dates are month-ends; the incomplete current
+month has no forward return and drops out. Signals (direction fixed in advance, high => higher
+future return): `DIV1` = 1 if the stock went ex-dividend in the calendar month twelve months before
+the forward month (Hartzmark-Solomon's own predictor), h=1 only (a month-of-payment effect, not a
+multi-horizon one); `DYLD` = trailing-12-month dividends / close at decision, h in {1, 3, 12} months.
+Registered: (DIV1 x 1 + DYLD x 3) x 2 universes x 2 periods = 16.
+
+**Persistence correction, disclosed before scoring (mirrors Entry 85's, independently discovered
+first — the OI probe's own docstring credits this entry's review for the pattern):** `DYLD`'s yield
+ranks have ~0.8 twelve-month autocorrelation, so a circular-shifted copy is nearly the same ranking —
+the shift null sat 1.9-2.4 sd off centre (`null_z0`), making its two-sided shift p meaningless. For
+`DYLD` the registered p is therefore the Newey-West t-test of the mean IC (lag = h) instead; `DIV1`'s
+null is centred (`null_z0` = -0.26 to -0.46 sd across cells) so it keeps the pre-registered shift p.
+Both p's are reported per cell (`p_basis` column records which was used); `dividend_signal_results.csv`
+already carries the basis-selected value in its own `p` column, used directly here rather than
+recomputed.
+
+**Results: null, one lone significant cell that fails the pre-registered rule outright.** 15 of 16
+cells have p >= 0.15; the exception is `DIV1 P2 univ B` (IC=+0.0357, p=0.0157, the earlier/pre-2016
+period on the 54-stock universe) — but the decision rule requires BOTH universes AND both periods to
+clear p<0.05 together, and `DIV1 P2 univ A` sits at p=0.1475 (same period, different universe,
+opposite-enough to fail the pairing outright), so no signal advances. `DYLD` (the "simplest
+quality-free value factor") shows no edge at any horizon in either universe or period — the highest
+IC magnitude is +0.0426 (`DYLD h=12 univ A P2`) at p=0.52. Gross excess (unregistered, not tested):
+mixed sign, mostly small, consistent with the null read.
+
+**Ledger.** 16 registered p-values added (no new unregistered scan cells — every signal/cell computed
+here was individually registered). Honest family: 408 registered + 478 unregistered = m=886 (shared
+with Entry 85's addition above), Bonferroni threshold 0.00006; nothing here is within two orders of
+magnitude of it. 77 mechanisms tested; IBS rotation remains the sole standing finding; nothing is
+declared tradable.
