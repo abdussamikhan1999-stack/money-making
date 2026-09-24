@@ -6455,3 +6455,67 @@ finding, same convention as the Eighteenth/Twenty-fifth entries' own retests). C
 line the same way SuperTrend's oil line was closed: real, sanity-checked, correctly-implemented
 code; one clean-looking survivor; zero corroboration from the instrument class it belongs to. 81
 mechanisms tested; IBS rotation remains the sole standing finding; nothing is declared tradable.
+
+
+## Ninety-second: the day-of-week effect — the classic Monday effect doesn't replicate on NIFTY, a "Wednesday effect" shows up independently on both markets, and neither clears cost or a corrected bar
+
+The oldest, simplest calendar anomaly this project had never directly tested: French (1980),
+"Stock returns and the weekend effect" — average Monday returns historically lower, often negative,
+than other weekdays. Genuinely different from the Sixth entry's turn-of-month rule (a multi-day
+window keyed to the calendar MONTH): this is a single-day classification keyed to the calendar
+WEEK, no lookback or lookahead of any kind — about as simple a signal as exists, and one this
+project somehow never tried despite testing turn-of-month, overnight/intraday decomposition, and
+VIX-regime timing in the same entry.
+
+`probe_day_of_week.py`: mean daily return by weekday (`Mon`-`Fri`) on two independent, long-history
+markets — `^NSEI` (NIFTY, 20y, 4,665 trading days) and `^GSPC` (S&P 500, full Yahoo history, 24,797
+trading days, ~98 years) — tested against a 5,000-draw random-same-size-subset-of-all-trading-days
+null (the same "random subset" control-family shape used throughout this project's cross-sectional
+rotation entries, applied here to a random subset of DAYS instead of stocks). Pre-registered: 5
+weekdays x 2 markets = 10 tests, direction NOT fixed to French's own "Monday worst" prediction,
+since other researchers have repeatedly found the classic effect weakening or reversing in more
+recent decades — reported regardless of sign. A synthetic sanity check (a known +1% bump injected
+into every 5th synthetic "Monday") confirmed the random-subset control correctly detects a real
+effect (p<0.001) before any real data was scored. Independent `/code-review` (medium) before this
+write-up: no findings.
+
+**Results: the classic Monday effect does NOT replicate on NIFTY, and a different day — Wednesday —
+shows up as significant, independently, on BOTH markets.**
+
+| market | day | mean/day | p |
+|---|---|---|---|
+| NIFTY | Mon | +0.0063% | 0.935 |
+| NIFTY | **Wed** | **+0.1098%** | **0.039** |
+| NIFTY | Thu | -0.0202% | 0.776 |
+| S&P 500 | **Mon** | **-0.0618%** | **0.025** |
+| S&P 500 | **Wed** | **+0.0775%** | **0.0008** |
+
+(Tue/Fri on both markets, and the two rows above with no p shown, are all p >= 0.08, omitted for
+space.) The classic literature's own predicted direction (negative Monday) shows up on the S&P
+(p=0.025) but is essentially null on NIFTY (p=0.935, mean near zero) — the same "real in the US,
+absent in India" pattern already found for the Halloween effect (Seventy-ninth entry). The
+Wednesday result is the more interesting one precisely because it wasn't the hypothesis motivating
+this entry: positive and individually significant on BOTH markets, with both halves of each
+market's own sample positive too (NIFTY 0.131%/0.089%, S&P 0.085%/0.070% — no decay, no sign flip).
+
+**But it doesn't clear either a corrected significance bar or realistic transaction costs.** Within
+this entry's own pre-registered 10-test family (Bonferroni threshold 0.005), only the S&P's Wednesday
+cell (p=0.0008) survives; NIFTY's Wednesday (0.039) and the S&P's Monday (0.025) do not. Against the
+honest project-wide family (now m=908, threshold 0.00006 after registering all 10 cells here),
+nothing comes remotely close. **Economically, a single-day-hold weekly trade washes out the gross
+edge entirely**: NIFTY's +0.1098%/day gross is below this project's own established 0.25%
+round-trip NSE cost threshold (the same bar Entries 82-86's daily cross-sectional signals were held
+to) — net roughly -0.14%/trade; the S&P's +0.0775%/day gross against this project's own
+~0.1%-round-trip US-equity convention (Seventy-ninth entry) nets to roughly -0.02%/trade,
+essentially a wash. This is the same "real gross pattern, unharvestable at the frequency required to
+capture it" lesson the Sixth/Thirty-seventh entries already established for the overnight-drift
+anomaly, now shown at weekly rather than daily frequency.
+
+**Net verdict.** Ninety-second mechanism, and a clean example of this project's own standard
+methodology doing its job: a cross-market-replicated pattern (Wednesday, on two markets
+independently) that still fails once correction and realistic costs are both applied, while the
+textbook hypothesis that motivated the test (Monday) fails to replicate outside the market it was
+originally documented in. Not pursued further — a slower, lower-frequency construction (e.g. a
+monthly rebalance conditioned on that week's expected weekday composition) would dilute the signal
+faster than it cuts cost, the same arithmetic that closed the overnight-drift line. 82 mechanisms
+tested; IBS rotation remains the sole standing finding; nothing is declared tradable.

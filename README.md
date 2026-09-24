@@ -14,11 +14,11 @@ responsible for any trades it places.
 ## Where things stand (2026-09-24)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-91 cover the latest work).
+are in CLAUDE.md's numbered entries (56-92 cover the latest work).
 
-- **81 mechanisms tested; none is declared tradable.** Across the 414 registered
+- **82 mechanisms tested; none is declared tradable.** Across the 424 registered
   significance tests plus 484 scan cells noted but not registered
-  (`multiple_comparisons.py`, honest family m=898, Bonferroni threshold 0.00006)
+  (`multiple_comparisons.py`, honest family m=908, Bonferroni threshold 0.00006)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
   only rows that pass are the trend gate's drawdown effect on the S&P 500 since
   1950 at SMA150/SMA200 (p <= 5e-5 at 20,000 draws; SMA100, p=1e-4, passed at the
@@ -93,7 +93,14 @@ are in CLAUDE.md's numbered entries (56-91 cover the latest work).
   2.14%/yr at 7.5% DD) — the cleanest lone-survivor internals of any recent
   entry. Gold is now a survivor across 4 unrelated mechanisms here (IBS,
   CMF+OBV, Parabolic SAR, this one); still not independently confirmed, and
-  separately capital-blocked regardless.
+  separately capital-blocked regardless. **Retested on 8 more commodities/FX
+  pairs — 0/8 passed** (Entry 91), the identical fate SuperTrend's oil
+  survivor met: gold isn't corroborated by its own instrument class.
+- **Day-of-week effect (Entry 92).** The classic Monday effect replicates on
+  the S&P (p=0.025) but not NIFTY; a "Wednesday effect" shows up
+  independently on both markets, but only the S&P cell clears even this
+  entry's own 10-test correction, and net of realistic costs both wash out
+  to roughly zero or negative at weekly trade frequency.
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship
@@ -845,6 +852,17 @@ its own instrument class, sharpening rather than resolving the
 across-mechanism gold pattern (something specific to gold itself, not
 commodities/FX broadly). See CLAUDE.md's "Ninetieth"/"Ninety-first"
 entries.
+
+`probe_day_of_week.py` (the classic "Monday effect" — French 1980 —
+tested on two independent long-history markets, NIFTY and the S&P 500,
+against a 5,000-draw random-subset-of-days control) found the textbook
+Monday effect replicates on the S&P (p=0.025) but not NIFTY, while an
+unexpected "Wednesday effect" shows up independently on BOTH markets —
+interesting because it wasn't the hypothesis being tested, but only the
+S&P's Wednesday cell clears even this entry's own 10-test correction,
+and net of realistic transaction costs both markets' Wednesday edge
+washes out to roughly zero or negative at the weekly trade frequency
+required to capture it. See CLAUDE.md's "Ninety-second" entry.
 
 ## Two variants
 
