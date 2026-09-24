@@ -6186,3 +6186,61 @@ convention rather than a second pre-registered family — = m=898, Bonferroni th
 nothing here is within an order of magnitude of either the entry's own 6-test threshold (0.0083) or
 the honest one. 78 mechanisms tested; IBS rotation remains the sole standing finding; nothing is
 declared tradable.
+
+
+## Eighty-eighth: Stochastic Oscillator (%K) mean reversion — 0/12, the same clean washout as Bollinger Bands, and a real same-bar reentry bug caught before any number was trusted
+
+Sourced from the plain, textbook version of one of the oldest and most widely published technical
+indicators (George Lane, 1950s-70s; every major charting platform ships the identical formula, so
+unlike Squeeze/SuperTrend/volume there is no single reference implementation to cite). Genuinely
+different construction from every mean-reversion strategy already tried: IBS is a same-day
+positional read of today's own high-low range; RSI(2) smooths up/down move magnitudes; Bollinger
+Bands is a statistical band on the close series. Stochastic %K instead bands today's close within
+the highest-high/lowest-low RANGE of the last `k_period` days — a different normalization from all
+three, effectively "IBS computed over a 14-day window instead of one day," directly testing whether
+IBS's own short-horizon edge (this project's flagship, but thin as a single-instrument signal —
+Entry 13 found only one gold survivor at a 12.5% hit rate) generalizes to a longer lookback.
+
+Implemented as `probe_stochastic.py`, standalone (same shape-mismatch reasoning as IBS/SuperTrend/
+gap-fill: `check_entry(close)` only receives today's close, not today's own high/low, which %K's
+window needs). Rule: long when %K(14) < `entry_threshold` (20, the standard oversold line), exit
+when %K climbs back >= `exit_threshold` (80) or `max_hold_days` (20) times out; short side (%K >
+100-entry_threshold) is this project's own symmetric extension, unconfirmed by literature, same
+caveat already attached to IBS's/volume's/52-week-high's. ATR-based stop (`stop_atr_multiple` x
+ATR, 2.0 default), the same convention RSI-2/Squeeze/Bollinger/MACD use for a signal with no
+natural structural stop. Classic implementations also smooth %K into a %D signal line and trade
+the crossover; this probe deliberately uses the plainer %K-only threshold instead, matching this
+project's established "try the simplest textbook rule first" choice for RSI-2/Bollinger/IBS.
+
+**A real bug, caught by an independent `/code-review` before any number was trusted (not a
+pre-registration disclosure — a runtime correctness defect in the first draft).** Two findings that
+mattered: (1) the exit check and the entry check were two independent `if`s rather than mutually
+exclusive, so a long reverting at %K>=80 could immediately reopen as a short on the SAME bar (which
+also satisfies %K>80 when entry_threshold=20) — fixed to the same no-same-bar-reentry convention
+`probe_ibs.py` already uses (`elif` on the original position state). (2) the stop-loss check
+compared only the day's CLOSE against the stop, silently missing a genuine intrabar breach that
+recovered by the close — fixed to check the day's high/low instead, the same convention
+`backtest_daily.py`'s engine already documents for exactly this reason (understating drawdown and
+overstating returns otherwise). A third finding (an unused %D computation, dead weight with no
+effect on behavior) was also removed rather than left half-wired. All three fixed before any
+backtest number below was generated; a synthetic sanity check (flat-then-gap-down price series,
+not a pytest file — this project's standalone probes don't get one, per established convention)
+confirmed %K reads exactly as expected (50 while flat mid-range, 8.33 once gapped near the window
+low) both before and after the fix.
+
+**Screening result (the same 12-instrument set used throughout Entries 12-21, `--walk-forward`,
+default params): 0/12 pass** (both halves positive) — the same clean washout Bollinger Bands
+produced in the Twenty-seventh entry (also 0/12), the worst hit rate tier in this project alongside
+it. 6 of 12 are consistent LOSERS, both halves negative (`^NSEBANK`, `RELIANCE.NS`, `TCS.NS`,
+`SBIN.NS`, `WIPRO.NS`, `CL=F`); the other 6 sign-flip between halves (`^NSEI`, `INFY.NS`,
+`HDFCBANK.NS`, `ITC.NS`, `AXISBANK.NS`, `GC=F`). No single-instrument survivor to chase, so no
+perturbation/quarter-split/sizing check was run — the same "how uniform the failure is" reasoning
+the Bollinger Bands entry already used to skip those steps on an equally clean 0/12.
+
+**Net verdict.** The answer to "does IBS's short-horizon edge generalize to a 14-day range
+normalization" is no, at least not via the plain %K threshold rule tested here — consistent with
+this project's own Forty-third entry (the cross-sectional-rotation recipe doesn't generalize past
+mean-reversion signals with a genuinely short/same-day character) and its Twenty-seventh/
+Twenty-eighth entries (Bollinger Bands' pure band-touch mean reversion, with or without a trend
+filter, also failed cleanly). 79 mechanisms tested; IBS rotation remains the sole standing finding;
+nothing is declared tradable.
