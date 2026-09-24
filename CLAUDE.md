@@ -6124,3 +6124,65 @@ here was individually registered). Honest family: 408 registered + 478 unregiste
 with Entry 85's addition above), Bonferroni threshold 0.00006; nothing here is within two orders of
 magnitude of it. 77 mechanisms tested; IBS rotation remains the sole standing finding; nothing is
 declared tradable.
+
+
+## Eighty-seventh: realized-skewness cross-sectional rotation — a real academic factor, genuinely different from everything tried so far, and a clean null that gets worse under stress
+
+Continuing the "keep testing" direction with a signal dimension none of the 77 prior mechanisms
+touched: the SHAPE of the recent return distribution, not its level (momentum, reversal), its
+range (IBS, MAX), its volume, its open interest, or its dividends. Amaya, Christoffersen, Jacobs &
+Vasquez (2015), "Does Realized Skewness Predict the Cross-Section of Equity Returns?" (Journal of
+Financial Economics): stocks with LOW (more negative) realized skewness of daily returns over the
+recent past earn HIGHER subsequent returns — a real, cited, out-of-sample-replicated academic
+finding, distinct from lottery-preference/MAX (Entry 84's daily MAX signal is the single most
+extreme observation in a window; skewness is the third moment of the WHOLE distribution, a
+different statistic entirely, and no realized-skewness signal has been computed anywhere in this
+project before).
+
+Implemented by adding one new `kind == "skew"` branch to `probe_reversal_rotation.py`'s existing
+`scores()` dispatcher, reusing every other piece of that file's now-mature rotation machinery
+unchanged: `simulate()`'s lag-1 fill (the look-ahead fix Entry 59 already applied to every other
+rotation in this family), the same 52-stock `WIDE_UNIVERSE`, the same STT+stamp+DP cost model, and
+the same random-portfolio significance control used for reversal/momentum/52-week-high. No new
+probe file, no new scaffolding — this is the smallest possible addition that gets a brand-new
+signal the full rigor of the established framework for free. Score = rolling `window`-day skewness
+of daily simple returns (`Series.rolling(window).skew()`, pandas' own adjusted Fisher-Pearson
+estimator — no new dependency); ascending sort already picks the lowest (most negative) skew first,
+matching the paper's own predicted direction, so no negation is needed (unlike `hi52`/`mom` in the
+same file). Pre-registered before any cell was scored: `window` in {21, 63} trading days (the two
+lookbacks most commonly used for "realized" skewness in this literature — roughly one and three
+months) x `top_k` in {3, 5, 8} (this project's own standard three sizes) = 6 tests. Independent
+`/code-review` of the diff run before this write-up (medium effort): no findings — additive-only,
+argument order at the new call site correct, no re-implementation of existing helpers.
+
+**Result: a clean null across all 6 cells, every one worse than its own random-portfolio
+control.** skew(21): top_k=3 10.07%/yr (maxDD 46.1%, random mean 13.83%/yr, p=0.6696); top_k=5
+11.38%/yr (DD 39.5%, random 13.61%/yr, p=0.6376); top_k=8 10.15%/yr (DD 40.2%, random 13.21%/yr,
+p=0.8035). skew(63): top_k=3 16.90%/yr (DD 28.5%, random 15.31%/yr, p=0.3031, the closest of the
+six and still nowhere near 0.05); top_k=5 11.87%/yr (DD 31.9%, random 14.72%/yr, p=0.7035); top_k=8
+7.96%/yr (DD 36.0%, random 14.53%/yr, p=0.9680). Every cell's own random control OUTPERFORMS it on
+average — the opposite of a promising signal — and both walk-forward halves are positive in every
+cell only because the whole 2016-2026 window is a rising market for nearly any long-only monthly
+basket, the same caveat this project has applied to every other basket-wide bet since the
+Cross-mechanism synthesis entry.
+
+**Survivorship stress (the Fortieth entry's four real blowups added, 56 stocks; same 6 cells,
+400-seed control, not separately pre-registered — a due-diligence rerun, not a second family):
+every cell gets WORSE, not better.** skew(21) top_k=3 falls to 6.15%/yr (DD 53.9%, p=0.7681);
+top_k=5 to 9.83%/yr (DD 46.7%, p=0.5885); top_k=8 to 9.05%/yr (DD 37.3%, p=0.7032). skew(63) falls
+hardest: top_k=3 6.88%/yr (DD 69.2%, p=0.7756), top_k=5 3.21%/yr (DD 60.7%, p=0.9776), top_k=8
+2.11%/yr (DD 59.5%, p=0.9950). This is the opposite of IBS rotation's own stress result (Fortieth
+entry: IBS's headline number went UP under the identical stress, because IBS harvests a one-month
+bounce after a crash rather than holding through it). Realized skewness's own mechanism plausibly
+explains the difference: a stock genuinely mid-collapse (JETAIRWAYS, YESBANK, RCOM, PCJEWELLER)
+shows persistently negative rolling skewness for MONTHS, not just the single bounce-window IBS
+catches, so a low-skew rotation is more likely to hold a real falling knife through its next leg
+down rather than catching its bounce — a plausible mechanism, not separately tested here, since the
+signal already fails cleanly without needing this explanation to reject it.
+
+**Ledger.** 6 registered p-values added (honest family: 414 registered + 484 unregistered scan
+cells — including the 6 stress-test reruns, counted as scan cells per this project's standing
+convention rather than a second pre-registered family — = m=898, Bonferroni threshold 0.00006);
+nothing here is within an order of magnitude of either the entry's own 6-test threshold (0.0083) or
+the honest one. 78 mechanisms tested; IBS rotation remains the sole standing finding; nothing is
+declared tradable.

@@ -106,7 +106,7 @@ IBS_ROTATION_PVALUES = [
 # Cells that were run and reported but never registered row-by-row: the Sixty-fourth entry's 84 phase/anchor scan
 # cells (21 fixed-step phases + 21 calendar anchors, x IBS(5) and rev(21)), plus the Eighty-first entry's 288-cell
 # industry scan, 12 monthly-average bond/gold robustness cells, and 30 Entry 82-84 robustness cells.
-UNREGISTERED_SCAN_CELLS = 84 + 288 + 12 + 30 + 64  # + Eighty-first: industry scan (288) + leaky bond/gold rows (12); + 82-84: spanning (8), reversal positive control (16), IBS-vs-I5 (6); + Eighty-fifth: OI1E/OI2E/PC2E/OI2X unregistered robustness variants (64)
+UNREGISTERED_SCAN_CELLS = 84 + 288 + 12 + 30 + 64 + 6  # + Eighty-first: industry scan (288) + leaky bond/gold rows (12); + 82-84: spanning (8), reversal positive control (16), IBS-vs-I5 (6); + Eighty-fifth: OI1E/OI2E/PC2E/OI2X unregistered robustness variants (64); + Eighty-seventh: survivorship-stress rerun of the same 6 skew cells
 
 ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("RSI-2 rotation top_k=3 (Forty-second)", 0.1987),
@@ -568,6 +568,19 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("DYLD P2 h=1m univ B (Eighty-sixth)", 0.9379),
     ("DYLD P2 h=3m univ B (Eighty-sixth)", 0.9006),
     ("DYLD P2 h=12m univ B (Eighty-sixth)", 0.9197),
+    # Eighty-seventh entry: realized-skewness monthly cross-sectional rotation (Amaya-Christoffersen-
+    # Jacobs-Vasquez 2015: low/negative realized skewness of daily returns predicts HIGHER future
+    # returns; ascending sort, no negation needed). 52-stock WIDE_UNIVERSE, lag-1 fill, 1,500-seed
+    # random-portfolio control, pre-registered 2 windows x top_k 3/5/8 = 6 tests. Clean null, every
+    # cell underperforms its own random-portfolio control (p 0.30-0.97); worse under the Fortieth
+    # entry's 4-blowup survivorship stress (not individually registered - a due-diligence rerun of
+    # the same 6 cells, not a second pre-registered family).
+    ("skew(21) top_k=3 (Eighty-seventh)", 0.6696),
+    ("skew(21) top_k=5 (Eighty-seventh)", 0.6376),
+    ("skew(21) top_k=8 (Eighty-seventh)", 0.8035),
+    ("skew(63) top_k=3 (Eighty-seventh)", 0.3031),
+    ("skew(63) top_k=5 (Eighty-seventh)", 0.7035),
+    ("skew(63) top_k=8 (Eighty-seventh)", 0.9680),
     # NOT individually registered (Sixty-fourth entry): 84 further cells, 21 fixed-step phase offsets
     # and 21 calendar-anchored offsets x {IBS(5) top_k=5, rev(21) top_k=8}. Counting them, an honest
     # Bonferroni family is m>=161 (threshold ~0.0003); the smallest p among them is 0.003.

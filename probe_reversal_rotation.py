@@ -92,6 +92,10 @@ def scores(M, kind, window):
         return ibs.rolling(window, min_periods=window).mean()
     if kind == "hi52":  # George-Hwang: nearness to the 252d high; NEGATED so "lowest score" = nearest the high
         return -(c / c.rolling(252, min_periods=252).max())
+    if kind == "skew":  # Amaya-Christoffersen-Jacobs-Vasquez 2015: realized skewness of daily returns over
+        # `window` days predicts returns NEGATIVELY (low/negative-skew names outperform), so ascending sort
+        # (lowest score first) already picks the low-skew names, same convention as "rev" below, no negation.
+        return c.pct_change().rolling(window, min_periods=window).skew()
     if kind == "mom":  # Jegadeesh-Titman 12-1: return from t-252 to t-21, NEGATED so highest momentum sorts first
         return -(c.shift(21) / c.shift(252) - 1)
     return c / c.shift(window) - 1  # reversal: trailing return, lowest = biggest loser
@@ -546,6 +550,7 @@ def main():
     ap.add_argument("--gate", action="store_true", help="NIFTY SMA trend gate on IBS rotation")
     ap.add_argument("--index-gate", action="store_true", help="trend gate on NIFTY 2008+ and S&P 1950+")
     ap.add_argument("--momentum", action="store_true", help="12-1 momentum and 52-week-high rotation")
+    ap.add_argument("--skew", action="store_true", help="realized-skewness rotation (Eighty-seventh entry)")
     ap.add_argument("--freq", action="store_true", help="IBS rebalance frequency 5/10/21 days")
     ap.add_argument("--phase", action="store_true", help="IBS 21d-step phase offsets vs calendar month-end")
     ap.add_argument("--anchor", action="store_true", help="IBS/rev rebalance j days before month-end, j=0..20")
@@ -599,6 +604,12 @@ def main():
         for kind in ("mom", "hi52"):
             for top_k in (3, 5, 8):
                 print(report(M, kind, 0, top_k, 1, a.seeds, years)[0])
+        return
+    if a.skew:
+        print(f"=== realized-skewness rotation, lag 1, {a.seeds}-seed control (pre-registered 2 windows x top_k 3/5/8) ===")
+        for window in (21, 63):
+            for top_k in (3, 5, 8):
+                print(report(M, "skew", window, top_k, 1, a.seeds, years)[0])
         return
     if a.spread:
         return spread_test(M, years, a.seeds)
