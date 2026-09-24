@@ -14,7 +14,7 @@ responsible for any trades it places.
 ## Where things stand (2026-09-24)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-90 cover the latest work).
+are in CLAUDE.md's numbered entries (56-91 cover the latest work).
 
 - **81 mechanisms tested; none is declared tradable.** Across the 414 registered
   significance tests plus 484 scan cells noted but not registered
@@ -837,8 +837,14 @@ turned up as a survivor across four unrelated mechanisms in this
 project (IBS, CMF+OBV, Parabolic SAR, this one) — a mild positive
 signal worth naming even though none of the four independently clears
 this project's bar, and even though gold's own MCX contract sizes
-already block it at this project's target capital regardless. See
-CLAUDE.md's "Ninetieth" entry.
+already block it at this project's target capital regardless. **Retested
+against 8 more commodities/FX pairs (the same extension set used for
+SuperTrend's own oil survivor) — 0/8 passed**, the identical fate
+SuperTrend's `CL=F` met on its own retest: `GC=F` isn't corroborated by
+its own instrument class, sharpening rather than resolving the
+across-mechanism gold pattern (something specific to gold itself, not
+commodities/FX broadly). See CLAUDE.md's "Ninetieth"/"Ninety-first"
+entries.
 
 ## Two variants
 
