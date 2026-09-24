@@ -14,9 +14,9 @@ responsible for any trades it places.
 ## Where things stand (2026-09-24)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-87 cover the latest work).
+are in CLAUDE.md's numbered entries (56-88 cover the latest work).
 
-- **78 mechanisms tested; none is declared tradable.** Across the 414 registered
+- **79 mechanisms tested; none is declared tradable.** Across the 414 registered
   significance tests plus 484 scan cells noted but not registered
   (`multiple_comparisons.py`, honest family m=898, Bonferroni threshold 0.00006)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
@@ -77,6 +77,12 @@ are in CLAUDE.md's numbered entries (56-87 cover the latest work).
   6 tests: clean null, every cell underperforms its own random-portfolio control
   (p 0.30-0.97), and gets worse under survivorship stress — the opposite of IBS
   rotation's own stress result.
+- **Stochastic Oscillator %K mean reversion (Entry 88).** 0/12 instruments pass
+  walk-forward — the same clean washout as Bollinger Bands, and the answer to
+  whether IBS's short-horizon edge generalizes to a 14-day range normalization
+  (no). An independent code review caught a same-bar reentry bug and a
+  close-only (not intrabar) stop check, both fixed before any number was
+  trusted.
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship
@@ -778,6 +784,18 @@ at the capital this strategy needs is only ~2-3%/year, not 20%+, likely
 below a risk-free rate. See CLAUDE.md's "Fourteenth" entry for the full
 numbers. Net effect: this mechanism is now closed out on two independent
 grounds (capital access AND thin real magnitude), not just one.
+
+`probe_stochastic.py` (the classic Stochastic Oscillator %K mean
+reversion — long when today's close sits near the bottom of its trailing
+14-day high-low range, effectively "IBS computed over 14 days instead of
+one") found **0/12 instruments passing walk-forward** — the same clean
+washout Bollinger Bands produced, and the answer to whether IBS's
+short-horizon edge generalizes to a longer lookback: no. An independent
+code review caught a real same-bar-reentry bug (an exit and a fresh
+opposite-side entry could fire on the identical bar) and a stop-loss
+check that only looked at the day's close instead of its high/low,
+both fixed before any number was trusted. See CLAUDE.md's
+"Eighty-eighth" entry.
 
 ## Two variants
 
