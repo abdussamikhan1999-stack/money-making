@@ -14,9 +14,9 @@ responsible for any trades it places.
 ## Where things stand (2026-09-24)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-88 cover the latest work).
+are in CLAUDE.md's numbered entries (56-89 cover the latest work).
 
-- **79 mechanisms tested; none is declared tradable.** Across the 414 registered
+- **80 mechanisms tested; none is declared tradable.** Across the 414 registered
   significance tests plus 484 scan cells noted but not registered
   (`multiple_comparisons.py`, honest family m=898, Bonferroni threshold 0.00006)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
@@ -83,6 +83,11 @@ are in CLAUDE.md's numbered entries (56-88 cover the latest work).
   (no). An independent code review caught a same-bar reentry bug and a
   close-only (not intrabar) stop check, both fixed before any number was
   trusted.
+- **Parabolic SAR (Entry 89).** This project's first always-in-market strategy;
+  1/12 pass (`GC=F`), an 8.3% hit rate, the lowest yet. A real position-sizing
+  bug (unfloored qty as SAR's stop converges on price) changed which instrument
+  survives once fixed. The survivor's internals look cleaner than most lone
+  survivors here, but sizing doesn't scale past 0.5% risk — flagged, not found.
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship
@@ -796,6 +801,22 @@ opposite-side entry could fire on the identical bar) and a stop-loss
 check that only looked at the day's close instead of its high/low,
 both fixed before any number was trusted. See CLAUDE.md's
 "Eighty-eighth" entry.
+
+`probe_parabolic_sar.py` (Wilder's Parabolic SAR — an accelerating
+trailing stop-and-reverse system, this project's first ALWAYS-IN-MARKET
+strategy) found **1/12 instruments passing walk-forward** (`GC=F`, gold)
+— an 8.3% hit rate, the lowest of any strategy tried here. An independent
+code review caught a real position-sizing bug (SAR's stop is *designed*
+to converge on price as its acceleration factor climbs, unlike every
+ATR-scaled stop already used in this project, so an unfloored
+risk-based quantity could blow up arbitrarily) — fixed by capping
+quantity with the Twenty-third entry's own Carver-style ATR sizing,
+which materially changed which instrument survives (`WIPRO.NS` before
+the fix, `GC=F` after it). The survivor's quarter-split and perturbation
+look cleaner than most lone survivors here, but sizing doesn't scale
+past the 0.5% default (drawdown-halts at 1%+) and it's flagged, not
+found, pending a retest against more instruments of gold's own class —
+see CLAUDE.md's "Eighty-ninth" entry.
 
 ## Two variants
 
