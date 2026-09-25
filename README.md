@@ -14,7 +14,7 @@ responsible for any trades it places.
 ## Where things stand (2026-09-24)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-92 cover the latest work).
+are in CLAUDE.md's numbered entries (56-93 cover the latest work).
 
 - **82 mechanisms tested; none is declared tradable.** Across the 424 registered
   significance tests plus 484 scan cells noted but not registered
@@ -101,6 +101,14 @@ are in CLAUDE.md's numbered entries (56-92 cover the latest work).
   independently on both markets, but only the S&P cell clears even this
   entry's own 10-test correction, and net of realistic costs both wash out
   to roughly zero or negative at weekly trade frequency.
+- **Gold shuffle-control (Entry 93).** A scrambled-time test of the "gold
+  survives four unrelated mechanisms" pattern above: on a fresh data pull
+  IBS no longer even passes on gold (down to 3 of the original 4), and of
+  those three, CMF+OBV's scrambled pass rate (45%) sits well above this
+  project's own established chance range, the clearest evidence yet that
+  gold's own return distribution — not real temporal structure — drives
+  that one. SAR (14%) and DMI/ADX (17%) don't show the same inflation,
+  which narrows the pattern without resolving it either way.
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship
@@ -850,8 +858,17 @@ SuperTrend's own oil survivor) — 0/8 passed**, the identical fate
 SuperTrend's `CL=F` met on its own retest: `GC=F` isn't corroborated by
 its own instrument class, sharpening rather than resolving the
 across-mechanism gold pattern (something specific to gold itself, not
-commodities/FX broadly). See CLAUDE.md's "Ninetieth"/"Ninety-first"
-entries.
+commodities/FX broadly). **A follow-up scrambled-time control
+(`probe_gold_shuffle_control.py`, Entry 93) found the "four mechanisms"
+premise already down to three on a fresh data pull (IBS no longer
+survives), and of the remaining three, CMF+OBV's scrambled-shuffle pass
+rate (45% of 200 time-order-destroying shuffles still pass) sits well
+above this project's own established chance-level range — the clearest
+evidence yet that gold's own volatility/return-distribution, not
+genuine temporal structure, drives that one survivor. SAR (14%) and
+DMI/ADX (17%) don't show the same inflation**, so the pattern is now
+mixed rather than either confirmed or fully debunked. See CLAUDE.md's
+"Ninetieth"/"Ninety-first"/"Ninety-third" entries.
 
 `probe_day_of_week.py` (the classic "Monday effect" — French 1980 —
 tested on two independent long-history markets, NIFTY and the S&P 500,
