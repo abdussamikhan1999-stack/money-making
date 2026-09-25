@@ -14,9 +14,9 @@ responsible for any trades it places.
 ## Where things stand (2026-09-24)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-96 cover the latest work).
+are in CLAUDE.md's numbered entries (56-97 cover the latest work).
 
-- **85 mechanisms tested; none is declared tradable.** Across the 438 registered
+- **86 mechanisms tested; none is declared tradable.** Across the 438 registered
   significance tests plus 484 scan cells noted but not registered
   (`multiple_comparisons.py`, honest family m=922, Bonferroni threshold 0.00006)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
@@ -123,6 +123,13 @@ are in CLAUDE.md's numbered entries (56-96 cover the latest work).
   duration before trusting any return). Direction matches the folklore
   (worse returns during retrograde) on both markets independently, same
   "consistent sign, nowhere near significant" shape as the lunar test.
+- **Astrology as an actual strategy (Entry 97).** Turned the lunar/
+  Mercury signals into a real entry/exit rule (buy at new moon outside
+  retrograde, exit at full moon/retrograde/stop) and ran it on the
+  standard 12-instrument screen: 5/12 passed (41.7%, above this
+  project's usual chance range) but every passer's annualized return is
+  under 0.6%/yr, 30-60x smaller than IBS rotation — a coin flip dressed
+  as a hit rate, not an edge.
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship
