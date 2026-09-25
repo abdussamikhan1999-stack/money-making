@@ -6519,3 +6519,79 @@ originally documented in. Not pursued further — a slower, lower-frequency cons
 monthly rebalance conditioned on that week's expected weekday composition) would dilute the signal
 faster than it cuts cost, the same arithmetic that closed the overnight-drift line. 82 mechanisms
 tested; IBS rotation remains the sole standing finding; nothing is declared tradable.
+
+
+## Ninety-third: the gold-shuffle-control — a scrambled-time test of whether gold's own return-shape drives its repeat survivorship, not genuine temporal structure
+
+Direct follow-up on the open question the Ninetieth and Ninety-first entries named but didn't
+chase: whether gold's repeat appearance as a lone survivor across four unrelated technical
+mechanisms (IBS - Thirteenth; CMF+OBV volume confirmation - Sixteenth; Parabolic SAR -
+Eighty-ninth; DMI/ADX - Ninetieth) reflects genuine, if elusive, temporal structure in gold's price
+series, or is instead a property of gold's own volatility/return-distribution (lower realized
+volatility meaning fewer drawdown-halts, mechanically raising the odds of a "both walk-forward
+halves positive" screen passing, independent of real temporal order).
+
+**Method** (`probe_gold_shuffle_control.py`, found uncommitted from a prior session; traced by hand
+for correctness before trusting any output, not run through `/code-review` — specifically checked
+that each synthetic day's open/high/low/close is the SAME real day's own gap/range ratios
+re-applied to a new running close, so `high >= open,close` and `low <= open,close` stay intact
+under the scaling, and that the walk-forward split-by-position logic in all four downstream
+mechanisms doesn't depend on real calendar order, only list position, so relabeling shuffled bars
+with their original position's date is safe): a day-level block bootstrap — record each real
+trading day's (open, high, low, close) as ratios of the PRECEDING day's close, plus that day's
+volume, a "shape" tuple capturing that day's own gap and intraday range with no reference to
+calendar time; shuffle the ORDER of the 2,513 shape tuples (day 0's real close is the fixed
+starting point) and re-multiply them out into a synthetic series that reproduces gold's exact
+marginal gap/range/volume distribution while destroying any genuine serial dependency (trend
+persistence, mean reversion, autocorrelation) a real rule would need to find. 200 shuffles, `GC=F`,
+freshly fetched 10y history (2,514 trading days) — the same random-subset/shuffle control-family
+shape used throughout this project (Thirty-ninth entry onward), applied here to the order of TIME
+on one instrument instead of to which stocks get picked each month. Each of the four already-
+tested, already-reviewed mechanisms' own `walk_forward` function is reused UNCHANGED against both
+the real series and every shuffle — no strategy logic reimplemented; "pass" = both walk-forward
+halves net-positive, this project's own standing screening bar throughout. Per the script's own
+pre-registered caveat (checked via a synthetic check before trusting anything below): injecting a
+genuine, strong regime-switching signal into synthetic data still produced a real-vs-scrambled gap
+too noisy to trust from a single draw, so the comparison this entry actually relies on is
+base-rate matching — whether gold's own scrambled pass rate sits close to this project's
+established chance-level range across many instruments/strategies (16-33%), not whether real gold
+"beats" its own scrambled distribution in one draw.
+
+**First finding, before the control even mattered: IBS no longer survives on a fresh pull.** Real
+`GC=F`: `ibs=False, sar=True, dmi_adx=True, cmf_obv=True` — only three of the original four
+mechanisms still pass on this snapshot. This is this project's own documented rolling-window drift
+(flagged as an open risk in earlier entries, never directly caught mid-effect before) actually
+erasing one of the four "gold survivors" the Ninetieth entry's framing was built on — the
+four-mechanism premise is down to three before the shuffle control says anything at all.
+
+**For the three that still pass, the scrambled-time pass rate splits, not uniformly:**
+
+| mechanism | real result | scrambled pass rate (200 shuffles) |
+|---|---|---|
+| SAR | pass | 14.0% |
+| DMI/ADX | pass | 17.0% |
+| CMF/OBV | pass | 45.0% |
+
+SAR's 14% sits at/just below this project's established chance-level range; DMI/ADX's 17% sits
+squarely inside it — neither shows gold's own shape as unusually easy to pass on for these two
+mechanisms, so their one real pass each reads as an ordinary, unremarkable base-rate event, not
+evidence gold's distribution is doing the work (though the reverse — genuine structure — isn't
+confirmed by this either; absence of inflated false-positive rate is an absence of disconfirming
+evidence, not positive evidence). **CMF/OBV's 45% is a different story** — roughly 1.4-2.8x this
+project's own established chance ceiling, the clearest single number this project has produced yet
+for the "gold's own properties, not real structure" explanation. That mechanism's gold
+survivorship (Sixteenth entry) now looks like a distributional artifact, not a found edge.
+
+**Net synthesis: mixed, not a clean resolution either way.** One of the original four "gold
+survivors" didn't even reproduce on a fresh data pull; one of the remaining three (CMF/OBV) is now
+flagged as a likely distributional artifact by its own pre-registered methodology; the other two
+(SAR, DMI/ADX) pass a test that fails to debunk them but doesn't confirm genuine structure either.
+Read against the Ninety-first entry's own closing question, this narrows rather than resolves it:
+gold isn't uniformly "just an easy instrument to pass screens on" (SAR/DMI-ADX don't support that),
+but it also isn't uniformly "hiding real structure four different rules each find" (CMF/OBV's
+number argues against that for at least one of the four, and IBS's non-replication undercuts the
+four-mechanism framing itself).
+
+**Net verdict.** Not a new mechanism — a diagnostic follow-up on the Ninetieth/Ninety-first
+entries' own flagged question, same convention as the Ninety-first entry's own retest. 82
+mechanisms tested; IBS rotation remains the sole standing finding; nothing is declared tradable.
