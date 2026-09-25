@@ -6741,3 +6741,50 @@ trusted, direction consistent with 2,000-year-old folklore on two independent ma
 indistinguishable from noise. 4 p-values registered (honest family: 918 -> 922, Bonferroni threshold
 unchanged). 85 mechanisms tested; IBS rotation remains the sole standing finding; nothing is
 declared tradable.
+
+
+## Ninety-seventh: astrology used AS A STRATEGY — a fixed common entry-timing rule scores 5/12 on this project's own screening bar, but every passer's magnitude is near zero
+
+Requested direction: use astrology, not just measure it. The Ninety-fourth/Ninety-sixth entries
+only tested whether returns DIFFER on astrologically-labelled days — descriptive, not a tradeable
+rule. `probe_astrology_strategy.py` takes folklore's own stated advice literally and turns it into
+an actual entry/exit state machine, reusing the Ninety-fourth/Ninety-sixth entries' own already
+self-checked signal code UNCHANGED (`moon_phase`/`classify` from `probe_lunar_cycle.py`,
+`retrograde_flags` from `probe_mercury_retrograde.py` — no new astronomical code): long-only, enter
+when flat and BOTH astrologically-favorable conditions hold at once (moon in its "new" window AND
+Mercury not retrograde), exit on Mercury turning retrograde, the moon reaching "full," an ATR stop,
+or `max_hold_days` (30 — one lunar month, the signal's own natural timescale, not fit to data)
+timing out. Same ATR-stop/risk-per-trade sizing convention every strategy here uses. Run on this
+project's standard 12-instrument screening set (the same set DMI/ADX, Parabolic SAR and SuperTrend
+were screened against: `INFY.NS`, `TCS.NS`, `HDFCBANK.NS`, `SBIN.NS`, `CL=F`, `GC=F`, `^NSEI`,
+`AXISBANK.NS`, `ITC.NS`, `^NSEBANK`, `RELIANCE.NS`, `WIPRO.NS`), walk-forward, "pass" = both halves
+net-positive with no drawdown-halt.
+
+**Screening result: 5/12 instruments passed** — `INFY.NS`, `SBIN.NS`, `CL=F`, `ITC.NS`, `WIPRO.NS`.
+41.7%, above this project's established chance-level range (16-33% across most prior technical
+screens) and in the same territory as the 3-bar breakout's 50% (its best hit rate to date).
+
+**But the magnitude kills it before any further check matters.** Every passer's annualized return,
+both halves: `INFY.NS` +0.32%/+0.28%, `SBIN.NS` +0.04%/+0.34%, `CL=F` +0.35%/+0.56%, `ITC.NS`
++0.21%/+0.57%, `WIPRO.NS` +0.06%/+0.03% — ten numbers, none above 0.6%/yr, several near zero,
+already net of commission. Compare to IBS rotation, this project's one real finding, at ~20%/yr:
+these are 30-60x smaller, on a single undiversified instrument (not even portfolio-scaled). A
+pass/fail count built almost entirely of trades this close to breakeven is a coin flip dressed as a
+hit rate, not evidence of edge.
+
+**A caveat specific to this entry, not present in prior technical-indicator screens: entry timing
+is IDENTICAL across all 12 instruments** (moon phase and Mercury's position don't depend on which
+stock you're looking at) — only the stop-hit path and the actual price move during each ~50-trade
+set of shared calendar windows differ by instrument. That makes "5/12 independent replications" a
+weaker form of corroboration than DMI/ADX's or SAR's per-instrument-idiosyncratic signals: it's
+closer to one shared trade-timing pattern scored against 12 different price paths (a
+cross-sectional event study) than 12 truly independent mechanism tests. Not fatal on its own (the
+magnitude finding already closes this line regardless) but worth naming so a future entry doesn't
+cite "5/12" as if it were the same kind of evidence as DMI/ADX's "2/12."
+
+**Net verdict.** Astrology, turned into an actual rule and run through this project's real
+screening bar, clears the hit-rate count but fails the economic bar every other survivor here has
+had to clear (Parabolic SAR's thin-but-real magnitude, DMI/ADX's 2.14%/yr) by more than an order of
+magnitude — closer to noise trading at cost than a found edge. Not pursued further (quarter-split/
+perturbation checks would only be worth running on a result with real magnitude to begin with). 86
+mechanisms tested; IBS rotation remains the sole standing finding; nothing is declared tradable.
