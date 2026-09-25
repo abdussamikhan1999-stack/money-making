@@ -6788,3 +6788,76 @@ had to clear (Parabolic SAR's thin-but-real magnitude, DMI/ADX's 2.14%/yr) by mo
 magnitude — closer to noise trading at cost than a found edge. Not pursued further (quarter-split/
 perturbation checks would only be worth running on a result with real magnitude to begin with). 86
 mechanisms tested; IBS rotation remains the sole standing finding; nothing is declared tradable.
+
+
+## Ninety-eighth: the pre-holiday effect (Lakonishok & Smidt 1988; Ariel 1990) — the cleanest statistical hit since the day-of-week entry's Wednesday result, decaying over time and failing cost on NIFTY, thin but real on the S&P
+
+Requested direction: keep searching for genuinely new mechanisms. The pre-holiday effect — returns
+on the trading day immediately before an exchange holiday run unusually high, one of the oldest
+documented calendar anomalies (Lakonishok & Smidt 1988, "Are Seasonal Anomalies Real?"; Ariel 1990,
+"High Stock Returns before Holidays") — has never been tested here, and is genuinely different in
+construction from every calendar effect already tried: day-of-week (Ninety-second entry) and
+turn-of-month (Sixth entry) key off a FIXED calendar position; this keys off an IRREGULAR event (an
+exchange closure) that can fall on any weekday.
+
+**No external holiday calendar, no new dependency** (`probe_holiday_effect.py`): a day is classified
+"pre-holiday"/"post-holiday" purely from GAPS in the trading-day sequence the data already
+contains — for trading day t, the normal gap to the next trading day is 1 calendar day (Mon-Thu) or
+3 (Friday), and a larger actual gap means a holiday fell in between. This generalizes correctly to a
+holiday on any weekday, including ones adjacent to a weekend, and needs nothing beyond the OHLC data
+already fetched.
+
+Pre-registered, same convention as the Ninety-second entry: mean return on pre-/post-holiday days vs
+baseline ("other"), NIFTY (20y) and the S&P 500 (~98y), the same random-subset null used throughout,
+literature's predicted direction (pre > other) named, not assumed.
+
+**Results:**
+
+| market | bucket | n | mean/day | halves | p |
+|---|---|---|---|---|---|
+| NIFTY | pre | 280 | +0.1901% | +0.2770% / +0.1032% | 0.0252 |
+| NIFTY | post | 280 | +0.1779% | +0.4134% / -0.0575% | 0.0388 |
+| NIFTY | other | 4,120 | +0.0280% | +0.0069% / +0.0491% | 0.988 |
+| S&P 500 | pre | 942 | +0.2520% | +0.3534% / +0.1506% | **0.0002** |
+| S&P 500 | post | 943 | -0.0429% | -0.0932% / +0.0072% | 0.417 |
+| S&P 500 | other | 22,915 | +0.0254% | +0.0103% / +0.0406% | 0.998 |
+
+**The S&P result is this project's best calendar-effect p-value yet** — 0.0002, beating the
+Ninety-second entry's Wednesday cell (0.0008) — magnitude (0.2520%/day, ~9.9x the "other" baseline
+of 0.0254%) matching the classic literature's own oft-cited "several times the normal day" figure
+almost exactly, and critically the pattern is EXACTLY what the literature specifically predicts:
+pre-holiday elevated, post-holiday NOT (p=0.417, consistent with zero) — a real discriminating
+test, not "anything unusual around a gap looks different."
+
+**NIFTY's pre-holiday result replicates the same direction** (p=0.0252) but its post-holiday cell is
+also significant (p=0.0388) — NOT predicted by the literature, and, checked against the halves, NOT
+robust: NIFTY post-holiday flips sign between halves (+0.4134% then -0.0575%), the same
+"front-loaded, not really there" pattern this project has flagged repeatedly elsewhere. Read as
+likely noise, not a second real effect.
+
+**Both markets' PRE-holiday effect decays across halves but does not flip sign** — NIFTY 0.2770% ->
+0.1032%, S&P 0.3534% -> 0.1506% — matching later academic follow-ups (e.g. Marquering, Nisser &
+Valla (2006), "Disappearing Anomalies," which specifically documents the pre-holiday effect
+weakening after the 1987 crash) rather than contradicting them.
+
+**Economics, using this project's own established cost conventions** (0.25% NSE round trip, Entry
+73; ~0.1% US-equity round trip, Entry 79) — a trade held only the pre-holiday day itself, scored at
+the RECENT (second) half's rate since that's what matters going forward: NIFTY nets 0.1032% - 0.25%
+= **-0.15%/trade, a loser** at ~14 trades/year despite being statistically real. S&P nets 0.1506% -
+0.10% = **+0.05%/trade**, thin but positive, at ~9-10 trades/year (roughly 0.5%/yr
+gross-of-compounding) — the first calendar-timing effect in this project's recent entries to clear
+its own cost bar on any market, even if barely.
+
+**Against the honest multiple-comparisons family:** 6 p-values registered here. S&P's pre-holiday
+cell (p=0.0002) is still ~3.7x above the Bonferroni threshold at m=922+6=928 (0.05/928 ≈ 0.000054)
+— fails the corrected bar, same fate as every other finding in this project.
+
+**Net verdict.** The most statistically convincing calendar result since day-of-week's Wednesday
+cell, discriminates correctly between pre- and post-holiday (unlike NIFTY's spurious post cell),
+decays honestly rather than flipping, and is the first calendar-timing effect here to clear a
+realistic cost bar on any market (S&P, thinly). Doesn't clear the honest corrected significance bar.
+Not built into a tracker (9-10 trades/year at a ~0.05%/trade net edge is too thin and infrequent to
+justify the operational overhead of a live paper-tracker at this project's stage) — flagged as the
+most promising untradable-yet finding since IBS rotation itself, worth a follow-up if this project
+ever widens beyond NIFTY/S&P index-level testing to real tradable index products. 87 mechanisms
+tested; IBS rotation remains the sole standing finding; nothing is declared tradable.
