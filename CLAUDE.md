@@ -6595,3 +6595,98 @@ four-mechanism framing itself).
 **Net verdict.** Not a new mechanism — a diagnostic follow-up on the Ninetieth/Ninety-first
 entries' own flagged question, same convention as the Ninety-first entry's own retest. 82
 mechanisms tested; IBS rotation remains the sole standing finding; nothing is declared tradable.
+
+
+## Ninety-fourth: astrology as a strategy — the lunar-phase effect (Yuan, Zheng & Zhu 2006) replicated as directionally consistent but not significant on either market
+
+Requested direction: add astrology and aesthetics as strategy inputs and check them. Astrology's
+most defensible, actually-published form in finance is the lunar-phase effect: Yuan, Zheng & Zhu
+(2006), "Are investors moonstruck? Lunar phases and stock returns" (Journal of Empirical Finance),
+found returns around new moon reliably higher than around full moon across 48 countries, with
+investor mood/sleep-disruption floated as the behavioral channel. Genuinely different from every
+calendar effect already tested here (day-of-week, turn-of-month, Halloween, January): those key off
+the CALENDAR; this keys off an independent astronomical cycle (the 29.53-day synodic month) that
+drifts relative to weekdays and months, so it can't be a repackaging of an already-tested effect.
+
+`probe_lunar_cycle.py` (new; pre-registered in its own docstring before any return was computed,
+same convention as the Ninety-second entry): moon phase computed from days-since-a-known-reference-
+new-moon (2000-01-06) modulo the synodic month (29.530588853 days) — no ephemeris library added,
+plain stdlib math, calendar-day granularity (a few hours' error against the true instant of each
+phase, immaterial at daily-return resolution). Each trading day classified "new"/"full" (within ±3
+days of the respective phase) or "other"; tested on NIFTY (20y) and the S&P 500 (full Yahoo
+history, ~98y), the same random-same-size-subset null as the Ninety-second entry, direction not
+fixed (reported regardless of sign, though the literature's own predicted direction — new > full —
+is one specific, named cell, not assumed).
+
+**Results:**
+
+| market | bucket | n | mean/day | p |
+|---|---|---|---|---|
+| NIFTY | new | 933 | +0.0749% | 0.197 |
+| NIFTY | full | 916 | +0.0038% | 0.956 |
+| NIFTY | other | 2,817 | +0.0460% | 0.438 |
+| S&P 500 | new | 5,056 | +0.0531% | 0.080 |
+| S&P 500 | full | 4,994 | +0.0319% | 0.495 |
+| S&P 500 | other | 14,748 | +0.0241% | 0.881 |
+
+No cell clears even uncorrected p<0.05 on either market. **But the direction is consistent with the
+published effect on both, independently:** new-moon mean return exceeds full-moon mean return on
+NIFTY (+0.0711%/day) and the S&P (+0.0212%/day) — the same sign the literature predicts, on two
+unrelated markets (a coin flip on each independently, so a 25% chance of both landing this way by
+pure luck) — mildly interesting but nowhere near a claim of significance, and the S&P's "new" cell
+(p=0.080) is the closest any lunar cell gets to conventional significance, still failing it.
+
+**Net verdict.** A real, published, peer-reviewed anomaly, correctly implemented and directionally
+replicated on two markets, that does not clear even the weakest (uncorrected) bar here. 6 p-values
+registered (honest family: 908 -> 914, Bonferroni threshold unchanged at 0.00006 since nothing here
+is within two orders of magnitude of it). 83 mechanisms tested; IBS rotation remains the sole
+standing finding; nothing is declared tradable.
+
+
+## Ninety-fifth: aesthetics as a strategy — round-number ("psychological barrier") price-level proximity, a clean null on both markets
+
+Companion to the Ninety-fourth entry's astrology test, same requested direction. The most
+defensible "aesthetics" hypothesis in market microstructure is the round-number/psychological-
+barrier literature (Sonnemans 2006, "Price clustering and natural resistance points in the Dutch
+stock market"; Bhattacharya, Holden & Jacobsen 2012, "Penny Wise, Dollar Foolish") — traders find
+round price levels more salient/aesthetically preferable as reference points and cluster limit
+orders there, which the literature ties to altered short-horizon return behavior near those levels
+independent of any real economic information. This project has never tested a pure PRICE-LEVEL
+signal before (every prior mechanism keyed off returns, volume, open interest, delivery or the
+calendar).
+
+`probe_round_number.py` (new; pre-registered): for each trading day, distance from that day's close
+to the nearest round level (a multiple of `--round-step`) expressed as a fraction of the step (0 =
+sitting on the level, 0.5 = exactly between two); "near" if that fraction is <= 0.10, else "far".
+`round_step` = 1,000 points for NIFTY, 500 for the S&P (index-appropriate round increments, not
+tuned to the data). Tested: next trading day's return conditional on near/far, same random-subset
+null, direction not assumed (a round number could plausibly act as a magnet or a barrier).
+
+**Results:**
+
+| market | bucket | n | mean/day | p |
+|---|---|---|---|---|
+| NIFTY | near (20.5% of days) | 955 | +0.0548% | 0.388 |
+| NIFTY | far | 3,711 | +0.0405% | 0.631 |
+| S&P 500 | near (38.3% of days) | 9,490 | +0.0230% | 0.820 |
+| S&P 500 | far | 15,308 | +0.0370% | 0.172 |
+
+Clean null on both markets, no cell near uncorrected p<0.05, and the sign isn't even consistent
+across markets (near > far on NIFTY by +0.0142%/day, near < far on the S&P by -0.0140%/day) —
+unlike the lunar entry's cross-market-consistent direction, this one doesn't agree with itself on
+sign.
+
+**One descriptive aside, not tested further here:** the S&P's "near" share (38.3%) is much higher
+than NIFTY's (20.5%) despite an identical `--near-frac` definition — plausibly because a FIXED
+500-point step is a very different fraction of the index level across the S&P's ~76-year, ~60x
+price range (roughly 100 in the 1950s to 6,000+ now) than across NIFTY's shorter, narrower-range
+history, which would inflate or deflate the "near" share mechanically as the index re-scales,
+independent of any real clustering behavior. Worth a relative (percentage-of-price) round-step
+definition if this line is ever revisited — not built here (ponytail: flat point-based round-step
+only; a %-of-price version is the upgrade path if this cell ever shows something worth chasing,
+which it currently doesn't).
+
+**Net verdict.** Aesthetics, in its most literature-grounded form (round-number salience), produces
+no detectable next-day return effect on either market at daily resolution. 4 p-values registered
+(honest family: 914 -> 918, Bonferroni threshold unchanged). 84 mechanisms tested; IBS rotation
+remains the sole standing finding; nothing is declared tradable.

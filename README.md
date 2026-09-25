@@ -14,11 +14,11 @@ responsible for any trades it places.
 ## Where things stand (2026-09-24)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-93 cover the latest work).
+are in CLAUDE.md's numbered entries (56-95 cover the latest work).
 
-- **82 mechanisms tested; none is declared tradable.** Across the 424 registered
+- **84 mechanisms tested; none is declared tradable.** Across the 434 registered
   significance tests plus 484 scan cells noted but not registered
-  (`multiple_comparisons.py`, honest family m=908, Bonferroni threshold 0.00006)
+  (`multiple_comparisons.py`, honest family m=918, Bonferroni threshold 0.00006)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
   only rows that pass are the trend gate's drawdown effect on the S&P 500 since
   1950 at SMA150/SMA200 (p <= 5e-5 at 20,000 draws; SMA100, p=1e-4, passed at the
@@ -109,6 +109,14 @@ are in CLAUDE.md's numbered entries (56-93 cover the latest work).
   gold's own return distribution — not real temporal structure — drives
   that one. SAR (14%) and DMI/ADX (17%) don't show the same inflation,
   which narrows the pattern without resolving it either way.
+- **Astrology and aesthetics (Entries 94-95).** Two folk-market-theory
+  probes, requested and tested directly. Lunar phase (new moon vs full
+  moon, Yuan/Zheng/Zhu 2006): directionally consistent with the published
+  effect on BOTH NIFTY and the S&P independently, but no cell clears even
+  uncorrected p<0.05. Round-number price-level proximity (psychological
+  barriers): a clean null that doesn't even agree with itself on sign
+  across the two markets. Neither is tradable; both are honestly
+  registered (10 p-values) into the project-wide family regardless.
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship
