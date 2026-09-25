@@ -6690,3 +6690,54 @@ which it currently doesn't).
 no detectable next-day return effect on either market at daily resolution. 4 p-values registered
 (honest family: 914 -> 918, Bonferroni threshold unchanged). 84 mechanisms tested; IBS rotation
 remains the sole standing finding; nothing is declared tradable.
+
+
+## Ninety-sixth: Mercury retrograde — real orbital mechanics, no library, direction matches folklore on both markets, nowhere near significant
+
+Requested direction: keep pushing on astrology, specifically ANCIENT astrology — Mercury
+retrograde is the oldest and most-cited example, going back to Ptolemy's Tetrabiblos (2nd century
+CE), and the one folk-financial-astrology claim still actively circulated today (retail-trading
+forums warning against opening new positions during a retrograde window). Different in kind from
+the Ninety-fourth entry's lunar phase (a fixed 29.53-day cycle): retrograde windows are irregular
+(~3-4 times a year, ~3 weeks each) because they come from the real relative geometry of two
+elliptical orbits, not a simple period — this can't be approximated the way lunar phase was.
+
+**No ephemeris library added** (checked first: none installed; ladder rung 5 doesn't apply).
+`probe_mercury_retrograde.py` computes Mercury's geocentric ecliptic longitude from the standard,
+public-domain, low-precision Keplerian orbital elements for Mercury and Earth (Standish/JPL,
+"Keplerian Elements for Approximate Positions of the Major Planets", valid 1800-2050 AD,
+~1-arcminute accuracy) — Kepler's equation solved by Newton's method, heliocentric orbital-plane
+coordinates rotated into the J2000 ecliptic frame, Mercury's position minus Earth's gives the
+geocentric longitude; a day is "retrograde" if that longitude moved backward (shortest-path
+unwrapped) from the prior calendar day. **Self-check before trusting any market number** (ladder:
+non-trivial logic gets one runnable check): over 2020-2026 the formula finds 22 retrograde episodes
+(3.1/yr) averaging 22.4 calendar days — matching the well-documented real-world figures (~3-4/yr,
+~21 days) closely enough to trust the day-level classification for a week-scale window, though not
+for precision astrometry.
+
+Pre-registered, same convention as the Ninety-fourth entry: mean daily return on retrograde vs
+direct (non-retrograde) days, NIFTY (20y) and the S&P 500 (~98y), the same random-same-size-subset
+null used throughout this project's calendar-effect entries. Folklore's predicted direction
+(retrograde = worse) is named, not assumed; reported regardless of sign.
+
+**Results:**
+
+| market | bucket | n | mean/day | p |
+|---|---|---|---|---|
+| NIFTY | retrograde | 904 | +0.0273% | 0.698 |
+| NIFTY | direct | 3,762 | +0.0474% | 0.340 |
+| S&P 500 | retrograde | 4,748 | +0.0262% | 0.645 |
+| S&P 500 | direct | 20,050 | +0.0329% | 0.360 |
+
+No cell within striking distance of uncorrected p<0.05. **The sign matches folklore's prediction on
+both markets independently** (retrograde mean is lower than direct: -0.0200%/day on NIFTY,
+-0.0068%/day on the S&P) — the same "consistent direction, nowhere near significant" shape as the
+Ninety-fourth entry's lunar result, and, same caveat as that entry, only a 25% base-rate coincidence
+on its own if there's truly nothing there.
+
+**Net verdict.** Real orbital mechanics, genuinely different construction from the lunar-phase
+entry, self-checked against known real-world retrograde frequency/duration before any return was
+trusted, direction consistent with 2,000-year-old folklore on two independent markets, magnitude
+indistinguishable from noise. 4 p-values registered (honest family: 918 -> 922, Bonferroni threshold
+unchanged). 85 mechanisms tested; IBS rotation remains the sole standing finding; nothing is
+declared tradable.
