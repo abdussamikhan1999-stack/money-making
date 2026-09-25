@@ -14,11 +14,11 @@ responsible for any trades it places.
 ## Where things stand (2026-09-24)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-97 cover the latest work).
+are in CLAUDE.md's numbered entries (56-98 cover the latest work).
 
-- **86 mechanisms tested; none is declared tradable.** Across the 438 registered
+- **87 mechanisms tested; none is declared tradable.** Across the 444 registered
   significance tests plus 484 scan cells noted but not registered
-  (`multiple_comparisons.py`, honest family m=922, Bonferroni threshold 0.00006)
+  (`multiple_comparisons.py`, honest family m=928, Bonferroni threshold 0.00005)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
   only rows that pass are the trend gate's drawdown effect on the S&P 500 since
   1950 at SMA150/SMA200 (p <= 5e-5 at 20,000 draws; SMA100, p=1e-4, passed at the
@@ -130,6 +130,16 @@ are in CLAUDE.md's numbered entries (56-97 cover the latest work).
   project's usual chance range) but every passer's annualized return is
   under 0.6%/yr, 30-60x smaller than IBS rotation — a coin flip dressed
   as a hit rate, not an edge.
+- **Pre-holiday effect (Entry 98).** A genuinely new, never-tested
+  calendar anomaly (Lakonishok & Smidt 1988; Ariel 1990), holidays
+  inferred straight from gaps in the trading-day sequence (no external
+  calendar). The S&P's pre-holiday cell (p=0.0002) is this project's
+  best calendar-effect p-value yet and correctly discriminates from a
+  null post-holiday cell, exactly as the literature predicts; decays
+  across halves on both markets but doesn't flip sign. Nets negative on
+  NIFTY after cost, thinly positive on the S&P (~0.05%/trade) — the
+  first calendar-timing effect here to clear cost on any market, still
+  short of the corrected significance bar.
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship
