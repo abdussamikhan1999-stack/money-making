@@ -9,3 +9,4 @@ volume_panel_cache.pkl
 ohlc_panel_cache.pkl
 dividend_panel_cache.pkl
 oi_panel_cache.pkl
+seasonality_panel_cache.pkl
