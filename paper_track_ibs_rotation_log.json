@@ -28,6 +28,55 @@
         "entry_ibs": 0.2814
       }
     ],
+    "exit": {
+      "date": "2026-09-28",
+      "prices": {
+        "POWERGRID.NS": 261.8500061035156,
+        "RELIANCE.NS": 1197.5999755859375,
+        "HINDUNILVR.NS": 1896.0,
+        "MARUTI.NS": 12008.0,
+        "BAJFINANCE.NS": 985.0
+      },
+      "net_pnl": -3004.9,
+      "net_pnl_pct": -3.005
+    },
+    "horizon_returns": {
+      "5": {
+        "picks_mean": -0.0085,
+        "universe_mean": -0.00582,
+        "excess": -0.00268
+      }
+    }
+  },
+  {
+    "date": "2026-09-28",
+    "picks": [
+      {
+        "symbol": "CROMPTON.NS",
+        "entry_price": 218.8000030517578,
+        "entry_ibs": 0.2796
+      },
+      {
+        "symbol": "SUNPHARMA.NS",
+        "entry_price": 1838.0,
+        "entry_ibs": 0.3216
+      },
+      {
+        "symbol": "BAJAJFINSV.NS",
+        "entry_price": 1752.0,
+        "entry_ibs": 0.3378
+      },
+      {
+        "symbol": "HDFCBANK.NS",
+        "entry_price": 719.0499877929688,
+        "entry_ibs": 0.34
+      },
+      {
+        "symbol": "LT.NS",
+        "entry_price": 3766.39990234375,
+        "entry_ibs": 0.3433
+      }
+    ],
     "exit": null
   }
 ]
