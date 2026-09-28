@@ -35,6 +35,58 @@
       "qty": 214,
       "entry_price": 265.94000244140625
     },
+    "exit": {
+      "date": "2026-09-28",
+      "stock_exit_prices": {
+        "POWERGRID.NS": 261.8500061035156,
+        "RELIANCE.NS": 1197.5999755859375,
+        "HINDUNILVR.NS": 1896.0,
+        "TCS.NS": 2070.699951171875,
+        "MARUTI.NS": 12008.0
+      },
+      "etf_exit_price": 260.4700012207031,
+      "stock_net_pnl": -3774.42,
+      "etf_pnl": 942.94,
+      "total_net_pnl": -2831.49,
+      "total_net_pnl_pct": -2.831
+    }
+  },
+  {
+    "date": "2026-09-28",
+    "beta": 1.1359,
+    "hedge_ratio": 0.5,
+    "picks": [
+      {
+        "symbol": "CROMPTON.NS",
+        "entry_price": 218.8000030517578,
+        "entry_ibs": 0.2796
+      },
+      {
+        "symbol": "SUNPHARMA.NS",
+        "entry_price": 1838.0,
+        "entry_ibs": 0.3216
+      },
+      {
+        "symbol": "BAJAJFINSV.NS",
+        "entry_price": 1752.0,
+        "entry_ibs": 0.3378
+      },
+      {
+        "symbol": "HDFCBANK.NS",
+        "entry_price": 719.0499877929688,
+        "entry_ibs": 0.34
+      },
+      {
+        "symbol": "LT.NS",
+        "entry_price": 3766.39990234375,
+        "entry_ibs": 0.3433
+      }
+    ],
+    "etf_hedge": {
+      "symbol": "NIFTYBEES.NS",
+      "qty": 218,
+      "entry_price": 260.4700012207031
+    },
     "exit": null
   }
 ]
