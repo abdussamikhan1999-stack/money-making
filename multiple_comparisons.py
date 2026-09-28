@@ -594,6 +594,42 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("S&P500 Wed (Ninety-second)", 0.0008),
     ("S&P500 Thu (Ninety-second)", 0.3005),
     ("S&P500 Fri (Ninety-second)", 0.0816),
+    # Entries 94-98 (astrology/aesthetics/holiday): their write-ups say "registered" but the rows were never added to
+    # this file (found while registering Entry 99: the file held 424 rows, README/CLAUDE.md said 444). Added now from the
+    # numbers printed in CLAUDE.md. Entry 97 (astrology strategy) has no p-value, only a walk-forward hit count.
+    ("lunar NIFTY new (Ninety-fourth)", 0.197),
+    ("lunar NIFTY full (Ninety-fourth)", 0.956),
+    ("lunar NIFTY other (Ninety-fourth)", 0.438),
+    ("lunar S&P500 new (Ninety-fourth)", 0.080),
+    ("lunar S&P500 full (Ninety-fourth)", 0.495),
+    ("lunar S&P500 other (Ninety-fourth)", 0.881),
+    ("round-number NIFTY near (Ninety-fifth)", 0.388),
+    ("round-number NIFTY far (Ninety-fifth)", 0.631),
+    ("round-number S&P500 near (Ninety-fifth)", 0.820),
+    ("round-number S&P500 far (Ninety-fifth)", 0.172),
+    ("Mercury retrograde NIFTY retro (Ninety-sixth)", 0.698),
+    ("Mercury retrograde NIFTY direct (Ninety-sixth)", 0.340),
+    ("Mercury retrograde S&P500 retro (Ninety-sixth)", 0.645),
+    ("Mercury retrograde S&P500 direct (Ninety-sixth)", 0.360),
+    ("pre-holiday NIFTY pre (Ninety-eighth)", 0.0252),
+    ("pre-holiday NIFTY post (Ninety-eighth)", 0.0388),
+    ("pre-holiday NIFTY other (Ninety-eighth)", 0.988),
+    ("pre-holiday S&P500 pre (Ninety-eighth)", 0.0002),
+    ("pre-holiday S&P500 post (Ninety-eighth)", 0.417),
+    ("pre-holiday S&P500 other (Ninety-eighth)", 0.998),
+    # Ninety-ninth entry: cross-sectional return seasonality (Heston-Sadka). 3 signals x 2 universes x 2 periods = 12
+    # registered; the two SEAS5 P2 cells have only 40 valid months (< the 60 floor) and produce no p-value, so 10 rows.
+    # p = max(p_shift, p_nw). None is under 0.05.
+    ("SEAS1 P1 univ A (Ninety-ninth)", 0.5817),
+    ("SEAS3 P1 univ A (Ninety-ninth)", 0.9510),
+    ("SEAS5 P1 univ A (Ninety-ninth)", 0.4753),
+    ("SEAS1 P2 univ A (Ninety-ninth)", 0.3387),
+    ("SEAS3 P2 univ A (Ninety-ninth)", 0.8335),
+    ("SEAS1 P1 univ B (Ninety-ninth)", 0.8708),
+    ("SEAS3 P1 univ B (Ninety-ninth)", 0.1623),
+    ("SEAS5 P1 univ B (Ninety-ninth)", 0.0667),
+    ("SEAS1 P2 univ B (Ninety-ninth)", 0.0580),
+    ("SEAS3 P2 univ B (Ninety-ninth)", 0.4379),
     # NOT individually registered (Sixty-fourth entry): 84 further cells, 21 fixed-step phase offsets
     # and 21 calendar-anchored offsets x {IBS(5) top_k=5, rev(21) top_k=8}. Counting them, an honest
     # Bonferroni family is m>=161 (threshold ~0.0003); the smallest p among them is 0.003.
