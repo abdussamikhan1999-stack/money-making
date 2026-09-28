@@ -14,11 +14,11 @@ responsible for any trades it places.
 ## Where things stand (2026-09-24)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-98 cover the latest work).
+are in CLAUDE.md's numbered entries (56-99 cover the latest work).
 
-- **87 mechanisms tested; none is declared tradable.** Across the 444 registered
+- **88 mechanisms tested; none is declared tradable.** Across the 454 registered
   significance tests plus 484 scan cells noted but not registered
-  (`multiple_comparisons.py`, honest family m=928, Bonferroni threshold 0.00005)
+  (`multiple_comparisons.py`, honest family m=938, Bonferroni threshold 0.00005)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
   only rows that pass are the trend gate's drawdown effect on the S&P 500 since
   1950 at SMA150/SMA200 (p <= 5e-5 at 20,000 draws; SMA100, p=1e-4, passed at the
