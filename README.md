@@ -11,14 +11,14 @@ accredited financial specialist before risking real capital. Backtest and
 paper-trade thoroughly before ever running this live. You are solely
 responsible for any trades it places.
 
-## Where things stand (2026-09-24)
+## Where things stand (2026-09-30)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-99 cover the latest work).
+are in CLAUDE.md's numbered entries (56-100 cover the latest work).
 
-- **88 mechanisms tested; none is declared tradable.** Across the 454 registered
+- **89 mechanisms tested; none is declared tradable.** Across the 470 registered
   significance tests plus 484 scan cells noted but not registered
-  (`multiple_comparisons.py`, honest family m=938, Bonferroni threshold 0.00005)
+  (`multiple_comparisons.py`, honest family m=954, Bonferroni threshold 0.00005)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
   only rows that pass are the trend gate's drawdown effect on the S&P 500 since
   1950 at SMA150/SMA200 (p <= 5e-5 at 20,000 draws; SMA100, p=1e-4, passed at the
@@ -140,6 +140,15 @@ are in CLAUDE.md's numbered entries (56-99 cover the latest work).
   NIFTY after cost, thinly positive on the S&P (~0.05%/trade) — the
   first calendar-timing effect here to clear cost on any market, still
   short of the corrected significance bar.
+- **NSE Bulk/Block Deals "follow the smart money" (Entry 100).** A genuinely
+  new signal dimension (single-client disclosed large trades, never a price/
+  volume/OI/delivery/calendar signal like everything before it), fetched from
+  a session-gated NSE endpoint discovered and worked around for two real traps
+  (a silent 70-row JSON cap, a ~1-year csv date-range cap) before any signal
+  was scored. Matched-stock random-day event-study null, 16 pre-registered
+  cells (2 deal types x 2 sides x 4 horizons): clean null throughout, p from
+  0.19 to 1.00, nothing close to even an uncorrected 0.05. No lot-size issue
+  (equities, not derivatives).
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship

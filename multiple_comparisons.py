@@ -633,6 +633,27 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     # NOT individually registered (Sixty-fourth entry): 84 further cells, 21 fixed-step phase offsets
     # and 21 calendar-anchored offsets x {IBS(5) top_k=5, rev(21) top_k=8}. Counting them, an honest
     # Bonferroni family is m>=161 (threshold ~0.0003); the smallest p among them is 0.003.
+    # Hundredth entry (2026-09-30): NSE bulk/block deals "follow the smart money" event study
+    # (probe_bulk_deals_signal.py). Matched-stock random-day null (per-stock, draw the same count of
+    # random dates from that stock's own eligible-date population, pool across stocks, 3,000 draws),
+    # two-sided empirical p. 2 deal types x 2 sides x 4 horizons = 16 registered, pre-registered before
+    # any signal was scored. Clean null: p ranges 0.19-1.00, no cell clears even an uncorrected 0.05.
+    ("Bulk deals BUY h=1 (Hundredth)", 0.5968),
+    ("Bulk deals BUY h=5 (Hundredth)", 0.9970),
+    ("Bulk deals BUY h=10 (Hundredth)", 0.9997),
+    ("Bulk deals BUY h=21 (Hundredth)", 1.0000),
+    ("Bulk deals SELL h=1 (Hundredth)", 0.2679),
+    ("Bulk deals SELL h=5 (Hundredth)", 0.5338),
+    ("Bulk deals SELL h=10 (Hundredth)", 0.2549),
+    ("Bulk deals SELL h=21 (Hundredth)", 0.8031),
+    ("Block deals BUY h=1 (Hundredth)", 0.9630),
+    ("Block deals BUY h=5 (Hundredth)", 0.1906),
+    ("Block deals BUY h=10 (Hundredth)", 0.2393),
+    ("Block deals BUY h=21 (Hundredth)", 0.2086),
+    ("Block deals SELL h=1 (Hundredth)", 0.6068),
+    ("Block deals SELL h=5 (Hundredth)", 0.4315),
+    ("Block deals SELL h=10 (Hundredth)", 0.2396),
+    ("Block deals SELL h=21 (Hundredth)", 0.3515),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number
