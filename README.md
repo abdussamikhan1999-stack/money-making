@@ -11,14 +11,14 @@ accredited financial specialist before risking real capital. Backtest and
 paper-trade thoroughly before ever running this live. You are solely
 responsible for any trades it places.
 
-## Where things stand (2026-09-30)
+## Where things stand (2026-10-01)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-100 cover the latest work).
+are in CLAUDE.md's numbered entries (56-101 cover the latest work).
 
-- **89 mechanisms tested; none is declared tradable.** Across the 470 registered
+- **90 mechanisms tested; none is declared tradable.** Across the 474 registered
   significance tests plus 484 scan cells noted but not registered
-  (`multiple_comparisons.py`, honest family m=954, Bonferroni threshold 0.00005)
+  (`multiple_comparisons.py`, honest family m=958, Bonferroni threshold 0.00005)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
   only rows that pass are the trend gate's drawdown effect on the S&P 500 since
   1950 at SMA150/SMA200 (p <= 5e-5 at 20,000 draws; SMA100, p=1e-4, passed at the
@@ -149,6 +149,22 @@ are in CLAUDE.md's numbered entries (56-100 cover the latest work).
   cells (2 deal types x 2 sides x 4 horizons): clean null throughout, p from
   0.19 to 1.00, nothing close to even an uncorrected 0.05. No lot-size issue
   (equities, not derivatives).
+- **Zweig Breadth Thrust (Entry 101).** A genuinely new data dimension
+  (cross-sectional market BREADTH, not one instrument's own price/vol) --
+  no prior market-timing overlay here conditioned on how many different
+  stocks were participating in a move. Zweig's own precise 1986 rule
+  (10% trend EMA of advance/decline ratio rising from <=0.40 to >=0.615
+  within 10 trading days) implemented exactly as published: ZERO
+  qualifying events in 20 years on either of two independent 52/54-stock
+  NSE universes -- not even the 2009 crash bottom qualifies (missed the
+  10-day window by 2 trading days on this sample). A relaxed 15-day
+  window (exploratory, n=1-2, no p-value claimed) catches 2009's real
+  rally on universe A but doesn't replicate at all on universe B.
+  Secondary: a "% of universe above its own 200d SMA" gate on IBS
+  rotation underperforms both the ungated baseline and its own
+  random-off-months control (p=0.58-0.78 on return) -- worse than the
+  existing price-only NIFTY-SMA gate (Entries 61-62), not merely no
+  better.
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship
