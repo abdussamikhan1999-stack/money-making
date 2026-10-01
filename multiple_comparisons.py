@@ -654,6 +654,21 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Block deals SELL h=5 (Hundredth)", 0.4315),
     ("Block deals SELL h=10 (Hundredth)", 0.2396),
     ("Block deals SELL h=21 (Hundredth)", 0.3515),
+    # Entry 101 (2026-10-01): Nifty 50 index-reconstitution drift (probe_nifty_reconstitution.py).
+    # Forced passive-fund rebalancing at the effective date of an index addition/deletion, anchored
+    # on the (well-sourced) effective date rather than the (unreliable) announcement date. Same
+    # matched-stock random-day null as the Hundredth entry, 3,000 draws. 69/85 distinct symbols
+    # resolved on Yahoo (16 delisted/renamed/excluded). 2 sides x 4 horizons = 8 registered,
+    # pre-registered before any signal was scored. Clean null: smallest p is ADD h=10 at 0.095
+    # (+2.29% gross, both halves positive), which does not clear even an uncorrected 0.05.
+    ("Nifty reconstitution ADD h=1 (101st)", 0.3299),
+    ("Nifty reconstitution ADD h=5 (101st)", 0.4422),
+    ("Nifty reconstitution ADD h=10 (101st)", 0.0953),
+    ("Nifty reconstitution ADD h=21 (101st)", 0.2179),
+    ("Nifty reconstitution DELETE h=1 (101st)", 0.7284),
+    ("Nifty reconstitution DELETE h=5 (101st)", 0.7877),
+    ("Nifty reconstitution DELETE h=10 (101st)", 0.8714),
+    ("Nifty reconstitution DELETE h=21 (101st)", 0.9197),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number

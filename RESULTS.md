@@ -7,7 +7,9 @@ financial advice.
 
 ## Headline
 
-- **75 mechanisms tested. None is declared tradable.**
+- **90 mechanisms tested (as of Entry 101; this report's body below is unregenerated since Entry 84 —
+  see CLAUDE.md for the full, current entry-by-entry record through Entry 101). None is declared
+  tradable.**
 - Significance ledger: **328 registered p-values + 414 scan cells noted but not registered =
   m 742, honest Bonferroni threshold 0.00007.** The only rows that pass are the S&P 500 1950+
   trend-gate *drawdown* effects at SMA150/SMA200 (p <= 5e-5 at 20,000 draws; SMA100 at 1e-4 no longer
