@@ -654,6 +654,19 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Block deals SELL h=5 (Hundredth)", 0.4315),
     ("Block deals SELL h=10 (Hundredth)", 0.2396),
     ("Block deals SELL h=21 (Hundredth)", 0.3515),
+    # Hundred-and-first entry (2026-10-01): Zweig Breadth Thrust (Martin Zweig, "Winning on
+    # Wall Street", 1986) on two independent 52/54-stock NSE universes as breadth sources, 20y.
+    # Literal rule (10% trend EMA alpha=0.1, thrust = rises from <=0.40 to >=0.615 within 10
+    # trading days): ZERO qualifying events on either universe -- no event-study p-value to
+    # register (nothing to test). Secondary: "% of universe above its own 200d SMA" as a gate
+    # on IBS rotation (universe A, 10y), same random-off-months control as the Sixty-first
+    # entry's price-only NIFTY-SMA gate. Both p(return) and p(drawdown) registered below; the
+    # gate UNDERPERFORMS both the ungated baseline and its own random-off-months control at
+    # both portfolio sizes (worse than the existing price-based gate, not merely "no better").
+    ("Breadth-pct-above-200sma gate top_k=5 return (Hundred-and-first)", 0.575),
+    ("Breadth-pct-above-200sma gate top_k=5 drawdown (Hundred-and-first)", 0.104),
+    ("Breadth-pct-above-200sma gate top_k=8 return (Hundred-and-first)", 0.778),
+    ("Breadth-pct-above-200sma gate top_k=8 drawdown (Hundred-and-first)", 0.201),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number

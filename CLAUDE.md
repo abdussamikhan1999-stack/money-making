@@ -6899,3 +6899,101 @@ An explicitly "genuinely new" direction, never touched in 99 prior entries: NSE 
 **No lot-size fix was needed** (equities, not derivatives — the capital-tier wall Entries 7/9/25/26/29/45 mapped out for options/futures/commodity contracts doesn't apply here), and the lag-1 fill convention was correct from the start of this entry (unlike Entry 59's retroactive fix to the older rotation family) — this entry's own event-study design used it from the first line of code, per this project's now-standard practice.
 
 **Net verdict.** Hundredth mechanism, and the cleanest possible negative result for a genuinely untested signal dimension: a real, freely fetchable, previously-untried data source, a design matched to its actual (sparse, irregular) shape rather than forced into an ill-fitting existing framework, and a null result across every registered cell rather than a hint requiring further chasing. 16 p-values registered in `multiple_comparisons.py` (honest family now 470 registered + 484 unregistered scan cells = m=954, Bonferroni threshold 0.00005; none of the 16 comes within two orders of magnitude of it, and none would have needed to — the null here is real, not a marginal miss). 271 tests pass (6 new, `tests/test_probe_bulk_deals_signal.py`). **89 mechanisms tested; IBS rotation remains the sole standing finding; nothing is declared tradable.**
+
+
+
+## Hundred-and-first: Zweig Breadth Thrust — a genuinely new data dimension (market breadth,
+not one instrument's own price/vol), and the literal published rule fires zero times in 20
+years on two independent NSE universes
+
+Per the "IBS rotation's significance claim is retired, search for something genuinely
+different" ordering this project has followed since the Fifty-third entry. Every prior
+market-timing overlay tried here — the Sixty-first/Sixty-second entries' price-based NIFTY
+SMA trend gates, the Fifty-seventh/Fifty-eighth entries' India-VIX-spike fear-buy — conditions
+on a SINGLE instrument's own price level or implied volatility. Martin Zweig's Breadth Thrust
+("Winning on Wall Street", 1986) conditions on something this project has never aggregated
+before: how many DIFFERENT stocks are participating in a move at once, across a whole
+universe. The raw ingredient (daily closes for the 52-stock `WIDE_UNIVERSE` and the 54-stock
+`UNIVERSE_B`, already fetched throughout Entries 38-99) was sitting in this project's own
+infrastructure unused for exactly this purpose.
+
+**Zweig's rule, implemented exactly as published — unusually precise for a decades-old
+technical rule, so no reinterpretation was needed:**
+- Daily breadth ratio = advances / (advances + declines) across the universe; unchanged names
+  excluded from both, the standard convention.
+- "10% trend" = an EXPONENTIAL moving average of that ratio with smoothing constant 0.1
+  (alpha=0.1) — explicitly NOT a 10-day window, a naming trap this entry avoided by reading
+  Zweig's own terminology carefully: today's trend = yesterday's trend + 10% of the gap to
+  today's raw ratio (`breadth.ewm(alpha=0.10, adjust=False).mean()`).
+- A "thrust" fires when the 10% trend rises from <= 0.40 to >= 0.615 within 10 trading days or
+  fewer — a rare, large, rapid swing from oversold to strongly positive breadth. Zweig's own
+  claim (NYSE data, 1945-1986): every such thrust up to that point was followed by a strong
+  advance over the following months, with only a handful of occurrences in 40 years —
+  EXPLICITLY a rare, low-n signal by the letter of the rule, not a parameter this project
+  chose to make thin.
+
+Implemented as `probe_breadth_thrust.py`. Tested on two independent, disjoint universes
+(`WIDE_UNIVERSE`, `UNIVERSE_B` — the Sixty-eighth/Sixty-ninth entries' own cross-check
+convention) as breadth sources, 20y (deliberately longer than this project's usual 10y
+rotation window, specifically so a rare signal gets a real chance to fire, and so it can be
+checked against 2009's crash bottom — historically one of the most famous real-world
+Zweig-thrust-qualifying events in US markets). Forward NIFTY return at 21/63/126/252 trading
+days, lag-1 fill (decision known at the event day's close, enter the NEXT close — this
+project's standard no-lookahead convention), against the random-day-pool null used throughout
+the calendar/event-study entries since the Ninety-second (`probe_fear_followup.random_pool_p`).
+
+**Result: zero qualifying events, on both universes, over the full 20-year window.** Diagnostics
+(run before concluding this was a bug, not a finding): universe A's breadth trend genuinely
+reaches both extremes (129 days <=0.40, 39 days >=0.615 over 20y) and its FASTEST observed
+low-to-high transition, with no window cap at all, was 12 trading days (2009-03-09 to
+2009-03-27) — missing Zweig's own 10-day requirement by just 2 trading days, on the single most
+famous real-world thrust episode in market history. Universe B's fastest transition was 19
+trading days. Neither universe produces a single event that clears the literal rule; there is
+no event-study p-value to register (nothing to test — correctly reported as "no events," not
+manufactured into a null p-value for its own sake).
+
+**A relaxed 15-day window (explicitly exploratory, post hoc, n too small for any p-value —
+same discipline the macro-analog entry (Fifty-seventh) applied to its own single-digit-n
+oil-shock episodes) surfaces exactly the episode the diagnostics predicted, and it does not
+replicate across universes.** Universe A: 2 events — 2009-03-27 (forward NIFTY: +21.7% at 21d,
++48.6% at 63d, +68.0% at 126d, +77.1% at 252d, the real 2009 rally) and 2025-03-24 (weaker and
+inconsistent: +2.8%/+8.3%/+4.2%/-3.0%). Universe B: STILL zero events even at 15 days — the one
+relaxed-window "hit" on universe A doesn't reproduce on an independent 54-stock sample of the
+same market over the same window, meaning it reads as "2009 was an extreme enough crash-then-
+rally that this particular 52-stock sample's breadth happened to qualify within 15 days," not a
+robust cross-sectional breadth phenomenon.
+
+**Secondary, cheap reuse of the same breadth data**: a continuous "% of universe above its own
+200-day SMA" gate on IBS rotation (universe A, 10y — matching the window the Sixty-first entry's
+own price-based NIFTY-SMA gate used, for direct comparability), reusing `simulate()`'s existing
+`gate=` parameter and the identical random-off-months control unchanged. Result: the breadth
+gate actively UNDERPERFORMS both the ungated baseline and its own random-off-months control at
+both portfolio sizes — top_k=5: ungated 20.12%/yr (39.5% maxDD) vs breadth-gated 14.73%/yr
+(22.8% maxDD) vs random-off-months 15.95%/yr (34.3% DD), p(return)=0.575, p(drawdown as low
+as)=0.104; top_k=8: ungated 19.07%/yr vs breadth-gated 12.24%/yr vs random 14.98%/yr,
+p(return)=0.778, p(drawdown)=0.201. Compare to the Sixty-first/Seventy-sixth entries' own
+price-only NIFTY-SMA gate, which DID beat its random-off-months control on drawdown at several
+SMA lengths (p(DD) as low as 0.013-0.077) — the breadth-based gate is not merely "no better,"
+it is measurably worse at the one job (cutting drawdown without giving back more return than a
+coin-flip) the existing price-based gate was shown to do.
+
+**Net verdict.** A genuinely new data dimension, correctly implemented against a rule precise
+enough that no interpretation judgment calls were needed, tested with the full rigor this
+project applies elsewhere (two independent universes, no-lookahead fills, a random-day-pool
+null, an honest report of a small-n exploratory check clearly separated from the pre-registered
+literal-rule test) — and it produces the cleanest possible negative for an event-based signal:
+the event simply never happens, on this market, at this rule's literal thresholds, even at the
+one moment (2009) it should have been most likely to. The likely reason, worth recording: Zweig
+calibrated 0.40/0.615/10-days against NYSE-wide breadth (thousands of names), whose day-to-day
+advance/decline ratio is far smoother than a 52-54-stock sample's; the same alpha=0.1 smoothing
+constant applied to a noisier, narrower universe needs a wider recovery window to swing the same
+distance, which is exactly what the diagnostics show (12-19 trading days for the fastest real
+transition vs the rule's 10-day requirement) — a genuine calibration mismatch between a rule
+built for a much broader universe and this project's own necessarily-smaller universes, not
+evidence the underlying "does breadth predict?" question has no answer here. 4 p-values
+registered in `multiple_comparisons.py` (the breadth-gate's return/drawdown tests at both
+portfolio sizes; honest family now 474 registered + 484 unregistered scan cells = m=958,
+Bonferroni threshold 0.00005 — none of the 4 comes remotely close, consistent with how clearly
+they failed). 276 tests pass (5 new, `tests/test_probe_breadth_thrust.py`, covering the EMA
+formula, the exact 10-vs-11-day boundary, declustering, and NaN-warmup safety). **90 mechanisms
+tested; IBS rotation remains the sole standing finding; nothing is declared tradable.**
