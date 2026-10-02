@@ -11,14 +11,14 @@ accredited financial specialist before risking real capital. Backtest and
 paper-trade thoroughly before ever running this live. You are solely
 responsible for any trades it places.
 
-## Where things stand (2026-10-01)
+## Where things stand (2026-10-02)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-102 cover the latest work).
+are in CLAUDE.md's numbered entries (56-103 cover the latest work).
 
-- **91 mechanisms tested; none is declared tradable.** Across the 482 registered
+- **92 mechanisms tested; none is declared tradable.** Across the 498 registered
   significance tests plus 484 scan cells noted but not registered
-  (`multiple_comparisons.py`, honest family m=966, Bonferroni threshold 0.00005)
+  (`multiple_comparisons.py`, honest family m=982, Bonferroni threshold 0.00005)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
   only rows that pass are the trend gate's drawdown effect on the S&P 500 since
   1950 at SMA150/SMA200 (p <= 5e-5 at 20,000 draws; SMA100, p=1e-4, passed at the
@@ -36,6 +36,16 @@ are in CLAUDE.md's numbered entries (56-102 cover the latest work).
   are survivorship-inflated (Entries 68-69); the full-month hold does not
   replicate on 2007-16 (p=0.26). Net economics of the short hold: ~8-13%/yr on
   capital in the market 25-50% of the time, cost- and slippage-sensitive.
+- **A second candidate, also unproven: following promoters'/officers' own disclosed
+  open-market purchases (SEBI PIT data, Entry 103).** Promoter BUY predicts higher
+  forward returns (h=21: +3.07% gross, p=0.0007, both halves positive, clears the
+  0.25% cost) while promoter/officer SELL does not - the literature's own predicted
+  asymmetry, pre-registered rather than found after looking. Survives a top-10
+  concentration check (still +2.37% with them removed) and a 4-quarter split (3/4
+  positive, no recent-quarter decay) - but the smallest p (0.000666) is still ~13x
+  above the honest multiple-comparisons threshold, and no universe-independence or
+  perturbation check has been run yet (the exact sequence IBS rotation went through
+  before being trusted at all).
 - **Robust observations that are not edges:** (1) holding equity with gold
   roughly halves the drawdown vs equity alone (24-27% for a 50/50 on Sensex+INR
   gold 2003-26 and 26-29% on S&P+USD gold 2000-26, both containing the full 2008
