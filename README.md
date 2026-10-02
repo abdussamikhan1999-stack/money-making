@@ -14,11 +14,11 @@ responsible for any trades it places.
 ## Where things stand (2026-10-01)
 
 Read this before any of the per-entry detail below. Full numbers and caveats
-are in CLAUDE.md's numbered entries (56-101 cover the latest work).
+are in CLAUDE.md's numbered entries (56-102 cover the latest work).
 
-- **90 mechanisms tested; none is declared tradable.** Across the 474 registered
+- **91 mechanisms tested; none is declared tradable.** Across the 482 registered
   significance tests plus 484 scan cells noted but not registered
-  (`multiple_comparisons.py`, honest family m=958, Bonferroni threshold 0.00005)
+  (`multiple_comparisons.py`, honest family m=966, Bonferroni threshold 0.00005)
   nothing in the stock-rotation family clears a family-wise corrected bar; the
   only rows that pass are the trend gate's drawdown effect on the S&P 500 since
   1950 at SMA150/SMA200 (p <= 5e-5 at 20,000 draws; SMA100, p=1e-4, passed at the
@@ -165,6 +165,15 @@ are in CLAUDE.md's numbered entries (56-101 cover the latest work).
   random-off-months control (p=0.58-0.78 on return) -- worse than the
   existing price-only NIFTY-SMA gate (Entries 61-62), not merely no
   better.
+- **Nifty 50 index-reconstitution drift (Entry 102).** A genuinely new
+  FORCED-FLOW mechanism (passive index-fund rebalancing at an addition/
+  deletion's effective date, not price/volume/OI/calendar/disclosed-trade).
+  61 dated events compiled from Wikipedia's NIFTY 50 article, each
+  individually sourced, anchored on the effective date rather than the
+  unreliable announcement date. Same matched-stock random-day event-study
+  null as Entry 100, 8 pre-registered cells (2 sides x 4 horizons): clean
+  null, p 0.10-0.92; closest is ADD h=10 at p=0.095, still short of an
+  uncorrected 0.05.
 - **Tested and rejected recently:** put-call-ratio contrarian long, macro/
   geopolitical analog matching, VIX-spike fear-buy (weak, sample-specific),
   short-term reversal (0.85 correlated with IBS, collapses under survivorship

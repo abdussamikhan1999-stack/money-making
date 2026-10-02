@@ -667,6 +667,23 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Breadth-pct-above-200sma gate top_k=5 drawdown (Hundred-and-first)", 0.104),
     ("Breadth-pct-above-200sma gate top_k=8 return (Hundred-and-first)", 0.778),
     ("Breadth-pct-above-200sma gate top_k=8 drawdown (Hundred-and-first)", 0.201),
+    # Hundred-and-second entry (2026-10-01): Nifty 50 index-reconstitution drift
+    # (probe_nifty_reconstitution.py). Renumbered from this entry's original "101st" label after
+    # a merge collision with the Zweig Breadth Thrust entry above, which took 101 first. Forced
+    # passive-fund rebalancing at the effective date of an index addition/deletion, anchored on
+    # the (well-sourced) effective date rather than the (unreliable) announcement date. Same
+    # matched-stock random-day null as the Hundredth entry, 3,000 draws. 69/85 distinct symbols
+    # resolved on Yahoo (16 delisted/renamed/excluded). 2 sides x 4 horizons = 8 registered,
+    # pre-registered before any signal was scored. Clean null: smallest p is ADD h=10 at 0.095
+    # (+2.29% gross, both halves positive), which does not clear even an uncorrected 0.05.
+    ("Nifty reconstitution ADD h=1 (102nd)", 0.3299),
+    ("Nifty reconstitution ADD h=5 (102nd)", 0.4422),
+    ("Nifty reconstitution ADD h=10 (102nd)", 0.0953),
+    ("Nifty reconstitution ADD h=21 (102nd)", 0.2179),
+    ("Nifty reconstitution DELETE h=1 (102nd)", 0.7284),
+    ("Nifty reconstitution DELETE h=5 (102nd)", 0.7877),
+    ("Nifty reconstitution DELETE h=10 (102nd)", 0.8714),
+    ("Nifty reconstitution DELETE h=21 (102nd)", 0.9197),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number
