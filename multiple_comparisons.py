@@ -106,7 +106,7 @@ IBS_ROTATION_PVALUES = [
 # Cells that were run and reported but never registered row-by-row: the Sixty-fourth entry's 84 phase/anchor scan
 # cells (21 fixed-step phases + 21 calendar anchors, x IBS(5) and rev(21)), plus the Eighty-first entry's 288-cell
 # industry scan, 12 monthly-average bond/gold robustness cells, and 30 Entry 82-84 robustness cells.
-UNREGISTERED_SCAN_CELLS = 84 + 288 + 12 + 30 + 64 + 6  # + Eighty-first: industry scan (288) + leaky bond/gold rows (12); + 82-84: spanning (8), reversal positive control (16), IBS-vs-I5 (6); + Eighty-fifth: OI1E/OI2E/PC2E/OI2X unregistered robustness variants (64); + Eighty-seventh: survivorship-stress rerun of the same 6 skew cells
+UNREGISTERED_SCAN_CELLS = 84 + 288 + 12 + 30 + 64 + 6 + 8  # + Eighty-first: industry scan (288) + leaky bond/gold rows (12); + 82-84: spanning (8), reversal positive control (16), IBS-vs-I5 (6); + Eighty-fifth: OI1E/OI2E/PC2E/OI2X unregistered robustness variants (64); + Eighty-seventh: survivorship-stress rerun of the same 6 skew cells; + Hundred-and-fourth: quarter-level p's (4 quarters x 2 cells) for the ATR-stop-only variant
 
 ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("RSI-2 rotation top_k=3 (Forty-second)", 0.1987),
@@ -684,6 +684,22 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Nifty reconstitution DELETE h=5 (102nd)", 0.7877),
     ("Nifty reconstitution DELETE h=10 (102nd)", 0.8714),
     ("Nifty reconstitution DELETE h=21 (102nd)", 0.9197),
+    # Hundred-and-fourth entry: full-rigor pass on the ATR-STOP-ONLY variant of IBS rotation
+    # (target effectively disabled, stop_mult grid, top_k=5, lag=1). 6 screening cells on the
+    # base 52-stock WIDE_UNIVERSE, then survivorship-stress and cross-universe (UNIVERSE_B)
+    # reruns of the 2 best-by-Calmar cells (stop=0.75x, stop=0.50x). Quarter-level p's (8 cells,
+    # 4 quarters x 2 cells) are NOT individually registered here, same convention as the
+    # Sixty-fourth entry's phase/anchor scan — counted in UNREGISTERED_SCAN_CELLS instead.
+    ("IBS stop-only stop=0.50xATR screening (104th)", 0.0053),
+    ("IBS stop-only stop=0.75xATR screening (104th)", 0.0220),
+    ("IBS stop-only stop=1.00xATR screening (104th)", 0.0213),
+    ("IBS stop-only stop=1.25xATR screening (104th)", 0.0180),
+    ("IBS stop-only stop=1.50xATR screening (104th)", 0.0346),
+    ("IBS stop-only stop=2.00xATR screening (104th)", 0.0440),
+    ("IBS stop-only stop=0.75xATR survivorship-stress (104th)", 0.0187),
+    ("IBS stop-only stop=0.50xATR survivorship-stress (104th)", 0.0053),
+    ("IBS stop-only stop=0.75xATR UNIVERSE_B (104th)", 0.3591),
+    ("IBS stop-only stop=0.50xATR UNIVERSE_B (104th)", 0.3531),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number

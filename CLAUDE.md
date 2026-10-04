@@ -7017,3 +7017,221 @@ Sourced from a background forums/niche-source research pass (not this project's 
 **Independent code-review findings and fix status (3 total, before this write-up).** FIXED: (1) the pre-registration docstring claimed "8 of 70 compiled events" excluded, but the actual `EVENTS` list has 61 rows (61+8=69, not 70) - a wrong round number in the draft text, not a data error; corrected to the exact reconciling count. (2) `HORIZONS`/`DRAWS`/`COST_RT` were redefined locally with values copied from `probe_bulk_deals_signal.py` instead of imported, risking silent drift if that module's cost assumption is ever revised (this project's own history shows transaction-cost estimates have been revisited before, Entry 73); now imported directly. (3) a stale test comment referencing a "GRASIM: DELETE 2010-10-01" event that doesn't exist in the data (leftover from an earlier draft) was corrected to describe what the adjacent assert actually checks.
 
 **Net verdict.** Ninety-first mechanism, and - like the Hundredth entry before it - a genuinely new signal FAMILY (forced flow, not price/volume/OI/calendar/disclosed-trade) tested cleanly and rejected rather than left unexamined. 8 p-values registered in `multiple_comparisons.py` (honest family now 482 registered + 484 unregistered scan cells = m=966, Bonferroni threshold 0.00005; the closest cell, ADD h=10 at p=0.095, is nowhere near it). 279 tests pass (3 new, `tests/test_probe_nifty_reconstitution.py`, on top of the Zweig entry's 276). **91 mechanisms tested; IBS rotation remains the sole standing finding; nothing is declared tradable.**
+
+
+## Hundred-and-third: does an ATR-based stop/target during the hold improve IBS rotation? It cuts drawdown a lot, costs more return than it saves, and only one grid cell comes out ahead on Calmar
+
+Requested check: whether adding the kind of per-trade ATR stop-loss/take-profit this project uses
+throughout its single-instrument daily strategies (RSI-2, Squeeze, MACD, SuperTrend, DMI/ADX, SAR
+— all size an ATR-scaled stop at entry) would improve IBS rotation, this project's sole standing
+finding, which currently has NO intra-month exit condition at all: a pick is held from the lag-1
+entry fill straight through to the lag-1 exit fill at the next month-end, no matter what happens
+to the stock in between.
+
+Added `compute_atr()` (vectorized per-stock ATR, the same plain-rolling-mean convention
+`indicators.average_true_range` and SuperTrend's own ATR already use, not Wilder's exponential
+smoothing) and an opt-in `atr`/`stop_mult`/`target_mult` triple to `probe_reversal_rotation.py`'s
+existing `simulate()` (default `None`, byte-for-byte unchanged behavior when omitted — verified by
+rerunning the file's own `--validate` baseline). When set, each pick's stop/target is sized off
+ITS OWN ATR as of the ranking date (no lookahead, same convention as every other ATR-sized stop
+in this project), then checked day-by-day from the entry fill through the scheduled exit: a low
+piercing the stop or a high clearing the target exits early at that trigger price (stop wins a
+same-day tie, this project's established adverse-first convention); a pick that never triggers
+exits at the scheduled month-end close exactly as before. Pre-registered grid (mirroring the
+R-multiple ranges this project's other ATR-stopped strategies already use — RSI-2's
+`stop_atr_multiple=3.0`, 3-bar breakout's `target_r_multiple=2.5`): `stop_mult` in {1.0, 1.5, 2.0}
+x `target_mult` in {2.0, 3.0, 4.0}, IBS(5), top_k=5, lag=1, the family's own 52-stock
+`WIDE_UNIVERSE`, 1,500-seed same-stop/target random-portfolio control. `--atr-stop` in
+`probe_reversal_rotation.py`.
+
+**Baseline (no stop/target, this run's fresh data pull): 19.60%/yr, max drawdown 39.5%** — in line
+with the Fifty-ninth entry's own ~20%/yr lag-1 figure, small drift only from the usual
+yfinance-snapshot variance already documented throughout this file.
+
+**Every one of the 9 cells returns LESS than the baseline — a tight stop clips the bounce, not
+just the downside.** Full grid:
+
+| stop | target=2.0 | target=3.0 | target=4.0 |
+|---|---|---|---|
+| 1.0xATR | 6.05%/yr, DD 21.9%, Calmar 0.28 | 7.92%/yr, DD 15.1%, Calmar 0.52 | **10.16%/yr, DD 13.1%, Calmar 0.78** |
+| 1.5xATR | 5.42%/yr, DD 23.2%, Calmar 0.23 | 7.51%/yr, DD 19.6%, Calmar 0.38 | 10.91%/yr, DD 20.3%, Calmar 0.54 |
+| 2.0xATR | 5.31%/yr, DD 20.3%, Calmar 0.26 | 7.60%/yr, DD 25.1%, Calmar 0.30 | 11.14%/yr, DD 25.8%, Calmar 0.43 |
+
+(Baseline Calmar: 19.60/39.5 = 0.50.) Drawdown drops hard everywhere (13-26% vs 39.5%), but return
+drops harder in every cell except one. **Only `stop=1.0xATR, target=4.0xATR` beats the baseline's
+own Calmar** (0.78 vs 0.50) — a real, if modest, risk-adjusted improvement: a TIGHT stop paired
+with a WIDE target (4:1 reward:risk) gives up about half the raw return (10.16% vs 19.60%) for
+two-thirds less drawdown (13.1% vs 39.5%). That cell's quarters are also clean — all 4 positive
+(+8%/+64%/+40%/+5%), no decay — and both walk-forward halves are strongly positive (+65%/+58%).
+Every cell still beats its own same-stop random-portfolio control (p=0.006-0.11, not corrected for
+multiple comparisons, consistent with this being an exploratory check rather than a fully
+registered family), meaning the underlying stock-selection edge over random survives the stop/
+target overlay — it's being diluted by the stop mechanics, not erased by them.
+
+**Why a stop mostly hurts here, consistent with this project's own prior finding on the same
+question for a different strategy**: the Eleventh entry already found that bolting an ATR trailing
+STOP (not even a hard stop-and-reverse) onto RSI-2's own exit rule "actively hurts, doesn't help,"
+because RSI-2's own exit already functions as a profit target tuned to its mechanism. IBS rotation's
+picks are specifically stocks that just closed near their own low — exactly the volatility profile
+most likely to breach a 1-2xATR stop in the days immediately after entry, before the Fifty-ninth/
+Sixty-sixth entries' own documented bounce (which accrues mostly in the first 5-10 trading days)
+has time to complete. A tight stop doesn't protect against a thesis that's wrong; on this specific
+entry signal it mostly cuts off the bounce mid-flight.
+
+**Net verdict.** Not a new mechanism (an exit-overlay test on the standing finding, same category
+as the Eleventh entry's RSI-2 profit-booking overlay and the Forty-sixth/Forty-seventh entries' ETF
+beta hedge) — no count change. A per-trade ATR stop/target is a real, usable lever for cutting IBS
+rotation's drawdown, but it costs more return than it saves at every setting except one (tight stop,
+wide target), and even that cell's Calmar gain (0.50 -> 0.78) is smaller than the half-hedge
+overlay's own (0.51 -> ~1.0-1.1, Sixty-first entry) — the NIFTY trend gate and the NIFTYBEES half-
+hedge both remain better-corroborated risk-reduction options on top of this project's sole standing
+finding than an ATR stop/target is. Not registered in `multiple_comparisons.py` (exploratory, not a
+formally pre-registered significance claim) and not run through quarter-split/perturbation/
+survivorship-stress beyond what's shown above — a deeper pass would only be worth it if this project
+decides to actually pursue the one-good-cell (1.0xATR/4.0xATR) further. 279 tests pass (unchanged —
+additive, default-off parameters, verified against the file's own `--validate` baseline). **IBS
+rotation remains the sole standing finding; nothing is declared tradable.**
+
+**Follow-up on the same cell: quarter-split detail and a perturbation sweep (`--atr-stop-detail`,
+`--atr-stop-perturb`).** Quarter-split (annualized per ~2.5y chunk, with its own random-portfolio
+control, same stop/target applied to both): **Q1 +4.77%/yr (random -0.0%, p=0.16); Q2 +16.94%/yr
+(random +62.3%, p=0.72 — a strong bull quarter where random picks did even better, so the edge
+isn't distinguishable from beta here); Q3 +14.26%/yr (random +14.6%, p=0.03); Q4 +5.07%/yr (random
+-8.4%, p=0.03).** All 4 quarters positive — no decay, and Q4 (the most recent, most relevant
+window) clears its random control the most cleanly of any quarter. Q2 is the one weak link: not a
+loss, just not distinguishable from random stock-picking in a quarter strong enough that almost
+any basket worked.
+
+**Perturbation (stop_mult in {0.75, 1.0, 1.25, 1.5} x target_mult in {3.0, 3.5, 4.0, 4.5, 5.0}, 20
+cells): smooth and monotonic everywhere, zero walk-forward sign flips — real robustness, not a
+single-point-fit.** Return and Calmar both rise as the target widens at every stop setting tested
+(e.g. stop=1.0: 7.92%/13.1%DD/Calmar 0.53 at target=3.0 climbing to 12.45%/14%DD/Calmar 0.91 at
+target=5.0) — no cliff anywhere in the grid. **This also means (1.0xATR, 4.0xATR) is not a local
+peak — it sits partway up a ridge the pre-registered grid's own edge (target=5.0) keeps climbing**;
+the best Calmar in this sweep is actually stop=1.0xATR/target=5.0xATR (0.91), not the originally
+flagged cell. Consistent with the earlier entry's own read: a tight stop with a wide enough target
+converges toward "barely constrain the upside, just cap the downside," approaching the no-stop
+baseline's return as the target widens further — the grid wasn't swept wide enough to find where
+(if anywhere) that ridge turns over, since this was a bounded, pre-registered check rather than an
+open-ended optimization.
+
+**Net addition.** The flagged cell is robust (smooth neighborhood, no decay, no cliff) but was an
+arbitrary point on a monotonic surface, not a validated optimum — per this project's own standing
+practice (the Fifteenth/Seventeenth/Thirty-fourth entries' repeated warning against trusting a
+result that "peaks suspiciously close to the exact default"), this is the opposite problem: nothing
+peaks at all within the tested range, which argues against over-interpreting this exact combination
+as special. If this line is pursued further, the honest next step is widening the target_mult axis
+past 5.0 to find where the curve actually turns over (or confirm it doesn't within any sane range,
+which would mean the "stop/target" framing is doing less work than a plain wide stop alone would).
+Not done here — out of scope for a single follow-up check. **IBS rotation remains the sole standing
+finding; nothing is declared tradable.**
+
+
+## Hundred-and-fourth: full-rigor pass on the ATR-stop-only variant — robust and significant on the
+universe it was found on, decisively fails cross-universe replication
+
+Direct follow-up requested on the Hundred-and-third entry's own finding that the target leg does
+almost no work — this entry puts the simplified ATR-STOP-ONLY rule (target effectively disabled,
+`STOP_ONLY_TARGET=1000`) through this project's full standing checklist rather than treating the
+earlier screens as sufficient: (1) walk-forward + 1,500-seed significance per cell, (2) quarter-
+split detail, (3) survivorship stress (the Fortieth entry's 4 real blowups, 56 stocks), (4) cross-
+universe replication (`UNIVERSE_B`, 54 different NSE names, zero overlap with `WIDE_UNIVERSE`) — a
+candidate only counts as a real survivor if it clears ALL four, the same standard this project has
+already applied to SuperTrend's `CL=F`, IBS's own FX retest, and 52-week-high's widening (all of
+which looked clean on the first screen and failed on a later one). `--stop-only-rigor` in
+`probe_reversal_rotation.py`. Pre-registered grid: `stop_mult` in {0.5, 0.75, 1.0, 1.25, 1.5, 2.0},
+IBS(5), top_k=5, lag=1.
+
+**(1) Screening, base 52-stock universe: all 6 cells pass cleanly.** Baseline (no stop): 19.60%/yr,
+39.5% drawdown, Calmar 0.50. Every stop level is walk-forward CONSISTENT and beats its own
+same-stop random-portfolio control at uncorrected p<0.05:
+
+| stop | return/yr | maxDD | Calmar | p |
+|---|---|---|---|---|
+| 0.50xATR | 10.46% | 10.6% | 0.98 | 0.0053 |
+| **0.75xATR** | **12.28%** | **11.6%** | **1.06** | 0.0220 |
+| 1.00xATR | 13.59% | 14.9% | 0.91 | 0.0213 |
+| 1.25xATR | 15.53% | 18.7% | 0.83 | 0.0180 |
+| 1.50xATR | 14.98% | 22.0% | 0.68 | 0.0346 |
+| 2.00xATR | 15.20% | 27.3% | 0.56 | 0.0440 |
+
+Smooth, monotonic Calmar decline as the stop widens — no cliffs, confirming the Hundred-and-third
+entry's own perturbation finding holds on this wider grid too. Best two by Calmar: 0.75xATR (1.06)
+and 0.50xATR (0.98).
+
+**(2) Quarter-split detail on the top 2: thin but not decaying.** Both cells are positive in all 4
+quarters (no decay), but only Q3 individually clears an uncorrected 0.05 against its own random
+control for both cells (p=0.0100, 0.0133); Q4 is significant for stop=0.50 (p=0.0199, random mean
+-10.3% vs the strategy's own +2.5%/yr) but not for stop=0.75 (p=0.1163, still positive at +0.65%/yr
+against random's -9.5%). Q1/Q2 don't clear 0.05 for either cell — Q2 especially, where even random
+stock-picking returned ~50-66%/yr in that bull stretch. Consistent with the overall screening p's:
+real on average, not uniformly significant quarter-by-quarter.
+
+**(3) Survivorship stress: holds up, even improves.** On the 56-stock blowup-stress universe
+(baseline no-stop: 21.86%/yr, 36.2% DD): stop=0.75xATR reaches 14.39%/yr at 13.0% DD, **Calmar 1.11**
+(better than the clean universe's 1.06), still CONSISTENT, p=0.0187. stop=0.50xATR: 13.57%/yr,
+15.7% DD, Calmar 0.87, CONSISTENT, p=0.0053. Same "harvests the bounce rather than holding through
+the collapse" signature already documented for plain IBS rotation (Fortieth entry) — the stop
+overlay doesn't break that property.
+
+**(4) Cross-universe replication: fails decisively.** On `UNIVERSE_B` (baseline no-stop: 16.02%/yr,
+37.0% DD, Calmar 0.43 — already a weaker universe than `WIDE_UNIVERSE` even unstopped): **stop=0.75xATR
+collapses to 5.47%/yr at 27.2% DD, Calmar 0.20, walk-forward INCONSISTENT** (first half +70%,
+second half ~0%), **Q4 is NEGATIVE (-27%)**, p=0.3591 (not significant — worse than most random
+draws). stop=0.50xATR: 4.66%/yr, Calmar 0.20, also INCONSISTENT, Q4 -24%, p=0.3531. The direction
+of the effect reverses on this universe: on `WIDE_UNIVERSE` the stop overlay roughly doubled
+Calmar (0.50 -> 1.06); on `UNIVERSE_B` it HALVES it (0.43 -> 0.20) relative to that universe's own
+unstopped baseline.
+
+**Net verdict.** Exactly the pattern this project has learned to require a retest for and has seen
+fail before (SuperTrend's `CL=F`, the Eighteenth entry's retest; IBS's own FX extension, the
+Twenty-fifth entry) — a result that is smooth, significant, and survivorship-robust on the one
+universe it was found on, and falls apart (inconsistent, Q4-negative, not significant) the moment
+it's asked to generalize to a different, equally real, equally Kite-tradable stock set. The
+ATR-stop-only overlay is **not confirmed** — it stays a universe-specific curiosity, not a
+validated risk-reduction lever, which also means the NIFTY trend gate and the NIFTYBEES half-hedge
+(both independently corroborated across more than one check in earlier entries) remain the better-
+evidenced options if a drawdown overlay is wanted on top of IBS rotation. 10 p-values registered in
+`multiple_comparisons.py` (quarter-level p's, 8 cells, added to `UNREGISTERED_SCAN_CELLS` instead,
+same convention as the Sixty-fourth entry's phase/anchor scan); honest family now 492 registered +
+492 unregistered = m=984, Bonferroni threshold 0.00005 — none of the 10 comes close, and the
+honest-family winners list is unchanged (still just the two S&P 500 index-gate drawdown rows). 279
+tests pass (no new logic needing a test — additive, default-off parameters built entirely from
+already-tested `simulate()`/`compute_atr()`). **IBS rotation remains the sole standing finding;
+nothing is declared tradable.**
+
+**Follow-up: widening target_mult to find where it actually turns over (`--atr-target-widen`).**
+Swept target_mult from 4.0 out to 1000 (effectively "stop-only, target never triggers") at
+stop=0.75/1.00/1.25xATR. **It does turn over — it doesn't climb forever.** Return and Calmar both
+rise sharply from target=4 to ~6-8, then FLATTEN, converging to the stop-only asymptote by
+target~20-30 (target=30 and target=1000 give identical numbers at every stop level, confirming the
+target has stopped mattering well before 1000). All cells remain walk-forward consistent — no sign
+flips anywhere in the widened range either.
+
+| stop | best cell in this sweep | return | maxDD | Calmar |
+|---|---|---|---|---|
+| 0.75xATR | target=8 | 12.45%/yr | 12% | **1.07** |
+| 1.00xATR | target=6 | 12.87%/yr | 13% | 0.96 |
+| 1.25xATR | target=6 | 15.19%/yr | 17% | 0.88 |
+
+The actual Calmar peak across this wider sweep is **stop=0.75xATR, target~8xATR (Calmar 1.07)** —
+better than both the originally flagged (1.0, 4.0) cell (0.77) and the first perturbation sweep's
+edge-of-grid "best" (1.0, 5.0, Calmar 0.91). Past target~10-15, widening the target further buys
+nothing: the position almost never actually hits a target that wide before either the stop fires
+or the month-end exit arrives, so performance flatlines at essentially "stop-only" — e.g. at
+stop=1.0xATR the stop-only variant nets 13.59%/yr at 15% drawdown (Calmar 0.91), only modestly below
+the best target=6 cell (12.87%/yr... note non-monotonic: actually target=8 edges target=6 slightly
+higher, 13.76%/yr Calmar 0.93 — the true peak at stop=1.0 is ~target=6-8, essentially tied).
+
+**Net reading.** The target_mult axis has a real, moderate interior optimum around 6-8xATR (not an
+unbounded ridge, correcting the previous follow-up's open question) — the earlier (1.0, 4.0) and
+(1.0, 5.0) cells were both short of it, not past it. The practical takeaway is blunter than the
+exact peak location, though: **almost all of the Calmar improvement over the no-stop baseline comes
+from the STOP, not the target** — once the target is wide enough to rarely fire (>=15xATR), results
+are statistically indistinguishable from a tight ATR stop with no profit target at all, and that
+"stop-only" variant already captures most of the gain (Calmar 0.83-1.07 across the three stop
+levels tested, vs the original-grid's best of 0.77-0.91). A simpler, one-parameter "tight stop, let
+it run to month-end or stop out, no separate target" rule would likely do about as well as the
+two-parameter version this check set out to tune — worth remembering before adding a second knob to
+a risk overlay without first checking whether the first one is doing all the work. **IBS rotation
+remains the sole standing finding; nothing is declared tradable.**
