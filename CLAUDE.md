@@ -7126,6 +7126,42 @@ which would mean the "stop/target" framing is doing less work than a plain wide 
 Not done here — out of scope for a single follow-up check. **IBS rotation remains the sole standing
 finding; nothing is declared tradable.**
 
+**Follow-up: widening target_mult to find where it actually turns over (`--atr-target-widen`).**
+Swept target_mult from 4.0 out to 1000 (effectively "stop-only, target never triggers") at
+stop=0.75/1.00/1.25xATR. **It does turn over — it doesn't climb forever.** Return and Calmar both
+rise sharply from target=4 to ~6-8, then FLATTEN, converging to the stop-only asymptote by
+target~20-30 (target=30 and target=1000 give identical numbers at every stop level, confirming the
+target has stopped mattering well before 1000). All cells remain walk-forward consistent — no sign
+flips anywhere in the widened range either.
+
+| stop | best cell in this sweep | return | maxDD | Calmar |
+|---|---|---|---|---|
+| 0.75xATR | target=8 | 12.45%/yr | 12% | **1.07** |
+| 1.00xATR | target=6 | 12.87%/yr | 13% | 0.96 |
+| 1.25xATR | target=6 | 15.19%/yr | 17% | 0.88 |
+
+The actual Calmar peak across this wider sweep is **stop=0.75xATR, target~8xATR (Calmar 1.07)** —
+better than both the originally flagged (1.0, 4.0) cell (0.77) and the first perturbation sweep's
+edge-of-grid "best" (1.0, 5.0, Calmar 0.91). Past target~10-15, widening the target further buys
+nothing: the position almost never actually hits a target that wide before either the stop fires
+or the month-end exit arrives, so performance flatlines at essentially "stop-only" — e.g. at
+stop=1.0xATR the stop-only variant nets 13.59%/yr at 15% drawdown (Calmar 0.91), only modestly below
+the best target=6 cell (12.87%/yr... note non-monotonic: actually target=8 edges target=6 slightly
+higher, 13.76%/yr Calmar 0.93 — the true peak at stop=1.0 is ~target=6-8, essentially tied).
+
+**Net reading.** The target_mult axis has a real, moderate interior optimum around 6-8xATR (not an
+unbounded ridge, correcting the previous follow-up's open question) — the earlier (1.0, 4.0) and
+(1.0, 5.0) cells were both short of it, not past it. The practical takeaway is blunter than the
+exact peak location, though: **almost all of the Calmar improvement over the no-stop baseline comes
+from the STOP, not the target** — once the target is wide enough to rarely fire (>=15xATR), results
+are statistically indistinguishable from a tight ATR stop with no profit target at all, and that
+"stop-only" variant already captures most of the gain (Calmar 0.83-1.07 across the three stop
+levels tested, vs the original-grid's best of 0.77-0.91). A simpler, one-parameter "tight stop, let
+it run to month-end or stop out, no separate target" rule would likely do about as well as the
+two-parameter version this check set out to tune — worth remembering before adding a second knob to
+a risk overlay without first checking whether the first one is doing all the work. **IBS rotation
+remains the sole standing finding; nothing is declared tradable.**
+
 
 ## Hundred-and-fourth: full-rigor pass on the ATR-stop-only variant — robust and significant on the
 universe it was found on, decisively fails cross-universe replication
@@ -7200,38 +7236,86 @@ tests pass (no new logic needing a test — additive, default-off parameters bui
 already-tested `simulate()`/`compute_atr()`). **IBS rotation remains the sole standing finding;
 nothing is declared tradable.**
 
-**Follow-up: widening target_mult to find where it actually turns over (`--atr-target-widen`).**
-Swept target_mult from 4.0 out to 1000 (effectively "stop-only, target never triggers") at
-stop=0.75/1.00/1.25xATR. **It does turn over — it doesn't climb forever.** Return and Calmar both
-rise sharply from target=4 to ~6-8, then FLATTEN, converging to the stop-only asymptote by
-target~20-30 (target=30 and target=1000 give identical numbers at every stop level, confirming the
-target has stopped mattering well before 1000). All cells remain walk-forward consistent — no sign
-flips anywhere in the widened range either.
 
-| stop | best cell in this sweep | return | maxDD | Calmar |
-|---|---|---|---|---|
-| 0.75xATR | target=8 | 12.45%/yr | 12% | **1.07** |
-| 1.00xATR | target=6 | 12.87%/yr | 13% | 0.96 |
-| 1.25xATR | target=6 | 15.19%/yr | 17% | 0.88 |
+## Hundred-and-fifth: full-rigor pass on the NIFTY SMA trend gate — the drawdown effect holds
+directionally but loses almost all its significance on a second universe, and the honest
+Bonferroni family has now grown past its own best surviving finding's resolution floor
 
-The actual Calmar peak across this wider sweep is **stop=0.75xATR, target~8xATR (Calmar 1.07)** —
-better than both the originally flagged (1.0, 4.0) cell (0.77) and the first perturbation sweep's
-edge-of-grid "best" (1.0, 5.0, Calmar 0.91). Past target~10-15, widening the target further buys
-nothing: the position almost never actually hits a target that wide before either the stop fires
-or the month-end exit arrives, so performance flatlines at essentially "stop-only" — e.g. at
-stop=1.0xATR the stop-only variant nets 13.59%/yr at 15% drawdown (Calmar 0.91), only modestly below
-the best target=6 cell (12.87%/yr... note non-monotonic: actually target=8 edges target=6 slightly
-higher, 13.76%/yr Calmar 0.93 — the true peak at stop=1.0 is ~target=6-8, essentially tied).
+Direct follow-up to the Hundred-and-fourth entry: the NIFTY trend gate (Sixty-first/Seventy-sixth
+entries) was named there as the "better-evidenced" alternative to the ATR-stop overlay, but it had
+never actually been put through the one check that just sank the ATR-stop variant — cross-universe
+replication on `UNIVERSE_B` (54 different NSE names). This entry reruns the full battery (screening,
+quarter-split detail, survivorship stress, cross-universe replication) on the gate fresh, in one
+consistent pass, rather than trusting the earlier entries' numbers (run on slightly different code/
+data snapshots) at face value. `--gate-rigor` in `probe_reversal_rotation.py`; pre-registered grid:
+SMA in {100, 150, 200}, IBS(5), top_k=5, lag=1.
 
-**Net reading.** The target_mult axis has a real, moderate interior optimum around 6-8xATR (not an
-unbounded ridge, correcting the previous follow-up's open question) — the earlier (1.0, 4.0) and
-(1.0, 5.0) cells were both short of it, not past it. The practical takeaway is blunter than the
-exact peak location, though: **almost all of the Calmar improvement over the no-stop baseline comes
-from the STOP, not the target** — once the target is wide enough to rarely fire (>=15xATR), results
-are statistically indistinguishable from a tight ATR stop with no profit target at all, and that
-"stop-only" variant already captures most of the gain (Calmar 0.83-1.07 across the three stop
-levels tested, vs the original-grid's best of 0.77-0.91). A simpler, one-parameter "tight stop, let
-it run to month-end or stop out, no separate target" rule would likely do about as well as the
-two-parameter version this check set out to tune — worth remembering before adding a second knob to
-a risk overlay without first checking whether the first one is doing all the work. **IBS rotation
+**(1) Screening, base 52-stock universe — Calmar roughly doubles, but the random-control p-values
+are weaker than the earlier entries' own headline numbers.** Baseline (ungated): 19.60%/yr, 39.5%
+drawdown, Calmar 0.50.
+
+| SMA | return/yr | maxDD | Calmar | p(return) | p(drawdown) |
+|---|---|---|---|---|---|
+| 100 | 15.34% | 14.3% | 1.08 | 0.268 | 0.0426 |
+| 150 | 15.44% | 14.8% | 1.04 | 0.317 | 0.0420 |
+| 200 | 15.47% | 17.8% | 0.87 | 0.371 | 0.0806 |
+
+Return never clears even an uncorrected 0.05 (confirming the Seventy-sixth entry's own "the gate
+does not time returns better than random months" on NIFTY specifically) — the return numbers above
+are indistinguishable from randomly picking the same number of off-months. Drawdown is the real
+claim, and on THIS fresh run it's thinner than previously reported: SMA100/150 sit right at
+p≈0.042-0.043 (barely under 0.05), SMA200 misses (p=0.081). Both halves are consistent and all
+quarters positive for every SMA length — no decay, matching earlier entries.
+
+**(2) Quarter-split detail on the top 2 (SMA100, SMA150): no individual quarter is significant.**
+Every one of the 8 quarter-cells (4 quarters x 2 SMA lengths) has p in the 0.19-0.82 range against
+its own random-off-months control — weaker than IBS rotation's or the ATR-stop line's own
+quarter-level results, which had at least one or two quarters individually clearing an uncorrected
+0.05. The drawdown benefit, such as it is, isn't concentrated in — or absent from — any particular
+quarter; it's a diffuse, whole-period effect too thin to localize.
+
+**(3) Survivorship stress (4 real blowups, 56 stocks): holds up, SMA150 improves.** SMA100: 18.71%/yr,
+20.8% DD, Calmar 0.90 (down from the clean universe's 1.08), p(return)=0.179, p(DD)=0.134 — weaker
+than the base screen. SMA150: 19.52%/yr, 14.8% DD, **Calmar 1.32** (up from 1.04), p(return)=0.177,
+p(DD)=**0.0173** — the single best drawdown p-value in this whole entry, and consistent with the
+Sixty-first entry's own earlier survivorship-stress finding that SMA150 is the more robust length
+under stress.
+
+**(4) Cross-universe replication (UNIVERSE_B): the Calmar advantage reverses.** `UNIVERSE_B`'s own
+ungated baseline: 16.02%/yr, 37.0% DD, Calmar 0.43. Gated: SMA100 10.45%/yr, 30.8% DD, **Calmar
+0.34** (worse than ungated); SMA150 12.11%/yr, 31.5% DD, **Calmar 0.38** (also worse than ungated).
+Both walk-forward halves stay positive (CONSISTENT, unlike the ATR-stop line's INCONSISTENT flip —
+this failure is milder in kind) but neither the return nor the drawdown effect is distinguishable
+from random on this universe (p(return) 0.41-0.51, p(DD) 0.37-0.38) — the SAME direction of failure
+the ATR-stop-only variant showed, just less dramatic: on the universe it was found on, the gate
+improves risk-adjusted return; on an equally real, disjoint 54-stock universe, applying it makes
+things slightly worse, and that difference is not statistically real either way.
+
+**A side effect of registering these 14 p-values, worth recording honestly rather than glossing
+over: the honest family has now grown large enough that this project's own best-ever surviving
+finding no longer clears its corrected bar.** The S&P 500 index-gate drawdown rows (Sixty-second
+entry, 20,000-draw control) were registered at the exact resolution floor, `0.00005` — previously
+just under the Bonferroni threshold (0.05/984 ≈ 0.0000508) and so the only rows ever to pass. Adding
+this entry's 14 rows pushes the honest family to m=1006, Bonferroni threshold ≈0.0000497 — strictly
+BELOW the floor value those rows are stuck at. **`multiple_comparisons.py`'s honest-family winners
+list is now empty.** This isn't new evidence against that finding (nothing about the S&P result
+changed), it's a mechanical consequence of a resolution-floor value losing a race against a growing
+denominator — but it's the first time in this project's history that literally nothing survives the
+honest Bonferroni bar, and it's worth remembering before citing "the S&P index-gate rows are the one
+thing that passes" again without rechecking the current m.
+
+**Net verdict.** Same shape of result as the Hundred-and-fourth entry's ATR-stop overlay, one notch
+milder: real and consistent on the universe it was discovered on (Calmar roughly doubles, quarters
+don't decay), but the statistical case was already thin (return never significant, drawdown only
+borderline) and the one check that matters most — an independent stock universe — shows the
+drawdown advantage reversing rather than replicating. Per this project's own standard, **not
+confirmed** as a cross-market-robust overlay for IBS rotation, though it fails more gently than the
+ATR-stop line did (directionally consistent rather than flipping sign). Of the two drawdown overlays
+tested this way so far, neither earns unqualified trust; the NIFTYBEES half-hedge (Forty-sixth/
+Forty-seventh entries, itself not yet retested on UNIVERSE_B either) is the one remaining
+candidate worth the same treatment if this line continues. 14 p-values registered in
+`multiple_comparisons.py` (quarter-level cells, 8, added to `UNREGISTERED_SCAN_CELLS` instead, same
+convention as the Hundred-and-fourth entry); honest family now 506 registered + 500 unregistered =
+m=1006, Bonferroni threshold 0.00005 — **no row currently passes**. 279 tests pass (no new logic
+needing a test — additive, reuses `simulate()`'s existing `gate=` parameter). **IBS rotation
 remains the sole standing finding; nothing is declared tradable.**

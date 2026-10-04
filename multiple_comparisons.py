@@ -106,7 +106,7 @@ IBS_ROTATION_PVALUES = [
 # Cells that were run and reported but never registered row-by-row: the Sixty-fourth entry's 84 phase/anchor scan
 # cells (21 fixed-step phases + 21 calendar anchors, x IBS(5) and rev(21)), plus the Eighty-first entry's 288-cell
 # industry scan, 12 monthly-average bond/gold robustness cells, and 30 Entry 82-84 robustness cells.
-UNREGISTERED_SCAN_CELLS = 84 + 288 + 12 + 30 + 64 + 6 + 8  # + Eighty-first: industry scan (288) + leaky bond/gold rows (12); + 82-84: spanning (8), reversal positive control (16), IBS-vs-I5 (6); + Eighty-fifth: OI1E/OI2E/PC2E/OI2X unregistered robustness variants (64); + Eighty-seventh: survivorship-stress rerun of the same 6 skew cells; + Hundred-and-fourth: quarter-level p's (4 quarters x 2 cells) for the ATR-stop-only variant
+UNREGISTERED_SCAN_CELLS = 84 + 288 + 12 + 30 + 64 + 6 + 8 + 8  # + Eighty-first: industry scan (288) + leaky bond/gold rows (12); + 82-84: spanning (8), reversal positive control (16), IBS-vs-I5 (6); + Eighty-fifth: OI1E/OI2E/PC2E/OI2X unregistered robustness variants (64); + Eighty-seventh: survivorship-stress rerun of the same 6 skew cells; + Hundred-and-fourth: quarter-level p's (4 quarters x 2 cells) for the ATR-stop-only variant; + Hundred-and-fifth: quarter-level p's (4 quarters x 2 SMA cells) for the NIFTY trend gate
 
 ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("RSI-2 rotation top_k=3 (Forty-second)", 0.1987),
@@ -700,6 +700,26 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("IBS stop-only stop=0.50xATR survivorship-stress (104th)", 0.0053),
     ("IBS stop-only stop=0.75xATR UNIVERSE_B (104th)", 0.3591),
     ("IBS stop-only stop=0.50xATR UNIVERSE_B (104th)", 0.3531),
+    # Hundred-and-fifth entry: full-rigor pass on the NIFTY SMA trend gate (Sixty-first/
+    # Seventy-sixth entries), the one check it had not yet been put through (cross-universe
+    # replication, UNIVERSE_B). Screening + survivorship stress rerun fresh alongside it for a
+    # single consistent writeup. Quarter-level p's (4 quarters x 2 SMA cells = 8) are NOT
+    # individually registered, same convention as the Hundred-and-fourth entry's ATR-stop
+    # quarter cells — counted in UNREGISTERED_SCAN_CELLS instead.
+    ("NIFTY gate SMA100 return, base universe (105th)", 0.268),
+    ("NIFTY gate SMA100 drawdown, base universe (105th)", 0.0426),
+    ("NIFTY gate SMA150 return, base universe (105th)", 0.317),
+    ("NIFTY gate SMA150 drawdown, base universe (105th)", 0.0420),
+    ("NIFTY gate SMA200 return, base universe (105th)", 0.371),
+    ("NIFTY gate SMA200 drawdown, base universe (105th)", 0.0806),
+    ("NIFTY gate SMA100 return, survivorship-stress (105th)", 0.1785),
+    ("NIFTY gate SMA100 drawdown, survivorship-stress (105th)", 0.1339),
+    ("NIFTY gate SMA150 return, survivorship-stress (105th)", 0.1772),
+    ("NIFTY gate SMA150 drawdown, survivorship-stress (105th)", 0.0173),
+    ("NIFTY gate SMA100 return, UNIVERSE_B (105th)", 0.5137),
+    ("NIFTY gate SMA100 drawdown, UNIVERSE_B (105th)", 0.3757),
+    ("NIFTY gate SMA150 return, UNIVERSE_B (105th)", 0.4097),
+    ("NIFTY gate SMA150 drawdown, UNIVERSE_B (105th)", 0.3691),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number
