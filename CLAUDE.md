@@ -7608,3 +7608,54 @@ market's naive p is anywhere close to 0.05 either. 279 tests pass (unchanged —
 script, no pytest file, per this project's own established convention; correctness checked via the
 script's own synthetic sanity check instead). **91 mechanisms tested; IBS rotation remains the sole
 standing finding; nothing is declared tradable.**
+
+
+## Hundred-and-tenth: the Arms Index (TRIN) — a strong, textbook-direction result on one
+universe that REVERSES SIGN, not just fails to replicate, on the other
+
+Continuing "apply the strategies in the book" with a second Aronson-adjacent construction: the
+Arms Index / TRIN (Richard Arms, 1967), one of the classic breadth-based contrarian timing tools
+in the technical-analysis literature the book audits. Genuinely different from the Hundred-and-
+first entry's Zweig Breadth Thrust: Zweig used advance/decline COUNT alone; TRIN divides the
+advance/decline count ratio by the advance/decline VOLUME ratio -- `(adv_n/dec_n) /
+(adv_vol/dec_vol)` -- asking whether the volume behind the day's advancers/decliners is
+proportionate to how many of them there are. This project has never combined cross-sectional
+volume with cross-sectional breadth before (Zweig's breadth was count-only; the Sixteenth/
+Eighty-third entries' volume signals were single-stock, never aggregated across a universe).
+
+`probe_trin_signal.py`: daily TRIN across both universes, smoothed over a trailing 10 days (the
+standard "10-day TRIN" practical convention -- raw single-day TRIN is far too noisy to read
+directly), tercile-split on the full history, tested against NIFTY's own forward return at h in
+{1, 5, 10, 21} trading days with a lag-1 fill, against a random-same-size-subset-of-days null
+(2,000 draws, the same shape used throughout the calendar-effect entries).
+
+**On WIDE_UNIVERSE, this looked like a genuinely strong, monotonic, textbook-direction result —
+exactly the kind of thing worth getting excited about before checking the second universe.** The
+HIGH-TRIN tercile (volume piling into the few declining names -- classic "oversold" reading)
+showed progressively stronger, more significant forward returns as the horizon lengthened: h=1
+p=0.2154, h=5 p=0.0380, h=10 p=0.0875, **h=21 p=0.0005** (mean forward return +1.362% vs the
+unconditional +0.870%, more than triple the low-TRIN bucket's +0.389%) -- the exact direction
+Arms' own published interpretation predicts, growing cleaner at longer horizons rather than
+noisier, which is usually a good sign.
+
+**On UNIVERSE_B, the result doesn't just fail to replicate — it flips sign.** There, it's the
+LOW-TRIN tercile that's significant at h=21 (p=0.0005, mean forward return +1.283%), while
+HIGH-TRIN -- the bucket that drove the entire WIDE_UNIVERSE finding -- is the WORST bucket on
+UNIVERSE_B (+0.335%, p=1.0000, meaning essentially every random subset of days beat it). This is
+a sharper disqualification than the Hundred-and-eighth entry's Ichimoku mirage (significant on
+one universe, null on the other): here the same construction, same thresholds, same horizons
+gives opposite-direction "significant" readings on the two universes. Whatever each universe's
+result is individually measuring, it isn't a shared, real TRIN-NIFTY relationship — a result this
+clean and this contradictory is close to the best evidence this project has produced yet that a
+single-universe backtest, however textbook-clean it looks, says nothing on its own.
+
+**Net verdict.** Second new signal family this session (breadth x volume, never combined before),
+both now closed: Zweig Breadth Thrust's own literal rule never fired (Hundred-and-first entry);
+TRIN fires constantly and looks real, in opposite directions depending on which 52-ish-stock NSE
+sample supplies the breadth. 24 p-values registered in `multiple_comparisons.py` (4 horizons x 3
+buckets x 2 universes, all registered for honesty regardless of which looked interesting before
+the cross-check); honest family now 577 registered + 508 unregistered = m=1085, Bonferroni
+threshold 0.00005 -- moot, since the point of this entry is the cross-universe contradiction, not
+any individual cell's significance. 279 tests pass (unchanged — standalone probe script, no
+pytest file, per this project's established convention). **91 mechanisms tested; IBS rotation
+remains the sole standing finding; nothing is declared tradable.**

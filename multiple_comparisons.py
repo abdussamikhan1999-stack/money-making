@@ -793,6 +793,36 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Filter rule x=5% Reality-Check-corrected, NIFTY (109th)", 0.5503),
     ("Filter rule x=25% naive, S&P 500 (109th)", 0.2072),
     ("Filter rule x=25% Reality-Check-corrected, S&P 500 (109th)", 0.3185),
+    # Hundred-and-tenth entry: Arms Index / TRIN, tested on both universes before trusting it.
+    # The high-TRIN tercile looked like a strong, monotonic, textbook-direction contrarian signal
+    # on WIDE_UNIVERSE (h=21 p=0.0005) and REVERSES SIGN on UNIVERSE_B (there it's the LOW-TRIN
+    # tercile that's significant at h=21, p=0.0005, while high-TRIN is the worst bucket, p=1.0) --
+    # not just a non-replication, an outright sign flip. All 24 cells (4 horizons x 3 buckets x
+    # 2 universes) registered for honesty.
+    ("TRIN h=1 low, WIDE_UNIVERSE (110th)", 0.7891),
+    ("TRIN h=1 mid, WIDE_UNIVERSE (110th)", 0.7386),
+    ("TRIN h=1 high, WIDE_UNIVERSE (110th)", 0.2154),
+    ("TRIN h=5 low, WIDE_UNIVERSE (110th)", 0.9815),
+    ("TRIN h=5 mid, WIDE_UNIVERSE (110th)", 0.7451),
+    ("TRIN h=5 high, WIDE_UNIVERSE (110th)", 0.0380),
+    ("TRIN h=10 low, WIDE_UNIVERSE (110th)", 0.9650),
+    ("TRIN h=10 mid, WIDE_UNIVERSE (110th)", 0.7601),
+    ("TRIN h=10 high, WIDE_UNIVERSE (110th)", 0.0875),
+    ("TRIN h=21 low, WIDE_UNIVERSE (110th)", 1.0000),
+    ("TRIN h=21 mid, WIDE_UNIVERSE (110th)", 0.9495),
+    ("TRIN h=21 high, WIDE_UNIVERSE (110th)", 0.0005),
+    ("TRIN h=1 low, UNIVERSE_B (110th)", 0.5497),
+    ("TRIN h=1 mid, UNIVERSE_B (110th)", 0.6912),
+    ("TRIN h=1 high, UNIVERSE_B (110th)", 0.8201),
+    ("TRIN h=5 low, UNIVERSE_B (110th)", 0.8991),
+    ("TRIN h=5 mid, UNIVERSE_B (110th)", 0.3848),
+    ("TRIN h=5 high, UNIVERSE_B (110th)", 0.8636),
+    ("TRIN h=10 low, UNIVERSE_B (110th)", 0.0410),
+    ("TRIN h=10 mid, UNIVERSE_B (110th)", 0.8861),
+    ("TRIN h=10 high, UNIVERSE_B (110th)", 0.9990),
+    ("TRIN h=21 low, UNIVERSE_B (110th)", 0.0005),
+    ("TRIN h=21 mid, UNIVERSE_B (110th)", 0.8896),
+    ("TRIN h=21 high, UNIVERSE_B (110th)", 1.0000),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number
