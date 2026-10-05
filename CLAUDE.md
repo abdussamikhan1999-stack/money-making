@@ -7548,3 +7548,63 @@ comes close, consistent with the rest of this project's ledger. 279 tests pass (
 logic needing a test beyond what `scores()`'s existing branches already exercise; the two new
 branches reuse `simulate()`'s already-tested machinery verbatim). **91 mechanisms tested; IBS
 rotation remains the sole standing finding; nothing is declared tradable.**
+
+
+## Hundred-and-ninth: Alexander's Filter Rule, tested with Aronson's own methodology — a
+block-bootstrap Reality-Check correction, built as new infrastructure, and a clean null on
+both markets even before the correction is applied
+
+Direct follow-up to "apply the strategies in the book": Aronson's "Evidence-Based Technical
+Analysis" isn't really a strategy cookbook — its core contribution is the METHODOLOGY for
+telling a real technical-rule edge from a data-mined one, specifically a bootstrap-based
+correction (the same idea as White's "Reality Check"/Hansen's SPA test, which the book cites) for
+the bias of searching a grid and reporting only the best cell. This project already has Bonferroni/
+Benjamini-Hochberg (`multiple_comparisons.py`) for correcting a family of ALREADY-COMPUTED
+p-values after the fact, but nothing that directly simulates "how good does the best-of-many-
+configs look under a null with no real exploitable structure" — which is a different, often less
+conservative (Bonferroni assumes independence; a bootstrap respects the grid's actual correlation
+structure) correction, and the one Aronson's own book is specifically about.
+
+**The rule**: Alexander's (1961) Filter Rule — long when price is x% above its own most recent
+trough (since it last went flat), flat when x% below its own most recent peak (since it last
+went long). One of the oldest technical rules academics have tested, predating everything else in
+this project's `probe_*.py` lineage by decades, and genuinely distinct from every trend-following
+construction already here (not a fixed-N-day channel like Donchian, not an ATR-ratchet band like
+SuperTrend, not a moving-average cross).
+
+**The correction**: `probe_filter_rule.py`'s block-bootstrap — resample 21-day blocks of the REAL
+daily-return series (with replacement) into a synthetic price path of the same length (preserves
+local, within-block serial dependence; destroys the specific long-range trend/cycle structure of
+the one real historical path), rerun the WHOLE pre-registered grid (x in {1,2,3,4,5,7.5,10,15,20,
+25}%) on every synthetic path, and track the single best cell's performance each draw. The actual
+best cell's percentile within that "best-of-grid under no real structure" distribution is the
+corrected p — by construction always at least as conservative as testing the chosen cell alone
+against its own null (the "naive" p also reported, for the contrast Aronson's book makes explicit).
+No lookahead: the filter state decided through `close[i]` fills at `close[i+1]` and only starts
+earning returns from `close[i+1]` onward, this project's standing lag-1 convention, verified by a
+synthetic all-up-then-reversal sanity check before any real number was trusted.
+
+**Result: a clean null on both markets, and the correction barely has to do any work because the
+NAIVE test already fails.** NIFTY (10y, 0.1%-per-leg ETF-level cost): best cell x=5% at 10.87%/yr,
+15.1% max drawdown — naive p=0.2598, Reality-Check-corrected p=0.5503. S&P 500 (20y): best cell
+x=25% at 10.32%/yr — naive p=0.2072, corrected p=0.3185. Neither market's single best grid cell
+clears even an uncorrected 0.05 tested alone, let alone once the search-over-10-configs bias is
+priced in. Descriptively, NIFTY's mid-range cells (x=4/5/7.5%) decay toward a flat or negative Q4
+(-3% to +3%) while S&P's equivalent cells show the opposite, strengthening into Q3/Q4 (+56% to
++161%) — neither pattern is statistically meaningful here since the underlying result never clears
+significance in the first place, but it's a reminder that "looks clean on quarter-split" and "beats
+a proper data-mining-bias-corrected null" are different bars, and this result fails the second one
+before the first one is even worth checking carefully.
+
+**Net verdict.** The book's actual contribution — applied directly rather than cherry-picking one
+of its cited rules — doesn't change this project's standing verdict (one of the oldest technical
+rules in the literature, tested honestly, is still a null here), but it adds a genuinely new,
+reusable correction tool (`block_bootstrap_price()`, a block-bootstrap Reality-Check harness
+generic enough to rerun on any future grid-searched single-instrument rule in this project, not
+just the filter rule) that this project's existing Bonferroni/BH machinery didn't cover. 4 p-values
+registered in `multiple_comparisons.py` (naive and corrected, both markets); honest family now 553
+registered + 508 unregistered = m=1061, Bonferroni threshold 0.00005 — moot here since neither
+market's naive p is anywhere close to 0.05 either. 279 tests pass (unchanged — a standalone probe
+script, no pytest file, per this project's own established convention; correctness checked via the
+script's own synthetic sanity check instead). **91 mechanisms tested; IBS rotation remains the sole
+standing finding; nothing is declared tradable.**

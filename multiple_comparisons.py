@@ -785,6 +785,14 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Ichimoku top_k=3, UNIVERSE_B (108th)", 0.0360),
     ("Ichimoku top_k=5, UNIVERSE_B (108th)", 0.0286),
     ("Ichimoku top_k=8, UNIVERSE_B (108th)", 0.0706),
+    # Hundred-and-ninth entry: Alexander's (1961) Filter Rule, plus a block-bootstrap Reality-
+    # Check-style correction (Aronson's own "Evidence-Based Technical Analysis" methodology) for
+    # the bias of picking the best of a 10-cell grid. Both the naive (best cell alone) and
+    # corrected (best-of-grid null) p-values are registered, on both markets.
+    ("Filter rule x=5% naive, NIFTY (109th)", 0.2598),
+    ("Filter rule x=5% Reality-Check-corrected, NIFTY (109th)", 0.5503),
+    ("Filter rule x=25% naive, S&P 500 (109th)", 0.2072),
+    ("Filter rule x=25% Reality-Check-corrected, S&P 500 (109th)", 0.3185),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number
