@@ -7319,3 +7319,88 @@ convention as the Hundred-and-fourth entry); honest family now 506 registered + 
 m=1006, Bonferroni threshold 0.00005 — **no row currently passes**. 279 tests pass (no new logic
 needing a test — additive, reuses `simulate()`'s existing `gate=` parameter). **IBS rotation
 remains the sole standing finding; nothing is declared tradable.**
+
+
+## Hundred-and-sixth: full-rigor pass on the NIFTYBEES half-hedge — never a Calmar win on either
+universe (consistent with what the Forty-sixth/Sixty-first entries already said), and the
+drawdown benefit itself doesn't clear significance on an independent universe
+
+Direct follow-up to the Hundred-and-fourth/fifth entries: the NIFTYBEES half-hedge (Forty-sixth/
+Forty-seventh entries) was the third drawdown overlay this project has tried on IBS rotation and
+the only one not yet put through the same four-check battery. Ported the hedge mechanism into
+`probe_reversal_rotation.py`'s already lag-corrected `simulate()` (a short NIFTYBEES-equivalent
+leg sized at `hedge_ratio x beta x capital`, rounded down to whole shares, same cost model as every
+stock leg) rather than reusing `probe_ibs_rotation_etf_hedge.py`'s older same-bar-fill pipeline —
+beta is now recomputed via `compute_beta_lag1()` from this file's own lag-1 monthly returns, not
+the un-lagged ones the original entries used, so the beta value differs slightly (1.063 here vs.
+1.143 originally) but the mechanism is identical. `--hedge-rigor` in `probe_reversal_rotation.py`;
+pre-registered grid (the Forty-seventh entry's own sweep): hedge_ratio in {0.25, 0.375, 0.5, 0.625,
+0.75}, IBS(5), top_k=5, lag=1.
+
+**Correcting a framing slip from the last two entries' chat responses first**: this project's own
+Sixty-first entry already stated plainly that the half-hedge's Calmar (0.50) was WORSE than the
+unhedged baseline's (0.58) — it was only ever sold as cutting absolute drawdown "by a third" at the
+cost of "keeping ~54% of the return," never as a risk-adjusted improvement. Calling it the
+"better-evidenced" overlay in the two prior turns overstated it; this entry's own numbers confirm
+the original, more modest framing rather than contradicting it.
+
+**(1) Screening, base 52-stock universe — Calmar is worse than unhedged at EVERY ratio tested, by
+construction, not by surprise.** Baseline (unhedged): 19.60%/yr, 39.5% drawdown, Calmar 0.50.
+
+| ratio | return/yr | maxDD | Calmar | p (vs random stock-picks, same hedge) |
+|---|---|---|---|---|
+| 0.25 | 14.92% | 32.8% | 0.45 | 0.0306 |
+| 0.375 | 12.54% | 29.5% | 0.43 | 0.0313 |
+| 0.50 | 10.14% | 27.4% | 0.37 | 0.0313 |
+| 0.625 | 7.73% | 29.2% | 0.26 | 0.0306 |
+| 0.75 | 5.30% | 31.1% | 0.17 | 0.0306 |
+
+Every ratio is walk-forward CONSISTENT, and the IBS stock-selection edge over random picking
+survives being run through the identical hedge at every ratio (p≈0.03 throughout — a different
+question than "does the hedge improve Calmar," which it doesn't: return falls faster than drawdown
+does, monotonically, as the hedge gets heavier). Best two by Calmar: 0.25 (0.45), 0.375 (0.43) —
+still both below the 0.50 baseline.
+
+**(2) Quarter-split on the top 2: same uneven shape as the other two overlays.** Q1/Q3 borderline
+(p≈0.06-0.15), Q2 not significant at all (random control earns far more in that bull stretch,
++55% vs the hedge's own +11-20%/yr), Q4 clears p<0.02 for both ratios (random control actually
+negative there, -2.6%/-5.5%, vs the hedge's own +12-14%/yr). No decay in raw terms — all 4 quarters
+positive for both ratios — just thin, concentrated significance.
+
+**(3) Survivorship stress (4 real blowups, 56 stocks): holds up, Calmar improves.** Beta recomputed
+fresh on the stress universe (1.123). ratio=0.25: 16.78%/yr, 30.1% DD, **Calmar 0.56** (up from the
+clean universe's 0.45); ratio=0.375: 14.21%/yr, 31.5% DD, Calmar 0.45 (up from 0.43). Both
+CONSISTENT, p=0.0127 (better than the base screen's 0.03) — the same bounce-harvesting-survives-
+stress signature already documented for IBS rotation and both other overlays.
+
+**(4) Cross-universe replication (UNIVERSE_B): degrades further, same direction, not a reversal.**
+Beta recomputed fresh (1.046). `UNIVERSE_B`'s own unhedged baseline: 16.02%/yr, 37.0% DD, Calmar
+0.43. Hedged: ratio=0.25 11.51%/yr, 35.2% DD, Calmar **0.33** (worse than Universe B's own unhedged
+baseline, same direction as the base universe's own result); ratio=0.375 9.22%/yr, 34.8% DD, Calmar
+0.27. Neither clears significance against random stock-picks under the same hedge (p=0.12-0.12,
+vs the base screen's p≈0.03) — weaker evidence the stock-selection edge survives this specific
+combination on this universe, though not inconsistent in sign (both halves stay positive, no flip).
+
+**Net verdict, and how this compares to the other two overlays.** This is actually the MOST
+internally consistent of the three drawdown overlays tested this way, precisely because it was
+never oversold: it reliably does the one thing it was ever claimed to do (cut absolute drawdown at
+a real cost to return and Calmar) on BOTH universes, in the SAME direction, rather than reversing
+sign the way the ATR-stop overlay did or flipping a borderline significance result the way the
+trend gate did. What doesn't hold up is the weaker claim implicit in treating it as "the better
+option" — the drawdown-vs-random-off-months style significance test was never run on the hedge
+itself in the original entries (there's no natural random-hedge-ratio null the way there was a
+random-off-months null for the gate), and the one significance test that IS meaningful here (does
+stock-picking still beat random under the hedge) is markedly weaker on `UNIVERSE_B` than on the
+discovery universe. **Still not confirmed as a validated edge-preserving overlay** — it's a real,
+consistent, but Calmar-negative drawdown-reduction tool, same as it was always described, now
+independently reconfirmed under lag-corrected machinery and a second universe. Of the three
+overlays this project has now tested with this battery (ATR-stop, NIFTY gate, NIFTYBEES half-
+hedge), none earns unqualified trust as a Calmar improvement; this one at least doesn't contradict
+itself across universes, which is a real (if modest) point in its favor over the other two. 9
+p-values registered in `multiple_comparisons.py` (quarter-level cells, 8, added to
+`UNREGISTERED_SCAN_CELLS` instead, same convention as the two prior entries); honest family now
+515 registered + 508 unregistered = m=1023, Bonferroni threshold 0.00005 — no row passes (unchanged
+from the Hundred-and-fifth entry's own finding that nothing currently clears the honest bar). 279
+tests pass (additive: `simulate()` gained an `etf=`/`hedge_ratio=`/`beta=` triple, default `None`,
+old behavior unchanged). **IBS rotation remains the sole standing finding; nothing is declared
+tradable.**

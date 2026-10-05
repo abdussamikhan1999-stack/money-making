@@ -131,7 +131,7 @@ def compute_atr(M, period=14):
 
 
 def simulate(M, S, top_k, lag, rng=None, capital=100_000.0, hs=None, hs_mult=1.0, gate=None, hold=None,
-             atr=None, stop_mult=None, target_mult=None):
+             atr=None, stop_mult=None, target_mult=None, etf=None, hedge_ratio=None, beta=None):
     """Long the top_k lowest-score names (random eligible names if rng given).
     hs: optional half-spread matrix (see corwin_schultz_half_spread); each pick pays
     ITS OWN half spread x hs_mult on both legs, so the asymmetry between
@@ -143,7 +143,16 @@ def simulate(M, S, top_k, lag, rng=None, capital=100_000.0, hs=None, hs_mult=1.0
     low breaches the stop AND its high clears the target, the stop takes priority
     (this project's established adverse-first-on-a-tie convention, matching
     backtest_daily.py's own day-path approximation). A pick that never triggers
-    either exits at the scheduled month-end/hold-day close exactly as before."""
+    either exits at the scheduled month-end/hold-day close exactly as before.
+
+    etf/hedge_ratio/beta (all default None, old behavior unchanged): a short
+    NIFTYBEES-equivalent leg sized at hedge_ratio x beta x current capital,
+    rounded down to whole shares at the lag-1 entry fill (the Forty-sixth/
+    Forty-seventh entries' ETF half-hedge, reimplemented here on top of this
+    file's already-lag-corrected machinery instead of probe_ibs_rotation_
+    etf_hedge.py's older same-bar-fill pipeline). Costed at the same COST_PCT
+    round-trip as every stock leg; skipped for a month if either fill price
+    is missing or the sized quantity rounds down to zero."""
     c = M["close"].to_numpy()
     use_stops = atr is not None and stop_mult is not None and target_mult is not None
     h = M["high"].to_numpy() if use_stops else None
@@ -151,6 +160,8 @@ def simulate(M, S, top_k, lag, rng=None, capital=100_000.0, hs=None, hs_mult=1.0
     atrv = atr.to_numpy() if use_stops else None
     sc = S.to_numpy()
     hsv = hs.to_numpy() if hs is not None else None
+    etfv = etf.to_numpy() if etf is not None else None
+    use_hedge = etfv is not None and hedge_ratio is not None and beta is not None
     me = M["me"]
     cap, peak, dd = capital, capital, 0.0
     months, at, spreads = [], [], []
@@ -193,6 +204,10 @@ def simulate(M, S, top_k, lag, rng=None, capital=100_000.0, hs=None, hs_mult=1.0
             else:
                 r = exit_px / entry_px - 1
             pnl += each * (r - 2 * COST_PCT / 100) - DP
+        if use_hedge and not (np.isnan(etfv[ea]) or np.isnan(etfv[eb])):
+            qty = int((hedge_ratio * beta * cap) // etfv[ea])
+            if qty > 0:
+                pnl += -qty * (etfv[eb] - etfv[ea]) - qty * etfv[ea] * (COST_PCT / 100) * 2
         cap += pnl
         peak = max(peak, cap)
         dd = max(dd, (peak - cap) / peak)
@@ -777,16 +792,58 @@ def stop_only_full_rigor(top_k=5, seeds=1500):
               f"quarters {[f'{q:+.0%}' for q in s['qs']]}, p={s['p']:.4f}")
 
 
+def align_to(M, x):
+    """Reindex a pandas Series with its OWN date index onto M's close index
+    (ffilled), so a non-stock series (NIFTY, an ETF) lines up position-for-
+    position with the integer indices (a, ea, eb, ...) every other function
+    in this file already uses. Shared by build_gate and the ETF-hedge helpers
+    below so the alignment logic can't drift between call sites."""
+    return x.reindex(M["close"].index.union(x.index)).ffill().reindex(M["close"].index)
+
+
 def build_gate(M, nifty_full, L):
     """Boolean risk-on array aligned to M's own calendar: NIFTY close > its own
     L-day SMA (full, pre-backtest history, so no SMA warm-up falls inside the
     window), known at the ranking close before the lag-1 fill. Shared by
     gate_test and gate_full_rigor so the gate definition can't drift between
     the two call sites."""
-    align = lambda x: x.reindex(M["close"].index.union(x.index)).ffill().reindex(M["close"].index)
-    nifty = align(nifty_full)
-    sma = align(nifty_full.rolling(L, min_periods=L).mean())
+    nifty = align_to(M, nifty_full)
+    sma = align_to(M, nifty_full.rolling(L, min_periods=L).mean())
     return np.where(sma.isna(), True, nifty > sma)  # (nifty > NaN) is False, so fillna would never fire
+
+
+def fetch_etf_series(period="10y", symbol="NIFTYBEES.NS"):
+    """NIFTYBEES.NS close as a plain pandas Series with its OWN date index —
+    the ETF half-hedge leg (Forty-sixth/Forty-seventh entries)."""
+    from data_yfinance import fetch_candles
+    candles = fetch_candles(symbol, "1d", period)
+    idx = pd.DatetimeIndex([c["date"].date() for c in candles])
+    return pd.Series([c["close"] for c in candles], index=idx)
+
+
+def compute_beta_lag1(M, S, top_k=5):
+    """Beta of the lag-1 long-only IBS(5) rotation's own monthly returns
+    against NIFTY's own monthly returns over the same window — the same
+    regression (statistics.linear_regression) the Forty-fifth/Forty-sixth
+    entries used, computed here from this file's already-lag-corrected
+    monthly return series instead of the older un-lagged
+    probe_ibs_rotation_hedged.py pipeline."""
+    import statistics
+    import probe_macro_analog as pm
+    nifty = align_to(M, pm.load()["nifty"].dropna()).to_numpy()
+    r = simulate(M, S, top_k, 1)
+    me = M["me"]
+    lo_idx = {a: i for i, a in enumerate(r["at"])}
+    pairs = []
+    for a, b in zip(me[:-1], me[1:]):
+        if a not in lo_idx or b + 1 >= len(nifty):
+            continue
+        if np.isnan(nifty[a + 1]) or np.isnan(nifty[b + 1]):
+            continue
+        pairs.append((nifty[b + 1] / nifty[a + 1] - 1, r["months"][lo_idx[a]]))
+    nifty_rets, lo_rets = zip(*pairs)
+    slope, _ = statistics.linear_regression(nifty_rets, lo_rets)
+    return slope
 
 
 def _gate_cell_stats(M, S, gate, top_k, years, seeds, rng_seed=0):
@@ -916,6 +973,122 @@ def gate_full_rigor(top_k=5, seeds=1500):
               f"quarters {[f'{q:+.0%}' for q in s['qs']]}, p(return)={s['p']:.4f}, p(DD)={s['pdd']:.4f}")
 
 
+def _hedge_cell_stats(M, S, etf, beta, top_k, hedge_ratio, years, seeds, rng_seed=0):
+    """Same shape as _cell_stats/_gate_cell_stats: the significance question here
+    is whether IBS's stock-picking still beats RANDOM stock-picking once both are
+    run through the identical hedge overlay (the hedge itself is a deterministic
+    position size, not a stochastic choice, so there's no separate null for it)."""
+    r = simulate(M, S, top_k, 1, etf=etf, hedge_ratio=hedge_ratio, beta=beta)
+    ann = cagr(r["final"], years)
+    calmar = ann / (100 * r["max_dd"]) if r["max_dd"] else float("nan")
+    mo = r["months"]
+    half = len(mo) // 2
+    h1, h2 = np.prod(1 + mo[:half]) - 1, np.prod(1 + mo[half:]) - 1
+    consistent = (h1 > 0) == (h2 > 0)
+    qs = [np.prod(1 + q) - 1 for q in np.array_split(mo, 4)]
+    rng = np.random.default_rng(rng_seed)
+    finals = np.array([simulate(M, S, top_k, 1, rng=rng, etf=etf, hedge_ratio=hedge_ratio,
+                                 beta=beta)["final"] for _ in range(seeds)])
+    p = ((finals >= r["final"]).sum() + 1) / (seeds + 1)
+    return dict(r=r, ann=ann, calmar=calmar, h1=h1, h2=h2, consistent=consistent, qs=qs,
+                p=p, random_mean=cagr(finals.mean(), years))
+
+
+def hedge_cell_detail(M, etf, beta, years, seeds, hedge_ratio, top_k=5):
+    """Annualized quarter-split (with its own random-stock-pick-same-hedge control
+    per quarter) for one hedge_ratio cell — mirrors atr_stop_cell_detail/
+    gate_cell_detail for the same reason (those functions' own quarters print
+    total return per chunk only)."""
+    S = scores(M, "ibs", 5)
+    r = simulate(M, S, top_k, 1, etf=etf, hedge_ratio=hedge_ratio, beta=beta)
+    mo = r["months"]
+    n = len(mo)
+    cuts = [0, n // 4, n // 2, 3 * n // 4, n]
+    print(f"IBS(5) top_k={top_k} lag=1, hedge_ratio={hedge_ratio:.3f} (beta={beta:.3f}) — quarter-split detail:")
+    rng = np.random.default_rng(1)
+    random_mo = [simulate(M, S, top_k, 1, rng=rng, etf=etf, hedge_ratio=hedge_ratio,
+                           beta=beta)["months"] for _ in range(min(seeds, 300))]
+    for i in range(4):
+        lo, hi = cuts[i], cuts[i + 1]
+        ch = mo[lo:hi]
+        yrs_q = len(ch) / 12
+        total = np.prod(1 + ch) - 1
+        ann = ((1 + total) ** (1 / yrs_q) - 1) * 100 if yrs_q > 0 and total > -1 else float("nan")
+        rand_totals = np.array([np.prod(1 + rm[lo:hi]) - 1 for rm in random_mo if len(rm) >= hi])
+        p_q = ((rand_totals >= total).sum() + 1) / (len(rand_totals) + 1) if len(rand_totals) else float("nan")
+        print(f"  Q{i + 1} ({len(ch)} months, ~{yrs_q:.1f}y): total {total:+.1%}, annualized {ann:+.2f}%/yr, "
+              f"random-control mean {rand_totals.mean():+.1%}, p={p_q:.4f}")
+
+
+def hedge_full_rigor(top_k=5, seeds=1500):
+    """Full-rigor pass on the NIFTYBEES half-hedge (Forty-sixth/Forty-seventh
+    entries), the third drawdown overlay put through the same four-check battery
+    as the ATR-stop and NIFTY-gate lines: (1) screening on the base 52-stock
+    universe (hedge_ratio in {0.25, 0.375, 0.5, 0.625, 0.75}, the Forty-seventh
+    entry's own grid), (2) quarter-split detail on the two best-by-Calmar
+    ratios, (3) survivorship stress (4 real blowups, 56 stocks, own beta
+    recomputed on that universe), (4) cross-universe replication (UNIVERSE_B,
+    54 different NSE names, own beta recomputed there too) — the one check
+    none of the three overlays had been put through until this session."""
+    global SYMBOLS
+    print("=== (1) screening: hedge_ratio grid on the base 52-stock universe ===")
+    M = load_matrices()
+    years = (M["close"].index[M["me"][-1]] - M["close"].index[M["me"][0]]).days / 365.25
+    S = scores(M, "ibs", 5)
+    etf = fetch_etf_series()
+    beta = compute_beta_lag1(M, S, top_k)
+    base = simulate(M, S, top_k, 1)
+    print(f"beta={beta:.3f}")
+    print(f"baseline (unhedged): {cagr(base['final'], years):6.2f}%/yr, maxDD {base['max_dd']:.1%}, "
+          f"Calmar {cagr(base['final'], years) / (100 * base['max_dd']):.2f}")
+    grid = (0.25, 0.375, 0.5, 0.625, 0.75)
+    cells = {}
+    for ratio in grid:
+        s = _hedge_cell_stats(M, S, etf, beta, top_k, ratio, years, seeds)
+        cells[ratio] = s
+        print(f"  ratio={ratio:.3f}: {s['ann']:6.2f}%/yr, maxDD {s['r']['max_dd']:.1%}, Calmar {s['calmar']:.2f}, "
+              f"halves {s['h1']:+.0%}/{s['h2']:+.0%} {'CONSISTENT' if s['consistent'] else 'INCONSISTENT'}, "
+              f"quarters {[f'{q:+.0%}' for q in s['qs']]}, random mean {s['random_mean']:.2f}%/yr, p={s['p']:.4f}")
+
+    best_two = sorted(grid, key=lambda rt: -cells[rt]["calmar"])[:2]
+    print(f"\ntop 2 by Calmar: ratio={best_two[0]:.3f} (Calmar {cells[best_two[0]]['calmar']:.2f}), "
+          f"ratio={best_two[1]:.3f} (Calmar {cells[best_two[1]]['calmar']:.2f})")
+
+    print("\n=== (2) quarter-split detail (annualized, own random control per quarter) on the top 2 ===")
+    for ratio in best_two:
+        hedge_cell_detail(M, etf, beta, years, seeds, ratio, top_k)
+
+    print("\n=== (3) survivorship stress (4 real blowups added, 56 stocks) on the top 2 ===")
+    Ms = load_matrices(stress=True)
+    years_s = (Ms["close"].index[Ms["me"][-1]] - Ms["close"].index[Ms["me"][0]]).days / 365.25
+    Ss = scores(Ms, "ibs", 5)
+    beta_s = compute_beta_lag1(Ms, Ss, top_k)
+    base_s = simulate(Ms, Ss, top_k, 1)
+    print(f"stress-universe beta={beta_s:.3f}")
+    print(f"stress-universe baseline (unhedged): {cagr(base_s['final'], years_s):6.2f}%/yr, maxDD {base_s['max_dd']:.1%}")
+    for ratio in best_two:
+        s = _hedge_cell_stats(Ms, Ss, etf, beta_s, top_k, ratio, years_s, seeds)
+        print(f"  ratio={ratio:.3f} (stress): {s['ann']:6.2f}%/yr, maxDD {s['r']['max_dd']:.1%}, Calmar {s['calmar']:.2f}, "
+              f"halves {s['h1']:+.0%}/{s['h2']:+.0%} {'CONSISTENT' if s['consistent'] else 'INCONSISTENT'}, "
+              f"quarters {[f'{q:+.0%}' for q in s['qs']]}, p={s['p']:.4f}")
+
+    print("\n=== (4) cross-universe replication (UNIVERSE_B, 54 different NSE names) on the top 2 ===")
+    SYMBOLS = UNIVERSE_B
+    Mb = load_matrices()
+    SYMBOLS = None
+    years_b = (Mb["close"].index[Mb["me"][-1]] - Mb["close"].index[Mb["me"][0]]).days / 365.25
+    Sb = scores(Mb, "ibs", 5)
+    beta_b = compute_beta_lag1(Mb, Sb, top_k)
+    base_b = simulate(Mb, Sb, top_k, 1)
+    print(f"Universe-B beta={beta_b:.3f}")
+    print(f"Universe-B baseline (unhedged): {cagr(base_b['final'], years_b):6.2f}%/yr, maxDD {base_b['max_dd']:.1%}")
+    for ratio in best_two:
+        s = _hedge_cell_stats(Mb, Sb, etf, beta_b, top_k, ratio, years_b, seeds)
+        print(f"  ratio={ratio:.3f} (univ B): {s['ann']:6.2f}%/yr, maxDD {s['r']['max_dd']:.1%}, Calmar {s['calmar']:.2f}, "
+              f"halves {s['h1']:+.0%}/{s['h2']:+.0%} {'CONSISTENT' if s['consistent'] else 'INCONSISTENT'}, "
+              f"quarters {[f'{q:+.0%}' for q in s['qs']]}, p={s['p']:.4f}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=1500)
@@ -939,6 +1112,7 @@ def main():
     ap.add_argument("--atr-target-widen", action="store_true", help="widen target_mult to find where the curve turns over")
     ap.add_argument("--stop-only-rigor", action="store_true", help="full-rigor pass on the ATR-stop-only variant")
     ap.add_argument("--gate-rigor", action="store_true", help="full-rigor pass on the NIFTY SMA trend gate")
+    ap.add_argument("--hedge-rigor", action="store_true", help="full-rigor pass on the NIFTYBEES half-hedge")
     ap.add_argument("--oos-horizon", action="store_true", help="horizon curve on 2007-2016 vs 2016-2026")
     ap.add_argument("--universe-b", action="store_true", help="52 different NSE names (Sixty-eighth entry)")
     ap.add_argument("--cost", type=float, help="per-leg cost %% override (default 0.2; ~0.125 is nearer real NSE delivery costs)")
@@ -962,6 +1136,8 @@ def main():
         return stop_only_full_rigor(seeds=a.seeds)
     if a.gate_rigor:
         return gate_full_rigor(seeds=a.seeds)
+    if a.hedge_rigor:
+        return hedge_full_rigor(seeds=a.seeds)
     M = load_matrices(stress=a.stress)
     years = (M["close"].index[M["me"][-1]] - M["close"].index[M["me"][0]]).days / 365.25
     print(f"universe {M['close'].shape[1]} stocks, {len(M['me'])} month-ends, {years:.1f}y")
