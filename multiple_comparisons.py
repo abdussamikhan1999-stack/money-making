@@ -766,6 +766,25 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Loss attribution: breadth=high, UNIVERSE_B (107th)", 0.3291),
     ("Loss attribution: breadth=low, UNIVERSE_B (107th)", 0.2905),
     ("Loss attribution: breadth=mid, UNIVERSE_B (107th)", 0.1306),
+    # Hundred-and-eighth entry: two book-sourced signals never tested here (frog-in-the-pan /
+    # momentum quality, Da-Gao-Jagadeesh 2014 via "Quantitative Momentum"; Ichimoku cloud distance,
+    # Hosoda), lag-1 fill, pre-registered top_k=3/5/8, both universes. Frog is a clean null on both.
+    # Ichimoku is the mirage this entry exists to report: it clears an uncorrected p<0.05 on
+    # UNIVERSE_B at top_k=3/5 while being a clean null (p=0.47-0.78) on WIDE_UNIVERSE -- the
+    # discovery universe and the cross-check universe disagree, same shape as the Hundred-and-
+    # seventh entry's own ivix/breadth mirages.
+    ("Frog-in-the-pan top_k=3, WIDE_UNIVERSE (108th)", 0.9234),
+    ("Frog-in-the-pan top_k=5, WIDE_UNIVERSE (108th)", 0.8608),
+    ("Frog-in-the-pan top_k=8, WIDE_UNIVERSE (108th)", 0.9074),
+    ("Frog-in-the-pan top_k=3, UNIVERSE_B (108th)", 0.1432),
+    ("Frog-in-the-pan top_k=5, UNIVERSE_B (108th)", 0.0966),
+    ("Frog-in-the-pan top_k=8, UNIVERSE_B (108th)", 0.3711),
+    ("Ichimoku top_k=3, WIDE_UNIVERSE (108th)", 0.5210),
+    ("Ichimoku top_k=5, WIDE_UNIVERSE (108th)", 0.4704),
+    ("Ichimoku top_k=8, WIDE_UNIVERSE (108th)", 0.7828),
+    ("Ichimoku top_k=3, UNIVERSE_B (108th)", 0.0360),
+    ("Ichimoku top_k=5, UNIVERSE_B (108th)", 0.0286),
+    ("Ichimoku top_k=8, UNIVERSE_B (108th)", 0.0706),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number

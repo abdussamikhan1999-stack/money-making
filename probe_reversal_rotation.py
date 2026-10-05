@@ -98,6 +98,31 @@ def scores(M, kind, window):
         return c.pct_change().rolling(window, min_periods=window).skew()
     if kind == "mom":  # Jegadeesh-Titman 12-1: return from t-252 to t-21, NEGATED so highest momentum sorts first
         return -(c.shift(21) / c.shift(252) - 1)
+    if kind == "frog":  # Da-Gao-Jagadeesh 2014 "Information Discreteness" (the book "Quantitative
+        # Momentum", Gray & Vogel, calls this "frog-in-the-pan"): a 12-1 momentum stock that got
+        # there via many small same-sign days continues more reliably than one that got there via
+        # a few big jumps. mom (same t-252..t-21 window as "mom" above) x fraction-of-up-days over
+        # the identical window; for a positive-momentum name this is most negative (sorts first,
+        # this file's ascending-pick convention) when the path was both strong AND smooth. A
+        # negative-momentum name's score stays positive regardless of its own path smoothness, so
+        # this naturally restricts the ranking's head to positive-momentum names without a separate
+        # filter — not itself a claim about smooth DOWNTRENDS, which this score doesn't rank for.
+        mom = c.shift(21) / c.shift(252) - 1
+        pct_up = (c.pct_change() > 0).astype(float).shift(21).rolling(231, min_periods=180).mean()
+        return -mom * pct_up
+    if kind == "ichimoku":  # Hosoda's Ichimoku Kinko Hyo cloud (Senkou Span A/B), as described in
+        # Murphy's "Technical Analysis of the Financial Markets": the cloud plotted AT today is
+        # computed from data through 26 days ago (it's drawn 26 periods ahead of its own inputs),
+        # so reading today's cloud from a value already known 26 days back needs no lookahead.
+        # Score = -(close - cloud midpoint)/close, so the stock furthest ABOVE its own current
+        # cloud (strongest Ichimoku-bullish reading) sorts first, the same "nearness to a bullish
+        # reference level" shape as "hi52" above, with Ichimoku's own specific construction.
+        tenkan = (h.rolling(9, min_periods=9).max() + l.rolling(9, min_periods=9).min()) / 2
+        kijun = (h.rolling(26, min_periods=26).max() + l.rolling(26, min_periods=26).min()) / 2
+        span_a = (tenkan + kijun) / 2
+        span_b = (h.rolling(52, min_periods=52).max() + l.rolling(52, min_periods=52).min()) / 2
+        cloud_today = ((span_a + span_b) / 2).shift(26)
+        return -(c - cloud_today) / c
     return c / c.shift(window) - 1  # reversal: trailing return, lowest = biggest loser
 
 
@@ -1100,6 +1125,8 @@ def main():
     ap.add_argument("--index-gate", action="store_true", help="trend gate on NIFTY 2008+ and S&P 1950+")
     ap.add_argument("--momentum", action="store_true", help="12-1 momentum and 52-week-high rotation")
     ap.add_argument("--skew", action="store_true", help="realized-skewness rotation (Eighty-seventh entry)")
+    ap.add_argument("--frog", action="store_true", help="frog-in-the-pan / momentum-quality rotation (Da-Gao-Jagadeesh 2014)")
+    ap.add_argument("--ichimoku", action="store_true", help="Ichimoku cloud-distance rotation (Hosoda)")
     ap.add_argument("--freq", action="store_true", help="IBS rebalance frequency 5/10/21 days")
     ap.add_argument("--phase", action="store_true", help="IBS 21d-step phase offsets vs calendar month-end")
     ap.add_argument("--anchor", action="store_true", help="IBS/rev rebalance j days before month-end, j=0..20")
@@ -1180,6 +1207,16 @@ def main():
         for window in (21, 63):
             for top_k in (3, 5, 8):
                 print(report(M, "skew", window, top_k, 1, a.seeds, years)[0])
+        return
+    if a.frog:
+        print(f"=== frog-in-the-pan / momentum-quality rotation, lag 1, {a.seeds}-seed control (pre-registered top_k 3/5/8) ===")
+        for top_k in (3, 5, 8):
+            print(report(M, "frog", 0, top_k, 1, a.seeds, years)[0])
+        return
+    if a.ichimoku:
+        print(f"=== Ichimoku cloud-distance rotation, lag 1, {a.seeds}-seed control (pre-registered top_k 3/5/8) ===")
+        for top_k in (3, 5, 8):
+            print(report(M, "ichimoku", 0, top_k, 1, a.seeds, years)[0])
         return
     if a.spread:
         return spread_test(M, years, a.seeds)

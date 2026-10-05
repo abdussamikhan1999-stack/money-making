@@ -7477,3 +7477,74 @@ highest-vol tercile specifically) through the same four-check battery (screening
 survivorship stress, cross-universe replication) the three price-trend overlays already got —
 untested, because this entry's job was to find which variable is worth gating on, not to build the
 fourth overlay. **IBS rotation remains the sole standing finding; nothing is declared tradable.**
+
+
+## Hundred-and-eighth: two book-sourced signals never tested here — frog-in-the-pan momentum
+quality and the Ichimoku cloud — a clean null and a single-universe mirage
+
+Requested direction: search books for strategies not yet tried and apply them to the data already
+collected. Two genuinely new signal constructions, both added as `kind` branches to
+`probe_reversal_rotation.py`'s existing `scores()` dispatcher (the same minimal-diff pattern Entry
+87 used for realized skewness) — no new file, no new fetch, full reuse of `simulate()`'s lag-1
+fill, cost model, and random-portfolio control.
+
+**Frog-in-the-pan / momentum quality** (Da, Gao & Jagadeesh 2014, "Information Discreteness and
+the Cross-Section of Stock Returns"; described as a retail-accessible factor in Wesley Gray &
+Jack Vogel's book "Quantitative Momentum"): a 12-1 momentum stock that got there via many small
+same-sign daily moves continues more reliably than one that got there via a few big jumps.
+Score = `-(12-1 momentum) x (fraction of up days over the same formation window)`, so a
+positive-momentum, smooth-path name sorts first (most negative score, this file's ascending-pick
+convention); a negative-momentum name's score stays positive regardless of its own path
+smoothness, so the ranking's head is naturally restricted to positive-momentum names without a
+separate filter.
+
+**Ichimoku cloud distance** (Hosoda's Ichimoku Kinko Hyo, as described in John Murphy's
+"Technical Analysis of the Financial Markets" — one of the most widely used indicators in retail
+technical analysis, and, like Bollinger Bands/Stochastic before it, never tested in this project
+despite that popularity): Score = `-(close - today's cloud midpoint) / close`. The cloud "visible"
+at today's close is Senkou Span A/B computed from data through 26 days ago (it's plotted 26
+periods ahead of its own inputs in the standard construction), so reading it via a 26-day forward
+shift of the already-computed span uses no lookahead — the stock furthest above its own current
+cloud sorts first, the same "distance above a bullish reference level" shape as `hi52`'s 52-week-
+high proximity, with Ichimoku's own specific construction instead.
+
+Pre-registered: both signals x top_k in {3, 5, 8}, IBS rotation's own 52-stock `WIDE_UNIVERSE`,
+lag-1 fill, 1,500-seed random-portfolio control — `--frog`/`--ichimoku` in
+`probe_reversal_rotation.py`. Checked on `UNIVERSE_B` before trusting anything, per this project's
+own standing practice.
+
+**Frog-in-the-pan: a clean null on both universes.** WIDE_UNIVERSE: 2.35-5.75%/yr vs random
+10.55-11.03%/yr at every top_k (p=0.86-0.92 — the strategy loses to most random draws), Q4
+strongly negative at every size (-34% to -50%) — the same basket-wide-momentum decay signature
+the Sixty-third entry already found for plain 12-1 momentum and 52-week-high. UNIVERSE_B is
+directionally better (p=0.10-0.37) but never clears even an uncorrected 0.05. The "quality" filter
+doesn't rescue momentum here, the same conclusion the Twenty-eighth entry reached testing whether a
+regime filter rescues Bollinger Bands: a filter on top of a mechanism with no real edge underneath
+doesn't manufacture one.
+
+**Ichimoku is the mirage this entry exists to report.** WIDE_UNIVERSE: a clean null at every
+top_k (9.94-12.68%/yr vs random 12.80-13.21%/yr, p=0.47-0.78). **UNIVERSE_B: top_k=3 clears
+p=0.0360, top_k=5 clears p=0.0286**, both walk-forward halves strongly positive (+124% to +190%
+across the two halves) — looks like exactly the kind of result this project would normally chase
+further. But the discovery universe (`WIDE_UNIVERSE`) shows nothing at all for the same rule, same
+top_k values, same window — the identical single-universe-disagreement shape the Hundred-and-
+seventh entry's own India-VIX and breadth splits just showed. Per this project's own standing
+rule (a candidate only counts once it clears the SAME bar on both independent universes, not
+either one alone — the rule that already sank SuperTrend's `CL=F`, IBS's FX retest, and 52-week-
+high's widening), **Ichimoku rotation is rejected, not flagged as promising.** Also worth naming:
+`UNIVERSE_B`'s own Q4 is negative at top_k=5/8 (-15%, -6%) even within the universe where it
+"passed" — only top_k=3 has all four quarters positive there, so even the passing side of this
+mirage isn't uniformly clean.
+
+**Net verdict.** Two new, literature-sourced constructions (one momentum-adjacent, one a classic
+multi-component technical indicator), added at minimal cost by reusing the existing `scores()`
+dispatcher rather than a new probe file, both rejected — one on a clean uniform null, one on
+exactly the cross-universe-disagreement pattern this project's own methodology exists to catch. No
+quarter-split/perturbation/survivorship-stress follow-up run on either (per the establishing
+"stop at the first clear crack" practice — Ichimoku already fails the cross-universe bar outright,
+frog is uniformly negative). 12 p-values registered in `multiple_comparisons.py`; honest family
+now 549 registered + 508 unregistered = m=1057, Bonferroni threshold 0.00005 — none of the 12
+comes close, consistent with the rest of this project's ledger. 279 tests pass (unchanged — no new
+logic needing a test beyond what `scores()`'s existing branches already exercise; the two new
+branches reuse `simulate()`'s already-tested machinery verbatim). **91 mechanisms tested; IBS
+rotation remains the sole standing finding; nothing is declared tradable.**
