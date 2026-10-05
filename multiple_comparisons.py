@@ -736,6 +736,36 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("NIFTYBEES hedge ratio=0.375 survivorship-stress (106th)", 0.0127),
     ("NIFTYBEES hedge ratio=0.25 UNIVERSE_B (106th)", 0.1213),
     ("NIFTYBEES hedge ratio=0.375 UNIVERSE_B (106th)", 0.1233),
+    # Hundred-and-seventh entry: loss attribution for IBS rotation. Not an overlay test — asks
+    # whether the strategy's own 119 real monthly outcomes, bucketed by 4 regime variables (NIFTY
+    # trend, realized vol tercile, India VIX tercile, this universe's own breadth tercile) at the
+    # ranking date, differ from what random stock-picking in the SAME months/buckets would have
+    # earned. Run on both universes before anything here was trusted; only the vol21 tercile result
+    # replicates (high-vol: no edge over random on either universe, p=0.5503/0.5583; mid-vol: a real
+    # edge on both, p=0.0133/0.0153). ivix/breadth/trend do NOT replicate (ivix mid flips from
+    # p=0.0087 WIDE_UNIVERSE to p=0.6722 UNIVERSE_B) and are registered for honesty, not credited.
+    ("Loss attribution: trend=down, WIDE_UNIVERSE (107th)", 0.1219),
+    ("Loss attribution: trend=up, WIDE_UNIVERSE (107th)", 0.0533),
+    ("Loss attribution: vol21=high, WIDE_UNIVERSE (107th)", 0.5503),
+    ("Loss attribution: vol21=low, WIDE_UNIVERSE (107th)", 0.0713),
+    ("Loss attribution: vol21=mid, WIDE_UNIVERSE (107th)", 0.0133),
+    ("Loss attribution: ivix=high, WIDE_UNIVERSE (107th)", 0.5123),
+    ("Loss attribution: ivix=low, WIDE_UNIVERSE (107th)", 0.0839),
+    ("Loss attribution: ivix=mid, WIDE_UNIVERSE (107th)", 0.0087),
+    ("Loss attribution: breadth=high, WIDE_UNIVERSE (107th)", 0.4390),
+    ("Loss attribution: breadth=low, WIDE_UNIVERSE (107th)", 0.0693),
+    ("Loss attribution: breadth=mid, WIDE_UNIVERSE (107th)", 0.0253),
+    ("Loss attribution: trend=down, UNIVERSE_B (107th)", 0.2851),
+    ("Loss attribution: trend=up, UNIVERSE_B (107th)", 0.1566),
+    ("Loss attribution: vol21=high, UNIVERSE_B (107th)", 0.5583),
+    ("Loss attribution: vol21=low, UNIVERSE_B (107th)", 0.4277),
+    ("Loss attribution: vol21=mid, UNIVERSE_B (107th)", 0.0153),
+    ("Loss attribution: ivix=high, UNIVERSE_B (107th)", 0.0773),
+    ("Loss attribution: ivix=low, UNIVERSE_B (107th)", 0.2105),
+    ("Loss attribution: ivix=mid, UNIVERSE_B (107th)", 0.6722),
+    ("Loss attribution: breadth=high, UNIVERSE_B (107th)", 0.3291),
+    ("Loss attribution: breadth=low, UNIVERSE_B (107th)", 0.2905),
+    ("Loss attribution: breadth=mid, UNIVERSE_B (107th)", 0.1306),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number

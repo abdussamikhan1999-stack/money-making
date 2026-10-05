@@ -7404,3 +7404,76 @@ from the Hundred-and-fifth entry's own finding that nothing currently clears the
 tests pass (additive: `simulate()` gained an `etf=`/`hedge_ratio=`/`beta=` triple, default `None`,
 old behavior unchanged). **IBS rotation remains the sole standing finding; nothing is declared
 tradable.**
+
+
+## Hundred-and-seventh: loss attribution for IBS rotation — the stock-picking edge itself (not
+just drawdown) vanishes in the highest realized-vol tercile, replicated on both universes; the
+IVIX/breadth splits that looked interesting on one universe reverse on the other
+
+Requested direction: apply a regime-conditioning framework to the data already collected, and look
+specifically at what conditions precede a LOSS, not just what overlay improves Calmar (Entries 61/
+76/103-106 already tested three overlays — NIFTY SMA gate, ATR stop, NIFTYBEES hedge — and none
+replicated cross-universe). This entry asks the narrower question those overlays acted on without
+ever checking directly: does the strategy's own realized 119-month track record actually differ by
+regime, or is "regime X is bad" an assumption the overlay tests smuggled in by picking which
+variable to gate on?
+
+`probe_loss_attribution.py`, reusing `simulate()`/`scores()`/`load_matrices()`/`align_to()`
+unchanged (no new strategy, no new fetch beyond `probe_macro_analog.py`'s already-cached NIFTY/
+India-VIX series) — IBS(5) top_k=5 lag=1 on the standing universe. Four regime variables, each
+already used somewhere in this project (NIFTY trend vs its 150d SMA — the Sixty-first entry's own
+gate; realized vol of NIFTY, 21d annualized; India VIX level — the fear-buy entries; this
+universe's own breadth, fraction of stocks above their own 200d SMA — the Hundred-and-first entry's
+Zweig probe), each computed at the ranking date of every real month with the project's standard
+no-lookahead `align_to`/rolling convention, tercile-split on the FULL history (so a bucket's
+definition doesn't depend on which months land in it). For each bucket: is the strategy's own mean
+return different from what buying `top_k` RANDOM eligible stocks in the EXACT SAME months would
+have earned (1,500-seed control) — this isolates whether a regime explains the STOCK-SELECTION edge
+specifically, since every bucket's random control already prices in that regime's own market beta.
+
+**Only one of the four regime variables replicates across both universes, and it's the most
+basic one: realized volatility.** WIDE_UNIVERSE: vol21 high tercile p(random>=actual)=0.5503 (no
+edge over random at all — the strategy is statistically indistinguishable from random
+stock-picking in the highest-vol months), vol21 mid p=0.0133 (a real, strong edge). UNIVERSE_B:
+vol21 high p=0.5583, vol21 mid p=0.0153 — both numbers reproduce closely on a disjoint 54-stock
+universe. **The other three variables do NOT replicate** — the India VIX mid-tercile cell looked
+like the single strongest result on WIDE_UNIVERSE (p=0.0087) and flips to p=0.6722 (no edge at all,
+direction reversed) on UNIVERSE_B; breadth's mid-tercile edge (p=0.0253 on WIDE_UNIVERSE) likewise
+disappears (p=0.1306) on UNIVERSE_B; the NIFTY trend split is weak and inconclusive on both
+(p=0.05-0.29, no bucket clears an uncorrected 0.05 on either universe). Registered, not credited —
+exactly the single-universe mirage this project's own standing practice exists to catch (the
+Sixty-eighth/Hundred-and-fourth/Hundred-and-fifth entries all found a result that looked real on one
+universe and reversed or vanished on the other).
+
+**What the replicating finding actually says, read against this project's own history of drawdown-
+overlay attempts.** Mean monthly return in the high-vol tercile isn't bad on its own (+1.88%/+1.89%
+on the two universes — among the better buckets by raw average) — what vanishes there isn't
+profitability, it's the STOCK-SELECTION skill specifically: in the calmest and most turbulent
+thirds of months, "most oversold" performs statistically like a random pick from the same universe;
+the real edge over random concentrates in the MIDDLE third. The worst single month in this entire
+backtest (2020-02-28, -30.0%/-24.6% on the two universes) sits in the high-vol tercile, consistent
+with this being a high-VARIANCE bucket (both the best and worst outcomes cluster there) rather than
+a uniformly-bad one, which is also why a hard regime GATE on this axis was never tried by any prior
+entry and wouldn't obviously help — cutting high-vol months removes upside and downside together,
+the same "costs more return than it saves" shape the ATR-stop and trend-gate overlays already
+showed on a different conditioning variable. This may explain, without proving, why those three
+overlays (gated on price TREND, not realized VOL) kept failing to replicate: they were conditioning
+on a variable this entry's own cross-universe check says doesn't discriminate skill from noise,
+while the one variable that does (realized vol) has never been used as a gate.
+
+**Net verdict.** Not a new mechanism and not a new overlay — a diagnostic entry answering "what
+regime distinguishes a good IBS-rotation month from a bad one" directly, rather than inferring it
+backward from which overlays happened to help. One real, cross-universe-replicated finding (the
+strategy's stock-picking skill is regime-dependent on realized volatility specifically, strongest
+in moderate-vol months, statistically absent in the highest-vol tercile) and three single-universe
+mirages, registered for honesty and explicitly not credited. 22 p-values registered in
+`multiple_comparisons.py`; honest family now 537 registered + 508 unregistered = m=1045,
+Bonferroni threshold 0.00005 — none of the 22 comes within two orders of magnitude of it, consistent
+with every other result in this project's ledger. 279 tests pass (unchanged — no new logic needing
+a test; the new probe script reuses already-tested `simulate()`/`scores()`/`align_to()` verbatim,
+same convention every other standalone probe in this project follows). Concrete next step, not done
+here: a realized-vol-tercile GATE (hold cash, or at minimum skip the lowest-conviction picks, in the
+highest-vol tercile specifically) through the same four-check battery (screening, quarter-split,
+survivorship stress, cross-universe replication) the three price-trend overlays already got —
+untested, because this entry's job was to find which variable is worth gating on, not to build the
+fourth overlay. **IBS rotation remains the sole standing finding; nothing is declared tradable.**
