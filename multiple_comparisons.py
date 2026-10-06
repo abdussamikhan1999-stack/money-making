@@ -684,6 +684,28 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Nifty reconstitution DELETE h=5 (102nd)", 0.7877),
     ("Nifty reconstitution DELETE h=10 (102nd)", 0.8714),
     ("Nifty reconstitution DELETE h=21 (102nd)", 0.9197),
+    # Hundred-and-third entry (2026-10-02): NSE insider trading (SEBI PIT) disclosures,
+    # promoter/officer Buy/Sell (probe_insider_trading_signal.py). Same matched-stock random-day
+    # null as the Hundredth/102nd entries. 2 insider types x 2 sides x 4 horizons = 16 registered.
+    # The first event-study signal in this lineage to clear its own pre-registered decision rule
+    # (promoter BUY h=5/10/21, officer BUY h=1/5) - but the smallest p (0.000666) is still ~13x
+    # above this honest family's Bonferroni threshold, so the standing verdict is unchanged.
+    ("Insider promoter BUY h=1 (103rd)", 0.0153),
+    ("Insider promoter BUY h=5 (103rd)", 0.0093),
+    ("Insider promoter BUY h=10 (103rd)", 0.000666),
+    ("Insider promoter BUY h=21 (103rd)", 0.000666),
+    ("Insider promoter SELL h=1 (103rd)", 0.3752),
+    ("Insider promoter SELL h=5 (103rd)", 0.2706),
+    ("Insider promoter SELL h=10 (103rd)", 0.1493),
+    ("Insider promoter SELL h=21 (103rd)", 0.0323),
+    ("Insider officer BUY h=1 (103rd)", 0.0490),
+    ("Insider officer BUY h=5 (103rd)", 0.0303),
+    ("Insider officer BUY h=10 (103rd)", 0.1083),
+    ("Insider officer BUY h=21 (103rd)", 0.6431),
+    ("Insider officer SELL h=1 (103rd)", 0.9537),
+    ("Insider officer SELL h=5 (103rd)", 0.6538),
+    ("Insider officer SELL h=10 (103rd)", 0.7617),
+    ("Insider officer SELL h=21 (103rd)", 0.9170),
     # Hundred-and-fourth entry: full-rigor pass on the ATR-STOP-ONLY variant of IBS rotation
     # (target effectively disabled, stop_mult grid, top_k=5, lag=1). 6 screening cells on the
     # base 52-stock WIDE_UNIVERSE, then survivorship-stress and cross-universe (UNIVERSE_B)
