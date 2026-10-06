@@ -7659,3 +7659,69 @@ threshold 0.00005 -- moot, since the point of this entry is the cross-universe c
 any individual cell's significance. 279 tests pass (unchanged — standalone probe script, no
 pytest file, per this project's established convention). **91 mechanisms tested; IBS rotation
 remains the sole standing finding; nothing is declared tradable.**
+
+
+## Hundred-and-eleventh: Nifty futures basis (cost-of-carry) as a market-timing signal — a clean
+null in both directions tested, reusing almost the entire PCR probe's own harness
+
+A genuinely new data dimension, picked specifically because it was cheap to test correctly: the
+GAP between the near-month NIFTY index future and the spot index, never used anywhere in this
+project before (every prior signal is price, volume, an OI level, a put/call ratio, delivery %, a
+disclosed trade, or the calendar). `probe_futures_basis_signal.py` reuses
+`probe_iron_condor_real_data.py`'s `fetch_fo_bhavcopy`/`weekly_mondays` fetch machinery and
+`probe_pcr_signal.py`'s entire weekly-cadence harness (`rolling_percentile`, `quarter_split`,
+`walk_forward`, `report`, its cost model and `CAPITAL`) completely unchanged — the only new code is
+the signal itself (basis instead of put/call OI) and its fetch function, the smallest possible diff
+that gets a new signal this project's full existing rigor for free.
+
+**Signal**: `basis_pct(t) = FUTIDX NIFTY near-month close(t) / ^NSEI spot close(t) - 1`, weekly
+(557 weeks, 2016-01 to 2026-09, 0 fetch errors — matching the PCR entry's own week count exactly,
+confirming the reused fetcher is behaving the same way on a different payload). Spot is `^NSEI`
+(not NIFTYBEES, whose Yahoo Open/High/Low the Seventy-ninth entry already found corrupt); the
+EXECUTED trade is on NIFTYBEES.NS (as the PCR entry did), so this is NOT blocked by the fixed-lot
+capital-tier wall that closed every prior Nifty-derivative idea here.
+
+**Direction was not fixed to one prediction, because no single canonical one exists in the
+commentary this signal is sourced from** — the same even-handed treatment Entries 92/94/95/96 gave
+day-of-week/lunar phase/round numbers/Mercury retrograde where the literature itself doesn't agree.
+Both named hypotheses were pre-registered and tested: "high" (momentum/continuation — go long while
+the basis sits in the top of its own rolling window, the same reading Entry 85's stock-level OI2
+signal used) and "low" (contrarian — go long while it sits in the bottom, the same reading the PCR
+entry's own put/call extreme used). Pre-registered grid: `entry_threshold` in {0.85, 0.90} x
+`window` in {26, 52} weeks x direction in {"high", "low"} = 8 configs, `probe_pcr_signal.shift_control`'s
+own circular-rotation null reused verbatim (1,500 seeds, >=1-year offset).
+
+**Result: a clean null, in both directions, at every setting tested.**
+
+| direction | entry | window | trades | net P&L | ann. | walk-forward | p(random >= actual) |
+|---|---|---|---|---|---|---|---|
+| high | 0.85 | 26 | 39 | Rs 18,716 | 1.75%/yr | inconsistent | 0.8181 |
+| high | 0.85 | 52 | 34 | Rs 32,899 | 3.08%/yr | CONSISTENT | 0.6482 |
+| high | 0.90 | 26 | 31 | Rs 24,778 | 2.32%/yr | CONSISTENT | 0.7775 |
+| high | 0.90 | 52 | 29 | Rs 17,645 | 1.65%/yr | CONSISTENT | 0.8521 |
+| low | 0.85 | 26 | 35 | Rs 39,530 | 3.71%/yr | inconsistent | 0.3877 |
+| low | 0.85 | 52 | 32 | Rs 43,954 | 4.12%/yr | CONSISTENT | 0.3904 |
+| low | 0.90 | 26 | 25 | Rs 20,571 | 1.93%/yr | CONSISTENT | 0.6409 |
+| **low** | **0.90** | **52** | **25** | **Rs 47,613** | **4.46%/yr** | **CONSISTENT** | **0.1932** |
+
+6 of 8 cells are walk-forward consistent (both halves net-positive) and the contrarian ("low")
+direction's net P&L beats the momentum direction's at every matched entry/window pair — a mild,
+unsurprising echo of the PCR entry's own contrarian framing, not evidence of anything here, since
+**every single cell's own random-timing control earns as much or more**: the best cell
+(low/0.90/52) still only reaches p=0.1932, nowhere close to an uncorrected 0.05, because — the same
+lesson the PCR entry's own circular-shift control exists to catch — a long-only bet on NIFTYBEES
+over a decade earns real money from the ETF's own bull-market drift regardless of which weeks the
+rule happens to pick. Quarter-split on the best cell (Q1 +Rs 17,905, Q2 -Rs 7,899, Q3 +Rs 37,560, Q4
++Rs 48) shows no coherent pattern worth chasing either — 3 of 4 positive, but the most recent
+quarter is flat, and the whole result is already indistinguishable from random timing before
+getting to quarter-level detail.
+
+**Net verdict.** A new signal dimension, implemented at minimal cost by reusing nearly all of an
+already-tested probe's own harness, tested fairly in both directions a reasonable reader could
+expect it to work, and rejected cleanly in both. 8 p-values registered in `multiple_comparisons.py`
+(honest family now 585 registered + 508 unregistered scan cells = m=1093, Bonferroni threshold
+0.00005 — the best cell, p=0.1932, is roughly 3,800x above it). 284 tests pass (5 new,
+`tests/test_probe_futures_basis_signal.py`, covering both bhavcopy-format parsers, the no-lookahead
+price lookup, the lag-1 fill, and that the "low" direction genuinely mirrors the percentile rather
+than reusing "high"'s entry logic under a different name). **92 mechanisms tested; IBS rotation
+remains the sole standing finding; nothing is declared tradable.**

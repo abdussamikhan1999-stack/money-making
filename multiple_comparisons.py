@@ -823,6 +823,21 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("TRIN h=21 low, UNIVERSE_B (110th)", 0.0005),
     ("TRIN h=21 mid, UNIVERSE_B (110th)", 0.8896),
     ("TRIN h=21 high, UNIVERSE_B (110th)", 1.0000),
+    # Hundred-and-eleventh entry: NIFTY futures basis (cost-of-carry), a genuinely new data
+    # dimension (the futures-spot gap, not price/volume/OI level/put-call ratio/delivery%/a
+    # disclosed trade/the calendar). Direction not fixed in advance -- momentum ("high": ride a
+    # widening premium) and contrarian ("low": buy a narrow/negative premium) both pre-registered
+    # as named hypotheses, entry_threshold x {0.85, 0.90} x window x {26, 52} weeks, NIFTYBEES.NS,
+    # probe_pcr_signal's own circular-shift control (1,500 seeds). Clean null: best p is 0.1932
+    # (dir=low entry=0.90 window=52), nowhere near an uncorrected 0.05, let alone corrected.
+    ("Futures basis high entry=0.85 window=26 (111th)", 0.8181),
+    ("Futures basis high entry=0.85 window=52 (111th)", 0.6482),
+    ("Futures basis high entry=0.90 window=26 (111th)", 0.7775),
+    ("Futures basis high entry=0.90 window=52 (111th)", 0.8521),
+    ("Futures basis low entry=0.85 window=26 (111th)", 0.3877),
+    ("Futures basis low entry=0.85 window=52 (111th)", 0.3904),
+    ("Futures basis low entry=0.90 window=26 (111th)", 0.6409),
+    ("Futures basis low entry=0.90 window=52 (111th)", 0.1932),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number
