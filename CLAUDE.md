@@ -7046,3 +7046,645 @@ Sourced per the "keep searching for a genuinely new mechanism" default: every pr
 **What is NOT yet done, flagged rather than skipped**: no perturbation of `UNIVERSE_MIN_EVENTS` (does the result hold at 8, 20, 30?), no deduplication/clustering of `UMIYA-MRO`-style overlapping-window repeat offenders, no check against an independent stock universe (this project's own `UNIVERSE_B`-style split, which caught the month-end IBS effect's fragility in the Sixty-eighth entry), no survivorship check, and no slippage adjustment for what is clearly a small/mid-cap-concentrated signal (several top contributors - `UMIYA-MRO`, `BIGBLOC`, `HEGAM`, `SDBL`, `RSSOFTWARE`, `ELECTCAST`, `SHAKTIPUMP` - are the kind of illiquid names this project's standard 0.25% round-trip cost convention was never calibrated against, per the Sixtieth entry's own caveat about asymmetric slippage on exactly this type of name). None of these were skipped to protect a result - they weren't reached because the robustness checks already run were enough to write this up honestly as "promising but unproven," and a future entry's natural next step is exactly this list, the same way the IBS rotation line's own early entries (Thirty-eighth onward) were followed by widening, significance, and survivorship checks over several subsequent entries rather than all at once.
 
 **Net verdict.** Ninety-second mechanism, and genuinely the strongest FIRST-PASS result of any event-study signal tried in this project's 82-102 lineage - but "strongest first pass" and "found" are not the same claim, and this project's own standard (now applied consistently for over 50 entries) is that a result this early needs exactly the kind of widening/perturbation/survivorship treatment IBS rotation got before being trusted, not a single promising run. 16 p-values registered; honest family m=982, nothing clears it. 284 tests pass (5 new, `tests/test_probe_insider_trading_signal.py`, covering the personCategory filter, the acqMode open-market filter, date/value parsing, and `build_universe`'s reuse of `net_events`). **92 mechanisms tested; IBS rotation remains this project's only mechanism with a fuller rigor record, but promoter-BUY insider trading is now the second-most-promising candidate on record and the first to warrant an explicit follow-up list rather than a closed verdict. Nothing is declared tradable.**
+
+
+## Hundred-and-third: does an ATR-based stop/target during the hold improve IBS rotation? It cuts drawdown a lot, costs more return than it saves, and only one grid cell comes out ahead on Calmar
+
+Requested check: whether adding the kind of per-trade ATR stop-loss/take-profit this project uses
+throughout its single-instrument daily strategies (RSI-2, Squeeze, MACD, SuperTrend, DMI/ADX, SAR
+— all size an ATR-scaled stop at entry) would improve IBS rotation, this project's sole standing
+finding, which currently has NO intra-month exit condition at all: a pick is held from the lag-1
+entry fill straight through to the lag-1 exit fill at the next month-end, no matter what happens
+to the stock in between.
+
+Added `compute_atr()` (vectorized per-stock ATR, the same plain-rolling-mean convention
+`indicators.average_true_range` and SuperTrend's own ATR already use, not Wilder's exponential
+smoothing) and an opt-in `atr`/`stop_mult`/`target_mult` triple to `probe_reversal_rotation.py`'s
+existing `simulate()` (default `None`, byte-for-byte unchanged behavior when omitted — verified by
+rerunning the file's own `--validate` baseline). When set, each pick's stop/target is sized off
+ITS OWN ATR as of the ranking date (no lookahead, same convention as every other ATR-sized stop
+in this project), then checked day-by-day from the entry fill through the scheduled exit: a low
+piercing the stop or a high clearing the target exits early at that trigger price (stop wins a
+same-day tie, this project's established adverse-first convention); a pick that never triggers
+exits at the scheduled month-end close exactly as before. Pre-registered grid (mirroring the
+R-multiple ranges this project's other ATR-stopped strategies already use — RSI-2's
+`stop_atr_multiple=3.0`, 3-bar breakout's `target_r_multiple=2.5`): `stop_mult` in {1.0, 1.5, 2.0}
+x `target_mult` in {2.0, 3.0, 4.0}, IBS(5), top_k=5, lag=1, the family's own 52-stock
+`WIDE_UNIVERSE`, 1,500-seed same-stop/target random-portfolio control. `--atr-stop` in
+`probe_reversal_rotation.py`.
+
+**Baseline (no stop/target, this run's fresh data pull): 19.60%/yr, max drawdown 39.5%** — in line
+with the Fifty-ninth entry's own ~20%/yr lag-1 figure, small drift only from the usual
+yfinance-snapshot variance already documented throughout this file.
+
+**Every one of the 9 cells returns LESS than the baseline — a tight stop clips the bounce, not
+just the downside.** Full grid:
+
+| stop | target=2.0 | target=3.0 | target=4.0 |
+|---|---|---|---|
+| 1.0xATR | 6.05%/yr, DD 21.9%, Calmar 0.28 | 7.92%/yr, DD 15.1%, Calmar 0.52 | **10.16%/yr, DD 13.1%, Calmar 0.78** |
+| 1.5xATR | 5.42%/yr, DD 23.2%, Calmar 0.23 | 7.51%/yr, DD 19.6%, Calmar 0.38 | 10.91%/yr, DD 20.3%, Calmar 0.54 |
+| 2.0xATR | 5.31%/yr, DD 20.3%, Calmar 0.26 | 7.60%/yr, DD 25.1%, Calmar 0.30 | 11.14%/yr, DD 25.8%, Calmar 0.43 |
+
+(Baseline Calmar: 19.60/39.5 = 0.50.) Drawdown drops hard everywhere (13-26% vs 39.5%), but return
+drops harder in every cell except one. **Only `stop=1.0xATR, target=4.0xATR` beats the baseline's
+own Calmar** (0.78 vs 0.50) — a real, if modest, risk-adjusted improvement: a TIGHT stop paired
+with a WIDE target (4:1 reward:risk) gives up about half the raw return (10.16% vs 19.60%) for
+two-thirds less drawdown (13.1% vs 39.5%). That cell's quarters are also clean — all 4 positive
+(+8%/+64%/+40%/+5%), no decay — and both walk-forward halves are strongly positive (+65%/+58%).
+Every cell still beats its own same-stop random-portfolio control (p=0.006-0.11, not corrected for
+multiple comparisons, consistent with this being an exploratory check rather than a fully
+registered family), meaning the underlying stock-selection edge over random survives the stop/
+target overlay — it's being diluted by the stop mechanics, not erased by them.
+
+**Why a stop mostly hurts here, consistent with this project's own prior finding on the same
+question for a different strategy**: the Eleventh entry already found that bolting an ATR trailing
+STOP (not even a hard stop-and-reverse) onto RSI-2's own exit rule "actively hurts, doesn't help,"
+because RSI-2's own exit already functions as a profit target tuned to its mechanism. IBS rotation's
+picks are specifically stocks that just closed near their own low — exactly the volatility profile
+most likely to breach a 1-2xATR stop in the days immediately after entry, before the Fifty-ninth/
+Sixty-sixth entries' own documented bounce (which accrues mostly in the first 5-10 trading days)
+has time to complete. A tight stop doesn't protect against a thesis that's wrong; on this specific
+entry signal it mostly cuts off the bounce mid-flight.
+
+**Net verdict.** Not a new mechanism (an exit-overlay test on the standing finding, same category
+as the Eleventh entry's RSI-2 profit-booking overlay and the Forty-sixth/Forty-seventh entries' ETF
+beta hedge) — no count change. A per-trade ATR stop/target is a real, usable lever for cutting IBS
+rotation's drawdown, but it costs more return than it saves at every setting except one (tight stop,
+wide target), and even that cell's Calmar gain (0.50 -> 0.78) is smaller than the half-hedge
+overlay's own (0.51 -> ~1.0-1.1, Sixty-first entry) — the NIFTY trend gate and the NIFTYBEES half-
+hedge both remain better-corroborated risk-reduction options on top of this project's sole standing
+finding than an ATR stop/target is. Not registered in `multiple_comparisons.py` (exploratory, not a
+formally pre-registered significance claim) and not run through quarter-split/perturbation/
+survivorship-stress beyond what's shown above — a deeper pass would only be worth it if this project
+decides to actually pursue the one-good-cell (1.0xATR/4.0xATR) further. 279 tests pass (unchanged —
+additive, default-off parameters, verified against the file's own `--validate` baseline). **IBS
+rotation remains the sole standing finding; nothing is declared tradable.**
+
+**Follow-up on the same cell: quarter-split detail and a perturbation sweep (`--atr-stop-detail`,
+`--atr-stop-perturb`).** Quarter-split (annualized per ~2.5y chunk, with its own random-portfolio
+control, same stop/target applied to both): **Q1 +4.77%/yr (random -0.0%, p=0.16); Q2 +16.94%/yr
+(random +62.3%, p=0.72 — a strong bull quarter where random picks did even better, so the edge
+isn't distinguishable from beta here); Q3 +14.26%/yr (random +14.6%, p=0.03); Q4 +5.07%/yr (random
+-8.4%, p=0.03).** All 4 quarters positive — no decay, and Q4 (the most recent, most relevant
+window) clears its random control the most cleanly of any quarter. Q2 is the one weak link: not a
+loss, just not distinguishable from random stock-picking in a quarter strong enough that almost
+any basket worked.
+
+**Perturbation (stop_mult in {0.75, 1.0, 1.25, 1.5} x target_mult in {3.0, 3.5, 4.0, 4.5, 5.0}, 20
+cells): smooth and monotonic everywhere, zero walk-forward sign flips — real robustness, not a
+single-point-fit.** Return and Calmar both rise as the target widens at every stop setting tested
+(e.g. stop=1.0: 7.92%/13.1%DD/Calmar 0.53 at target=3.0 climbing to 12.45%/14%DD/Calmar 0.91 at
+target=5.0) — no cliff anywhere in the grid. **This also means (1.0xATR, 4.0xATR) is not a local
+peak — it sits partway up a ridge the pre-registered grid's own edge (target=5.0) keeps climbing**;
+the best Calmar in this sweep is actually stop=1.0xATR/target=5.0xATR (0.91), not the originally
+flagged cell. Consistent with the earlier entry's own read: a tight stop with a wide enough target
+converges toward "barely constrain the upside, just cap the downside," approaching the no-stop
+baseline's return as the target widens further — the grid wasn't swept wide enough to find where
+(if anywhere) that ridge turns over, since this was a bounded, pre-registered check rather than an
+open-ended optimization.
+
+**Net addition.** The flagged cell is robust (smooth neighborhood, no decay, no cliff) but was an
+arbitrary point on a monotonic surface, not a validated optimum — per this project's own standing
+practice (the Fifteenth/Seventeenth/Thirty-fourth entries' repeated warning against trusting a
+result that "peaks suspiciously close to the exact default"), this is the opposite problem: nothing
+peaks at all within the tested range, which argues against over-interpreting this exact combination
+as special. If this line is pursued further, the honest next step is widening the target_mult axis
+past 5.0 to find where the curve actually turns over (or confirm it doesn't within any sane range,
+which would mean the "stop/target" framing is doing less work than a plain wide stop alone would).
+Not done here — out of scope for a single follow-up check. **IBS rotation remains the sole standing
+finding; nothing is declared tradable.**
+
+**Follow-up: widening target_mult to find where it actually turns over (`--atr-target-widen`).**
+Swept target_mult from 4.0 out to 1000 (effectively "stop-only, target never triggers") at
+stop=0.75/1.00/1.25xATR. **It does turn over — it doesn't climb forever.** Return and Calmar both
+rise sharply from target=4 to ~6-8, then FLATTEN, converging to the stop-only asymptote by
+target~20-30 (target=30 and target=1000 give identical numbers at every stop level, confirming the
+target has stopped mattering well before 1000). All cells remain walk-forward consistent — no sign
+flips anywhere in the widened range either.
+
+| stop | best cell in this sweep | return | maxDD | Calmar |
+|---|---|---|---|---|
+| 0.75xATR | target=8 | 12.45%/yr | 12% | **1.07** |
+| 1.00xATR | target=6 | 12.87%/yr | 13% | 0.96 |
+| 1.25xATR | target=6 | 15.19%/yr | 17% | 0.88 |
+
+The actual Calmar peak across this wider sweep is **stop=0.75xATR, target~8xATR (Calmar 1.07)** —
+better than both the originally flagged (1.0, 4.0) cell (0.77) and the first perturbation sweep's
+edge-of-grid "best" (1.0, 5.0, Calmar 0.91). Past target~10-15, widening the target further buys
+nothing: the position almost never actually hits a target that wide before either the stop fires
+or the month-end exit arrives, so performance flatlines at essentially "stop-only" — e.g. at
+stop=1.0xATR the stop-only variant nets 13.59%/yr at 15% drawdown (Calmar 0.91), only modestly below
+the best target=6 cell (12.87%/yr... note non-monotonic: actually target=8 edges target=6 slightly
+higher, 13.76%/yr Calmar 0.93 — the true peak at stop=1.0 is ~target=6-8, essentially tied).
+
+**Net reading.** The target_mult axis has a real, moderate interior optimum around 6-8xATR (not an
+unbounded ridge, correcting the previous follow-up's open question) — the earlier (1.0, 4.0) and
+(1.0, 5.0) cells were both short of it, not past it. The practical takeaway is blunter than the
+exact peak location, though: **almost all of the Calmar improvement over the no-stop baseline comes
+from the STOP, not the target** — once the target is wide enough to rarely fire (>=15xATR), results
+are statistically indistinguishable from a tight ATR stop with no profit target at all, and that
+"stop-only" variant already captures most of the gain (Calmar 0.83-1.07 across the three stop
+levels tested, vs the original-grid's best of 0.77-0.91). A simpler, one-parameter "tight stop, let
+it run to month-end or stop out, no separate target" rule would likely do about as well as the
+two-parameter version this check set out to tune — worth remembering before adding a second knob to
+a risk overlay without first checking whether the first one is doing all the work. **IBS rotation
+remains the sole standing finding; nothing is declared tradable.**
+
+
+## Hundred-and-fourth: full-rigor pass on the ATR-stop-only variant — robust and significant on the
+universe it was found on, decisively fails cross-universe replication
+
+Direct follow-up requested on the Hundred-and-third entry's own finding that the target leg does
+almost no work — this entry puts the simplified ATR-STOP-ONLY rule (target effectively disabled,
+`STOP_ONLY_TARGET=1000`) through this project's full standing checklist rather than treating the
+earlier screens as sufficient: (1) walk-forward + 1,500-seed significance per cell, (2) quarter-
+split detail, (3) survivorship stress (the Fortieth entry's 4 real blowups, 56 stocks), (4) cross-
+universe replication (`UNIVERSE_B`, 54 different NSE names, zero overlap with `WIDE_UNIVERSE`) — a
+candidate only counts as a real survivor if it clears ALL four, the same standard this project has
+already applied to SuperTrend's `CL=F`, IBS's own FX retest, and 52-week-high's widening (all of
+which looked clean on the first screen and failed on a later one). `--stop-only-rigor` in
+`probe_reversal_rotation.py`. Pre-registered grid: `stop_mult` in {0.5, 0.75, 1.0, 1.25, 1.5, 2.0},
+IBS(5), top_k=5, lag=1.
+
+**(1) Screening, base 52-stock universe: all 6 cells pass cleanly.** Baseline (no stop): 19.60%/yr,
+39.5% drawdown, Calmar 0.50. Every stop level is walk-forward CONSISTENT and beats its own
+same-stop random-portfolio control at uncorrected p<0.05:
+
+| stop | return/yr | maxDD | Calmar | p |
+|---|---|---|---|---|
+| 0.50xATR | 10.46% | 10.6% | 0.98 | 0.0053 |
+| **0.75xATR** | **12.28%** | **11.6%** | **1.06** | 0.0220 |
+| 1.00xATR | 13.59% | 14.9% | 0.91 | 0.0213 |
+| 1.25xATR | 15.53% | 18.7% | 0.83 | 0.0180 |
+| 1.50xATR | 14.98% | 22.0% | 0.68 | 0.0346 |
+| 2.00xATR | 15.20% | 27.3% | 0.56 | 0.0440 |
+
+Smooth, monotonic Calmar decline as the stop widens — no cliffs, confirming the Hundred-and-third
+entry's own perturbation finding holds on this wider grid too. Best two by Calmar: 0.75xATR (1.06)
+and 0.50xATR (0.98).
+
+**(2) Quarter-split detail on the top 2: thin but not decaying.** Both cells are positive in all 4
+quarters (no decay), but only Q3 individually clears an uncorrected 0.05 against its own random
+control for both cells (p=0.0100, 0.0133); Q4 is significant for stop=0.50 (p=0.0199, random mean
+-10.3% vs the strategy's own +2.5%/yr) but not for stop=0.75 (p=0.1163, still positive at +0.65%/yr
+against random's -9.5%). Q1/Q2 don't clear 0.05 for either cell — Q2 especially, where even random
+stock-picking returned ~50-66%/yr in that bull stretch. Consistent with the overall screening p's:
+real on average, not uniformly significant quarter-by-quarter.
+
+**(3) Survivorship stress: holds up, even improves.** On the 56-stock blowup-stress universe
+(baseline no-stop: 21.86%/yr, 36.2% DD): stop=0.75xATR reaches 14.39%/yr at 13.0% DD, **Calmar 1.11**
+(better than the clean universe's 1.06), still CONSISTENT, p=0.0187. stop=0.50xATR: 13.57%/yr,
+15.7% DD, Calmar 0.87, CONSISTENT, p=0.0053. Same "harvests the bounce rather than holding through
+the collapse" signature already documented for plain IBS rotation (Fortieth entry) — the stop
+overlay doesn't break that property.
+
+**(4) Cross-universe replication: fails decisively.** On `UNIVERSE_B` (baseline no-stop: 16.02%/yr,
+37.0% DD, Calmar 0.43 — already a weaker universe than `WIDE_UNIVERSE` even unstopped): **stop=0.75xATR
+collapses to 5.47%/yr at 27.2% DD, Calmar 0.20, walk-forward INCONSISTENT** (first half +70%,
+second half ~0%), **Q4 is NEGATIVE (-27%)**, p=0.3591 (not significant — worse than most random
+draws). stop=0.50xATR: 4.66%/yr, Calmar 0.20, also INCONSISTENT, Q4 -24%, p=0.3531. The direction
+of the effect reverses on this universe: on `WIDE_UNIVERSE` the stop overlay roughly doubled
+Calmar (0.50 -> 1.06); on `UNIVERSE_B` it HALVES it (0.43 -> 0.20) relative to that universe's own
+unstopped baseline.
+
+**Net verdict.** Exactly the pattern this project has learned to require a retest for and has seen
+fail before (SuperTrend's `CL=F`, the Eighteenth entry's retest; IBS's own FX extension, the
+Twenty-fifth entry) — a result that is smooth, significant, and survivorship-robust on the one
+universe it was found on, and falls apart (inconsistent, Q4-negative, not significant) the moment
+it's asked to generalize to a different, equally real, equally Kite-tradable stock set. The
+ATR-stop-only overlay is **not confirmed** — it stays a universe-specific curiosity, not a
+validated risk-reduction lever, which also means the NIFTY trend gate and the NIFTYBEES half-hedge
+(both independently corroborated across more than one check in earlier entries) remain the better-
+evidenced options if a drawdown overlay is wanted on top of IBS rotation. 10 p-values registered in
+`multiple_comparisons.py` (quarter-level p's, 8 cells, added to `UNREGISTERED_SCAN_CELLS` instead,
+same convention as the Sixty-fourth entry's phase/anchor scan); honest family now 492 registered +
+492 unregistered = m=984, Bonferroni threshold 0.00005 — none of the 10 comes close, and the
+honest-family winners list is unchanged (still just the two S&P 500 index-gate drawdown rows). 279
+tests pass (no new logic needing a test — additive, default-off parameters built entirely from
+already-tested `simulate()`/`compute_atr()`). **IBS rotation remains the sole standing finding;
+nothing is declared tradable.**
+
+
+## Hundred-and-fifth: full-rigor pass on the NIFTY SMA trend gate — the drawdown effect holds
+directionally but loses almost all its significance on a second universe, and the honest
+Bonferroni family has now grown past its own best surviving finding's resolution floor
+
+Direct follow-up to the Hundred-and-fourth entry: the NIFTY trend gate (Sixty-first/Seventy-sixth
+entries) was named there as the "better-evidenced" alternative to the ATR-stop overlay, but it had
+never actually been put through the one check that just sank the ATR-stop variant — cross-universe
+replication on `UNIVERSE_B` (54 different NSE names). This entry reruns the full battery (screening,
+quarter-split detail, survivorship stress, cross-universe replication) on the gate fresh, in one
+consistent pass, rather than trusting the earlier entries' numbers (run on slightly different code/
+data snapshots) at face value. `--gate-rigor` in `probe_reversal_rotation.py`; pre-registered grid:
+SMA in {100, 150, 200}, IBS(5), top_k=5, lag=1.
+
+**(1) Screening, base 52-stock universe — Calmar roughly doubles, but the random-control p-values
+are weaker than the earlier entries' own headline numbers.** Baseline (ungated): 19.60%/yr, 39.5%
+drawdown, Calmar 0.50.
+
+| SMA | return/yr | maxDD | Calmar | p(return) | p(drawdown) |
+|---|---|---|---|---|---|
+| 100 | 15.34% | 14.3% | 1.08 | 0.268 | 0.0426 |
+| 150 | 15.44% | 14.8% | 1.04 | 0.317 | 0.0420 |
+| 200 | 15.47% | 17.8% | 0.87 | 0.371 | 0.0806 |
+
+Return never clears even an uncorrected 0.05 (confirming the Seventy-sixth entry's own "the gate
+does not time returns better than random months" on NIFTY specifically) — the return numbers above
+are indistinguishable from randomly picking the same number of off-months. Drawdown is the real
+claim, and on THIS fresh run it's thinner than previously reported: SMA100/150 sit right at
+p≈0.042-0.043 (barely under 0.05), SMA200 misses (p=0.081). Both halves are consistent and all
+quarters positive for every SMA length — no decay, matching earlier entries.
+
+**(2) Quarter-split detail on the top 2 (SMA100, SMA150): no individual quarter is significant.**
+Every one of the 8 quarter-cells (4 quarters x 2 SMA lengths) has p in the 0.19-0.82 range against
+its own random-off-months control — weaker than IBS rotation's or the ATR-stop line's own
+quarter-level results, which had at least one or two quarters individually clearing an uncorrected
+0.05. The drawdown benefit, such as it is, isn't concentrated in — or absent from — any particular
+quarter; it's a diffuse, whole-period effect too thin to localize.
+
+**(3) Survivorship stress (4 real blowups, 56 stocks): holds up, SMA150 improves.** SMA100: 18.71%/yr,
+20.8% DD, Calmar 0.90 (down from the clean universe's 1.08), p(return)=0.179, p(DD)=0.134 — weaker
+than the base screen. SMA150: 19.52%/yr, 14.8% DD, **Calmar 1.32** (up from 1.04), p(return)=0.177,
+p(DD)=**0.0173** — the single best drawdown p-value in this whole entry, and consistent with the
+Sixty-first entry's own earlier survivorship-stress finding that SMA150 is the more robust length
+under stress.
+
+**(4) Cross-universe replication (UNIVERSE_B): the Calmar advantage reverses.** `UNIVERSE_B`'s own
+ungated baseline: 16.02%/yr, 37.0% DD, Calmar 0.43. Gated: SMA100 10.45%/yr, 30.8% DD, **Calmar
+0.34** (worse than ungated); SMA150 12.11%/yr, 31.5% DD, **Calmar 0.38** (also worse than ungated).
+Both walk-forward halves stay positive (CONSISTENT, unlike the ATR-stop line's INCONSISTENT flip —
+this failure is milder in kind) but neither the return nor the drawdown effect is distinguishable
+from random on this universe (p(return) 0.41-0.51, p(DD) 0.37-0.38) — the SAME direction of failure
+the ATR-stop-only variant showed, just less dramatic: on the universe it was found on, the gate
+improves risk-adjusted return; on an equally real, disjoint 54-stock universe, applying it makes
+things slightly worse, and that difference is not statistically real either way.
+
+**A side effect of registering these 14 p-values, worth recording honestly rather than glossing
+over: the honest family has now grown large enough that this project's own best-ever surviving
+finding no longer clears its corrected bar.** The S&P 500 index-gate drawdown rows (Sixty-second
+entry, 20,000-draw control) were registered at the exact resolution floor, `0.00005` — previously
+just under the Bonferroni threshold (0.05/984 ≈ 0.0000508) and so the only rows ever to pass. Adding
+this entry's 14 rows pushes the honest family to m=1006, Bonferroni threshold ≈0.0000497 — strictly
+BELOW the floor value those rows are stuck at. **`multiple_comparisons.py`'s honest-family winners
+list is now empty.** This isn't new evidence against that finding (nothing about the S&P result
+changed), it's a mechanical consequence of a resolution-floor value losing a race against a growing
+denominator — but it's the first time in this project's history that literally nothing survives the
+honest Bonferroni bar, and it's worth remembering before citing "the S&P index-gate rows are the one
+thing that passes" again without rechecking the current m.
+
+**Net verdict.** Same shape of result as the Hundred-and-fourth entry's ATR-stop overlay, one notch
+milder: real and consistent on the universe it was discovered on (Calmar roughly doubles, quarters
+don't decay), but the statistical case was already thin (return never significant, drawdown only
+borderline) and the one check that matters most — an independent stock universe — shows the
+drawdown advantage reversing rather than replicating. Per this project's own standard, **not
+confirmed** as a cross-market-robust overlay for IBS rotation, though it fails more gently than the
+ATR-stop line did (directionally consistent rather than flipping sign). Of the two drawdown overlays
+tested this way so far, neither earns unqualified trust; the NIFTYBEES half-hedge (Forty-sixth/
+Forty-seventh entries, itself not yet retested on UNIVERSE_B either) is the one remaining
+candidate worth the same treatment if this line continues. 14 p-values registered in
+`multiple_comparisons.py` (quarter-level cells, 8, added to `UNREGISTERED_SCAN_CELLS` instead, same
+convention as the Hundred-and-fourth entry); honest family now 506 registered + 500 unregistered =
+m=1006, Bonferroni threshold 0.00005 — **no row currently passes**. 279 tests pass (no new logic
+needing a test — additive, reuses `simulate()`'s existing `gate=` parameter). **IBS rotation
+remains the sole standing finding; nothing is declared tradable.**
+
+
+## Hundred-and-sixth: full-rigor pass on the NIFTYBEES half-hedge — never a Calmar win on either
+universe (consistent with what the Forty-sixth/Sixty-first entries already said), and the
+drawdown benefit itself doesn't clear significance on an independent universe
+
+Direct follow-up to the Hundred-and-fourth/fifth entries: the NIFTYBEES half-hedge (Forty-sixth/
+Forty-seventh entries) was the third drawdown overlay this project has tried on IBS rotation and
+the only one not yet put through the same four-check battery. Ported the hedge mechanism into
+`probe_reversal_rotation.py`'s already lag-corrected `simulate()` (a short NIFTYBEES-equivalent
+leg sized at `hedge_ratio x beta x capital`, rounded down to whole shares, same cost model as every
+stock leg) rather than reusing `probe_ibs_rotation_etf_hedge.py`'s older same-bar-fill pipeline —
+beta is now recomputed via `compute_beta_lag1()` from this file's own lag-1 monthly returns, not
+the un-lagged ones the original entries used, so the beta value differs slightly (1.063 here vs.
+1.143 originally) but the mechanism is identical. `--hedge-rigor` in `probe_reversal_rotation.py`;
+pre-registered grid (the Forty-seventh entry's own sweep): hedge_ratio in {0.25, 0.375, 0.5, 0.625,
+0.75}, IBS(5), top_k=5, lag=1.
+
+**Correcting a framing slip from the last two entries' chat responses first**: this project's own
+Sixty-first entry already stated plainly that the half-hedge's Calmar (0.50) was WORSE than the
+unhedged baseline's (0.58) — it was only ever sold as cutting absolute drawdown "by a third" at the
+cost of "keeping ~54% of the return," never as a risk-adjusted improvement. Calling it the
+"better-evidenced" overlay in the two prior turns overstated it; this entry's own numbers confirm
+the original, more modest framing rather than contradicting it.
+
+**(1) Screening, base 52-stock universe — Calmar is worse than unhedged at EVERY ratio tested, by
+construction, not by surprise.** Baseline (unhedged): 19.60%/yr, 39.5% drawdown, Calmar 0.50.
+
+| ratio | return/yr | maxDD | Calmar | p (vs random stock-picks, same hedge) |
+|---|---|---|---|---|
+| 0.25 | 14.92% | 32.8% | 0.45 | 0.0306 |
+| 0.375 | 12.54% | 29.5% | 0.43 | 0.0313 |
+| 0.50 | 10.14% | 27.4% | 0.37 | 0.0313 |
+| 0.625 | 7.73% | 29.2% | 0.26 | 0.0306 |
+| 0.75 | 5.30% | 31.1% | 0.17 | 0.0306 |
+
+Every ratio is walk-forward CONSISTENT, and the IBS stock-selection edge over random picking
+survives being run through the identical hedge at every ratio (p≈0.03 throughout — a different
+question than "does the hedge improve Calmar," which it doesn't: return falls faster than drawdown
+does, monotonically, as the hedge gets heavier). Best two by Calmar: 0.25 (0.45), 0.375 (0.43) —
+still both below the 0.50 baseline.
+
+**(2) Quarter-split on the top 2: same uneven shape as the other two overlays.** Q1/Q3 borderline
+(p≈0.06-0.15), Q2 not significant at all (random control earns far more in that bull stretch,
++55% vs the hedge's own +11-20%/yr), Q4 clears p<0.02 for both ratios (random control actually
+negative there, -2.6%/-5.5%, vs the hedge's own +12-14%/yr). No decay in raw terms — all 4 quarters
+positive for both ratios — just thin, concentrated significance.
+
+**(3) Survivorship stress (4 real blowups, 56 stocks): holds up, Calmar improves.** Beta recomputed
+fresh on the stress universe (1.123). ratio=0.25: 16.78%/yr, 30.1% DD, **Calmar 0.56** (up from the
+clean universe's 0.45); ratio=0.375: 14.21%/yr, 31.5% DD, Calmar 0.45 (up from 0.43). Both
+CONSISTENT, p=0.0127 (better than the base screen's 0.03) — the same bounce-harvesting-survives-
+stress signature already documented for IBS rotation and both other overlays.
+
+**(4) Cross-universe replication (UNIVERSE_B): degrades further, same direction, not a reversal.**
+Beta recomputed fresh (1.046). `UNIVERSE_B`'s own unhedged baseline: 16.02%/yr, 37.0% DD, Calmar
+0.43. Hedged: ratio=0.25 11.51%/yr, 35.2% DD, Calmar **0.33** (worse than Universe B's own unhedged
+baseline, same direction as the base universe's own result); ratio=0.375 9.22%/yr, 34.8% DD, Calmar
+0.27. Neither clears significance against random stock-picks under the same hedge (p=0.12-0.12,
+vs the base screen's p≈0.03) — weaker evidence the stock-selection edge survives this specific
+combination on this universe, though not inconsistent in sign (both halves stay positive, no flip).
+
+**Net verdict, and how this compares to the other two overlays.** This is actually the MOST
+internally consistent of the three drawdown overlays tested this way, precisely because it was
+never oversold: it reliably does the one thing it was ever claimed to do (cut absolute drawdown at
+a real cost to return and Calmar) on BOTH universes, in the SAME direction, rather than reversing
+sign the way the ATR-stop overlay did or flipping a borderline significance result the way the
+trend gate did. What doesn't hold up is the weaker claim implicit in treating it as "the better
+option" — the drawdown-vs-random-off-months style significance test was never run on the hedge
+itself in the original entries (there's no natural random-hedge-ratio null the way there was a
+random-off-months null for the gate), and the one significance test that IS meaningful here (does
+stock-picking still beat random under the hedge) is markedly weaker on `UNIVERSE_B` than on the
+discovery universe. **Still not confirmed as a validated edge-preserving overlay** — it's a real,
+consistent, but Calmar-negative drawdown-reduction tool, same as it was always described, now
+independently reconfirmed under lag-corrected machinery and a second universe. Of the three
+overlays this project has now tested with this battery (ATR-stop, NIFTY gate, NIFTYBEES half-
+hedge), none earns unqualified trust as a Calmar improvement; this one at least doesn't contradict
+itself across universes, which is a real (if modest) point in its favor over the other two. 9
+p-values registered in `multiple_comparisons.py` (quarter-level cells, 8, added to
+`UNREGISTERED_SCAN_CELLS` instead, same convention as the two prior entries); honest family now
+515 registered + 508 unregistered = m=1023, Bonferroni threshold 0.00005 — no row passes (unchanged
+from the Hundred-and-fifth entry's own finding that nothing currently clears the honest bar). 279
+tests pass (additive: `simulate()` gained an `etf=`/`hedge_ratio=`/`beta=` triple, default `None`,
+old behavior unchanged). **IBS rotation remains the sole standing finding; nothing is declared
+tradable.**
+
+
+## Hundred-and-seventh: loss attribution for IBS rotation — the stock-picking edge itself (not
+just drawdown) vanishes in the highest realized-vol tercile, replicated on both universes; the
+IVIX/breadth splits that looked interesting on one universe reverse on the other
+
+Requested direction: apply a regime-conditioning framework to the data already collected, and look
+specifically at what conditions precede a LOSS, not just what overlay improves Calmar (Entries 61/
+76/103-106 already tested three overlays — NIFTY SMA gate, ATR stop, NIFTYBEES hedge — and none
+replicated cross-universe). This entry asks the narrower question those overlays acted on without
+ever checking directly: does the strategy's own realized 119-month track record actually differ by
+regime, or is "regime X is bad" an assumption the overlay tests smuggled in by picking which
+variable to gate on?
+
+`probe_loss_attribution.py`, reusing `simulate()`/`scores()`/`load_matrices()`/`align_to()`
+unchanged (no new strategy, no new fetch beyond `probe_macro_analog.py`'s already-cached NIFTY/
+India-VIX series) — IBS(5) top_k=5 lag=1 on the standing universe. Four regime variables, each
+already used somewhere in this project (NIFTY trend vs its 150d SMA — the Sixty-first entry's own
+gate; realized vol of NIFTY, 21d annualized; India VIX level — the fear-buy entries; this
+universe's own breadth, fraction of stocks above their own 200d SMA — the Hundred-and-first entry's
+Zweig probe), each computed at the ranking date of every real month with the project's standard
+no-lookahead `align_to`/rolling convention, tercile-split on the FULL history (so a bucket's
+definition doesn't depend on which months land in it). For each bucket: is the strategy's own mean
+return different from what buying `top_k` RANDOM eligible stocks in the EXACT SAME months would
+have earned (1,500-seed control) — this isolates whether a regime explains the STOCK-SELECTION edge
+specifically, since every bucket's random control already prices in that regime's own market beta.
+
+**Only one of the four regime variables replicates across both universes, and it's the most
+basic one: realized volatility.** WIDE_UNIVERSE: vol21 high tercile p(random>=actual)=0.5503 (no
+edge over random at all — the strategy is statistically indistinguishable from random
+stock-picking in the highest-vol months), vol21 mid p=0.0133 (a real, strong edge). UNIVERSE_B:
+vol21 high p=0.5583, vol21 mid p=0.0153 — both numbers reproduce closely on a disjoint 54-stock
+universe. **The other three variables do NOT replicate** — the India VIX mid-tercile cell looked
+like the single strongest result on WIDE_UNIVERSE (p=0.0087) and flips to p=0.6722 (no edge at all,
+direction reversed) on UNIVERSE_B; breadth's mid-tercile edge (p=0.0253 on WIDE_UNIVERSE) likewise
+disappears (p=0.1306) on UNIVERSE_B; the NIFTY trend split is weak and inconclusive on both
+(p=0.05-0.29, no bucket clears an uncorrected 0.05 on either universe). Registered, not credited —
+exactly the single-universe mirage this project's own standing practice exists to catch (the
+Sixty-eighth/Hundred-and-fourth/Hundred-and-fifth entries all found a result that looked real on one
+universe and reversed or vanished on the other).
+
+**What the replicating finding actually says, read against this project's own history of drawdown-
+overlay attempts.** Mean monthly return in the high-vol tercile isn't bad on its own (+1.88%/+1.89%
+on the two universes — among the better buckets by raw average) — what vanishes there isn't
+profitability, it's the STOCK-SELECTION skill specifically: in the calmest and most turbulent
+thirds of months, "most oversold" performs statistically like a random pick from the same universe;
+the real edge over random concentrates in the MIDDLE third. The worst single month in this entire
+backtest (2020-02-28, -30.0%/-24.6% on the two universes) sits in the high-vol tercile, consistent
+with this being a high-VARIANCE bucket (both the best and worst outcomes cluster there) rather than
+a uniformly-bad one, which is also why a hard regime GATE on this axis was never tried by any prior
+entry and wouldn't obviously help — cutting high-vol months removes upside and downside together,
+the same "costs more return than it saves" shape the ATR-stop and trend-gate overlays already
+showed on a different conditioning variable. This may explain, without proving, why those three
+overlays (gated on price TREND, not realized VOL) kept failing to replicate: they were conditioning
+on a variable this entry's own cross-universe check says doesn't discriminate skill from noise,
+while the one variable that does (realized vol) has never been used as a gate.
+
+**Net verdict.** Not a new mechanism and not a new overlay — a diagnostic entry answering "what
+regime distinguishes a good IBS-rotation month from a bad one" directly, rather than inferring it
+backward from which overlays happened to help. One real, cross-universe-replicated finding (the
+strategy's stock-picking skill is regime-dependent on realized volatility specifically, strongest
+in moderate-vol months, statistically absent in the highest-vol tercile) and three single-universe
+mirages, registered for honesty and explicitly not credited. 22 p-values registered in
+`multiple_comparisons.py`; honest family now 537 registered + 508 unregistered = m=1045,
+Bonferroni threshold 0.00005 — none of the 22 comes within two orders of magnitude of it, consistent
+with every other result in this project's ledger. 279 tests pass (unchanged — no new logic needing
+a test; the new probe script reuses already-tested `simulate()`/`scores()`/`align_to()` verbatim,
+same convention every other standalone probe in this project follows). Concrete next step, not done
+here: a realized-vol-tercile GATE (hold cash, or at minimum skip the lowest-conviction picks, in the
+highest-vol tercile specifically) through the same four-check battery (screening, quarter-split,
+survivorship stress, cross-universe replication) the three price-trend overlays already got —
+untested, because this entry's job was to find which variable is worth gating on, not to build the
+fourth overlay. **IBS rotation remains the sole standing finding; nothing is declared tradable.**
+
+
+## Hundred-and-eighth: two book-sourced signals never tested here — frog-in-the-pan momentum
+quality and the Ichimoku cloud — a clean null and a single-universe mirage
+
+Requested direction: search books for strategies not yet tried and apply them to the data already
+collected. Two genuinely new signal constructions, both added as `kind` branches to
+`probe_reversal_rotation.py`'s existing `scores()` dispatcher (the same minimal-diff pattern Entry
+87 used for realized skewness) — no new file, no new fetch, full reuse of `simulate()`'s lag-1
+fill, cost model, and random-portfolio control.
+
+**Frog-in-the-pan / momentum quality** (Da, Gao & Jagadeesh 2014, "Information Discreteness and
+the Cross-Section of Stock Returns"; described as a retail-accessible factor in Wesley Gray &
+Jack Vogel's book "Quantitative Momentum"): a 12-1 momentum stock that got there via many small
+same-sign daily moves continues more reliably than one that got there via a few big jumps.
+Score = `-(12-1 momentum) x (fraction of up days over the same formation window)`, so a
+positive-momentum, smooth-path name sorts first (most negative score, this file's ascending-pick
+convention); a negative-momentum name's score stays positive regardless of its own path
+smoothness, so the ranking's head is naturally restricted to positive-momentum names without a
+separate filter.
+
+**Ichimoku cloud distance** (Hosoda's Ichimoku Kinko Hyo, as described in John Murphy's
+"Technical Analysis of the Financial Markets" — one of the most widely used indicators in retail
+technical analysis, and, like Bollinger Bands/Stochastic before it, never tested in this project
+despite that popularity): Score = `-(close - today's cloud midpoint) / close`. The cloud "visible"
+at today's close is Senkou Span A/B computed from data through 26 days ago (it's plotted 26
+periods ahead of its own inputs in the standard construction), so reading it via a 26-day forward
+shift of the already-computed span uses no lookahead — the stock furthest above its own current
+cloud sorts first, the same "distance above a bullish reference level" shape as `hi52`'s 52-week-
+high proximity, with Ichimoku's own specific construction instead.
+
+Pre-registered: both signals x top_k in {3, 5, 8}, IBS rotation's own 52-stock `WIDE_UNIVERSE`,
+lag-1 fill, 1,500-seed random-portfolio control — `--frog`/`--ichimoku` in
+`probe_reversal_rotation.py`. Checked on `UNIVERSE_B` before trusting anything, per this project's
+own standing practice.
+
+**Frog-in-the-pan: a clean null on both universes.** WIDE_UNIVERSE: 2.35-5.75%/yr vs random
+10.55-11.03%/yr at every top_k (p=0.86-0.92 — the strategy loses to most random draws), Q4
+strongly negative at every size (-34% to -50%) — the same basket-wide-momentum decay signature
+the Sixty-third entry already found for plain 12-1 momentum and 52-week-high. UNIVERSE_B is
+directionally better (p=0.10-0.37) but never clears even an uncorrected 0.05. The "quality" filter
+doesn't rescue momentum here, the same conclusion the Twenty-eighth entry reached testing whether a
+regime filter rescues Bollinger Bands: a filter on top of a mechanism with no real edge underneath
+doesn't manufacture one.
+
+**Ichimoku is the mirage this entry exists to report.** WIDE_UNIVERSE: a clean null at every
+top_k (9.94-12.68%/yr vs random 12.80-13.21%/yr, p=0.47-0.78). **UNIVERSE_B: top_k=3 clears
+p=0.0360, top_k=5 clears p=0.0286**, both walk-forward halves strongly positive (+124% to +190%
+across the two halves) — looks like exactly the kind of result this project would normally chase
+further. But the discovery universe (`WIDE_UNIVERSE`) shows nothing at all for the same rule, same
+top_k values, same window — the identical single-universe-disagreement shape the Hundred-and-
+seventh entry's own India-VIX and breadth splits just showed. Per this project's own standing
+rule (a candidate only counts once it clears the SAME bar on both independent universes, not
+either one alone — the rule that already sank SuperTrend's `CL=F`, IBS's FX retest, and 52-week-
+high's widening), **Ichimoku rotation is rejected, not flagged as promising.** Also worth naming:
+`UNIVERSE_B`'s own Q4 is negative at top_k=5/8 (-15%, -6%) even within the universe where it
+"passed" — only top_k=3 has all four quarters positive there, so even the passing side of this
+mirage isn't uniformly clean.
+
+**Net verdict.** Two new, literature-sourced constructions (one momentum-adjacent, one a classic
+multi-component technical indicator), added at minimal cost by reusing the existing `scores()`
+dispatcher rather than a new probe file, both rejected — one on a clean uniform null, one on
+exactly the cross-universe-disagreement pattern this project's own methodology exists to catch. No
+quarter-split/perturbation/survivorship-stress follow-up run on either (per the establishing
+"stop at the first clear crack" practice — Ichimoku already fails the cross-universe bar outright,
+frog is uniformly negative). 12 p-values registered in `multiple_comparisons.py`; honest family
+now 549 registered + 508 unregistered = m=1057, Bonferroni threshold 0.00005 — none of the 12
+comes close, consistent with the rest of this project's ledger. 279 tests pass (unchanged — no new
+logic needing a test beyond what `scores()`'s existing branches already exercise; the two new
+branches reuse `simulate()`'s already-tested machinery verbatim). **91 mechanisms tested; IBS
+rotation remains the sole standing finding; nothing is declared tradable.**
+
+
+## Hundred-and-ninth: Alexander's Filter Rule, tested with Aronson's own methodology — a
+block-bootstrap Reality-Check correction, built as new infrastructure, and a clean null on
+both markets even before the correction is applied
+
+Direct follow-up to "apply the strategies in the book": Aronson's "Evidence-Based Technical
+Analysis" isn't really a strategy cookbook — its core contribution is the METHODOLOGY for
+telling a real technical-rule edge from a data-mined one, specifically a bootstrap-based
+correction (the same idea as White's "Reality Check"/Hansen's SPA test, which the book cites) for
+the bias of searching a grid and reporting only the best cell. This project already has Bonferroni/
+Benjamini-Hochberg (`multiple_comparisons.py`) for correcting a family of ALREADY-COMPUTED
+p-values after the fact, but nothing that directly simulates "how good does the best-of-many-
+configs look under a null with no real exploitable structure" — which is a different, often less
+conservative (Bonferroni assumes independence; a bootstrap respects the grid's actual correlation
+structure) correction, and the one Aronson's own book is specifically about.
+
+**The rule**: Alexander's (1961) Filter Rule — long when price is x% above its own most recent
+trough (since it last went flat), flat when x% below its own most recent peak (since it last
+went long). One of the oldest technical rules academics have tested, predating everything else in
+this project's `probe_*.py` lineage by decades, and genuinely distinct from every trend-following
+construction already here (not a fixed-N-day channel like Donchian, not an ATR-ratchet band like
+SuperTrend, not a moving-average cross).
+
+**The correction**: `probe_filter_rule.py`'s block-bootstrap — resample 21-day blocks of the REAL
+daily-return series (with replacement) into a synthetic price path of the same length (preserves
+local, within-block serial dependence; destroys the specific long-range trend/cycle structure of
+the one real historical path), rerun the WHOLE pre-registered grid (x in {1,2,3,4,5,7.5,10,15,20,
+25}%) on every synthetic path, and track the single best cell's performance each draw. The actual
+best cell's percentile within that "best-of-grid under no real structure" distribution is the
+corrected p — by construction always at least as conservative as testing the chosen cell alone
+against its own null (the "naive" p also reported, for the contrast Aronson's book makes explicit).
+No lookahead: the filter state decided through `close[i]` fills at `close[i+1]` and only starts
+earning returns from `close[i+1]` onward, this project's standing lag-1 convention, verified by a
+synthetic all-up-then-reversal sanity check before any real number was trusted.
+
+**Result: a clean null on both markets, and the correction barely has to do any work because the
+NAIVE test already fails.** NIFTY (10y, 0.1%-per-leg ETF-level cost): best cell x=5% at 10.87%/yr,
+15.1% max drawdown — naive p=0.2598, Reality-Check-corrected p=0.5503. S&P 500 (20y): best cell
+x=25% at 10.32%/yr — naive p=0.2072, corrected p=0.3185. Neither market's single best grid cell
+clears even an uncorrected 0.05 tested alone, let alone once the search-over-10-configs bias is
+priced in. Descriptively, NIFTY's mid-range cells (x=4/5/7.5%) decay toward a flat or negative Q4
+(-3% to +3%) while S&P's equivalent cells show the opposite, strengthening into Q3/Q4 (+56% to
++161%) — neither pattern is statistically meaningful here since the underlying result never clears
+significance in the first place, but it's a reminder that "looks clean on quarter-split" and "beats
+a proper data-mining-bias-corrected null" are different bars, and this result fails the second one
+before the first one is even worth checking carefully.
+
+**Net verdict.** The book's actual contribution — applied directly rather than cherry-picking one
+of its cited rules — doesn't change this project's standing verdict (one of the oldest technical
+rules in the literature, tested honestly, is still a null here), but it adds a genuinely new,
+reusable correction tool (`block_bootstrap_price()`, a block-bootstrap Reality-Check harness
+generic enough to rerun on any future grid-searched single-instrument rule in this project, not
+just the filter rule) that this project's existing Bonferroni/BH machinery didn't cover. 4 p-values
+registered in `multiple_comparisons.py` (naive and corrected, both markets); honest family now 553
+registered + 508 unregistered = m=1061, Bonferroni threshold 0.00005 — moot here since neither
+market's naive p is anywhere close to 0.05 either. 279 tests pass (unchanged — a standalone probe
+script, no pytest file, per this project's own established convention; correctness checked via the
+script's own synthetic sanity check instead). **91 mechanisms tested; IBS rotation remains the sole
+standing finding; nothing is declared tradable.**
+
+
+## Hundred-and-tenth: the Arms Index (TRIN) — a strong, textbook-direction result on one
+universe that REVERSES SIGN, not just fails to replicate, on the other
+
+Continuing "apply the strategies in the book" with a second Aronson-adjacent construction: the
+Arms Index / TRIN (Richard Arms, 1967), one of the classic breadth-based contrarian timing tools
+in the technical-analysis literature the book audits. Genuinely different from the Hundred-and-
+first entry's Zweig Breadth Thrust: Zweig used advance/decline COUNT alone; TRIN divides the
+advance/decline count ratio by the advance/decline VOLUME ratio -- `(adv_n/dec_n) /
+(adv_vol/dec_vol)` -- asking whether the volume behind the day's advancers/decliners is
+proportionate to how many of them there are. This project has never combined cross-sectional
+volume with cross-sectional breadth before (Zweig's breadth was count-only; the Sixteenth/
+Eighty-third entries' volume signals were single-stock, never aggregated across a universe).
+
+`probe_trin_signal.py`: daily TRIN across both universes, smoothed over a trailing 10 days (the
+standard "10-day TRIN" practical convention -- raw single-day TRIN is far too noisy to read
+directly), tercile-split on the full history, tested against NIFTY's own forward return at h in
+{1, 5, 10, 21} trading days with a lag-1 fill, against a random-same-size-subset-of-days null
+(2,000 draws, the same shape used throughout the calendar-effect entries).
+
+**On WIDE_UNIVERSE, this looked like a genuinely strong, monotonic, textbook-direction result —
+exactly the kind of thing worth getting excited about before checking the second universe.** The
+HIGH-TRIN tercile (volume piling into the few declining names -- classic "oversold" reading)
+showed progressively stronger, more significant forward returns as the horizon lengthened: h=1
+p=0.2154, h=5 p=0.0380, h=10 p=0.0875, **h=21 p=0.0005** (mean forward return +1.362% vs the
+unconditional +0.870%, more than triple the low-TRIN bucket's +0.389%) -- the exact direction
+Arms' own published interpretation predicts, growing cleaner at longer horizons rather than
+noisier, which is usually a good sign.
+
+**On UNIVERSE_B, the result doesn't just fail to replicate — it flips sign.** There, it's the
+LOW-TRIN tercile that's significant at h=21 (p=0.0005, mean forward return +1.283%), while
+HIGH-TRIN -- the bucket that drove the entire WIDE_UNIVERSE finding -- is the WORST bucket on
+UNIVERSE_B (+0.335%, p=1.0000, meaning essentially every random subset of days beat it). This is
+a sharper disqualification than the Hundred-and-eighth entry's Ichimoku mirage (significant on
+one universe, null on the other): here the same construction, same thresholds, same horizons
+gives opposite-direction "significant" readings on the two universes. Whatever each universe's
+result is individually measuring, it isn't a shared, real TRIN-NIFTY relationship — a result this
+clean and this contradictory is close to the best evidence this project has produced yet that a
+single-universe backtest, however textbook-clean it looks, says nothing on its own.
+
+**Net verdict.** Second new signal family this session (breadth x volume, never combined before),
+both now closed: Zweig Breadth Thrust's own literal rule never fired (Hundred-and-first entry);
+TRIN fires constantly and looks real, in opposite directions depending on which 52-ish-stock NSE
+sample supplies the breadth. 24 p-values registered in `multiple_comparisons.py` (4 horizons x 3
+buckets x 2 universes, all registered for honesty regardless of which looked interesting before
+the cross-check); honest family now 577 registered + 508 unregistered = m=1085, Bonferroni
+threshold 0.00005 -- moot, since the point of this entry is the cross-universe contradiction, not
+any individual cell's significance. 279 tests pass (unchanged — standalone probe script, no
+pytest file, per this project's established convention). **91 mechanisms tested; IBS rotation
+remains the sole standing finding; nothing is declared tradable.**

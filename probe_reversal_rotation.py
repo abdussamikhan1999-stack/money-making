@@ -98,6 +98,31 @@ def scores(M, kind, window):
         return c.pct_change().rolling(window, min_periods=window).skew()
     if kind == "mom":  # Jegadeesh-Titman 12-1: return from t-252 to t-21, NEGATED so highest momentum sorts first
         return -(c.shift(21) / c.shift(252) - 1)
+    if kind == "frog":  # Da-Gao-Jagadeesh 2014 "Information Discreteness" (the book "Quantitative
+        # Momentum", Gray & Vogel, calls this "frog-in-the-pan"): a 12-1 momentum stock that got
+        # there via many small same-sign days continues more reliably than one that got there via
+        # a few big jumps. mom (same t-252..t-21 window as "mom" above) x fraction-of-up-days over
+        # the identical window; for a positive-momentum name this is most negative (sorts first,
+        # this file's ascending-pick convention) when the path was both strong AND smooth. A
+        # negative-momentum name's score stays positive regardless of its own path smoothness, so
+        # this naturally restricts the ranking's head to positive-momentum names without a separate
+        # filter — not itself a claim about smooth DOWNTRENDS, which this score doesn't rank for.
+        mom = c.shift(21) / c.shift(252) - 1
+        pct_up = (c.pct_change() > 0).astype(float).shift(21).rolling(231, min_periods=180).mean()
+        return -mom * pct_up
+    if kind == "ichimoku":  # Hosoda's Ichimoku Kinko Hyo cloud (Senkou Span A/B), as described in
+        # Murphy's "Technical Analysis of the Financial Markets": the cloud plotted AT today is
+        # computed from data through 26 days ago (it's drawn 26 periods ahead of its own inputs),
+        # so reading today's cloud from a value already known 26 days back needs no lookahead.
+        # Score = -(close - cloud midpoint)/close, so the stock furthest ABOVE its own current
+        # cloud (strongest Ichimoku-bullish reading) sorts first, the same "nearness to a bullish
+        # reference level" shape as "hi52" above, with Ichimoku's own specific construction.
+        tenkan = (h.rolling(9, min_periods=9).max() + l.rolling(9, min_periods=9).min()) / 2
+        kijun = (h.rolling(26, min_periods=26).max() + l.rolling(26, min_periods=26).min()) / 2
+        span_a = (tenkan + kijun) / 2
+        span_b = (h.rolling(52, min_periods=52).max() + l.rolling(52, min_periods=52).min()) / 2
+        cloud_today = ((span_a + span_b) / 2).shift(26)
+        return -(c - cloud_today) / c
     return c / c.shift(window) - 1  # reversal: trailing return, lowest = biggest loser
 
 
@@ -116,14 +141,52 @@ def corwin_schultz_half_spread(M, smooth=3):
     return (spread.rolling(smooth, min_periods=1).mean() / 2)
 
 
-def simulate(M, S, top_k, lag, rng=None, capital=100_000.0, hs=None, hs_mult=1.0, gate=None, hold=None):
+def compute_atr(M, period=14):
+    """Simple (unsmoothed) ATR per stock, vectorized — same convention as
+    indicators.average_true_range (plain rolling mean of true range, not
+    Wilder's exponential smoothing), reused here instead of a second
+    definition. ATR[t] uses only high/low/close through day t, so using
+    atr[a] (the ranking date) to size a stop/target for a trade entered at
+    a+lag is no-lookahead, the same convention every other indicator in
+    this project's daily strategies already follows."""
+    h, l, c = M["high"], M["low"], M["close"]
+    prev_close = c.shift(1)
+    tr = np.maximum(h - l, np.maximum((h - prev_close).abs(), (l - prev_close).abs()))
+    return tr.rolling(period, min_periods=period).mean()
+
+
+def simulate(M, S, top_k, lag, rng=None, capital=100_000.0, hs=None, hs_mult=1.0, gate=None, hold=None,
+             atr=None, stop_mult=None, target_mult=None, etf=None, hedge_ratio=None, beta=None):
     """Long the top_k lowest-score names (random eligible names if rng given).
     hs: optional half-spread matrix (see corwin_schultz_half_spread); each pick pays
     ITS OWN half spread x hs_mult on both legs, so the asymmetry between
-    the strategy's picks and random picks is priced in, not assumed."""
+    the strategy's picks and random picks is priced in, not assumed.
+
+    atr/stop_mult/target_mult (all default None, old behavior unchanged): optional
+    ATR-based stop-loss and take-profit, checked day-by-day against that pick's
+    OWN ATR as of the ranking date (no lookahead — see compute_atr). If a day's
+    low breaches the stop AND its high clears the target, the stop takes priority
+    (this project's established adverse-first-on-a-tie convention, matching
+    backtest_daily.py's own day-path approximation). A pick that never triggers
+    either exits at the scheduled month-end/hold-day close exactly as before.
+
+    etf/hedge_ratio/beta (all default None, old behavior unchanged): a short
+    NIFTYBEES-equivalent leg sized at hedge_ratio x beta x current capital,
+    rounded down to whole shares at the lag-1 entry fill (the Forty-sixth/
+    Forty-seventh entries' ETF half-hedge, reimplemented here on top of this
+    file's already-lag-corrected machinery instead of probe_ibs_rotation_
+    etf_hedge.py's older same-bar-fill pipeline). Costed at the same COST_PCT
+    round-trip as every stock leg; skipped for a month if either fill price
+    is missing or the sized quantity rounds down to zero."""
     c = M["close"].to_numpy()
+    use_stops = atr is not None and stop_mult is not None and target_mult is not None
+    h = M["high"].to_numpy() if use_stops else None
+    l = M["low"].to_numpy() if use_stops else None
+    atrv = atr.to_numpy() if use_stops else None
     sc = S.to_numpy()
     hsv = hs.to_numpy() if hs is not None else None
+    etfv = etf.to_numpy() if etf is not None else None
+    use_hedge = etfv is not None and hedge_ratio is not None and beta is not None
     me = M["me"]
     cap, peak, dd = capital, capital, 0.0
     months, at, spreads = [], [], []
@@ -146,13 +209,30 @@ def simulate(M, S, top_k, lag, rng=None, capital=100_000.0, hs=None, hs_mult=1.0
         each = cap / k
         pnl = 0.0
         for j in pick:
+            entry_px, exit_idx, exit_px = c[ea, j], eb, c[eb, j]
+            if use_stops and not np.isnan(atrv[a, j]):
+                stop_px = entry_px - stop_mult * atrv[a, j]
+                target_px = entry_px + target_mult * atrv[a, j]
+                for d in range(ea + 1, eb + 1):
+                    if np.isnan(l[d, j]) or np.isnan(h[d, j]):
+                        continue
+                    stopped, hit_target = l[d, j] <= stop_px, h[d, j] >= target_px
+                    if stopped:
+                        exit_idx, exit_px = d, stop_px
+                        break
+                    if hit_target:
+                        exit_idx, exit_px = d, target_px
+                        break
             if hsv is not None:
-                r = c[eb, j] * (1 - hs_mult * np.nan_to_num(hsv[eb, j])) / (c[ea, j] * (1 + hs_mult * np.nan_to_num(hsv[ea, j]))) - 1
-            else:
-                r = c[eb, j] / c[ea, j] - 1
-            if hsv is not None:
+                r = exit_px * (1 - hs_mult * np.nan_to_num(hsv[exit_idx, j])) / (entry_px * (1 + hs_mult * np.nan_to_num(hsv[ea, j]))) - 1
                 spreads.append(np.nan_to_num(hsv[ea, j]))
+            else:
+                r = exit_px / entry_px - 1
             pnl += each * (r - 2 * COST_PCT / 100) - DP
+        if use_hedge and not (np.isnan(etfv[ea]) or np.isnan(etfv[eb])):
+            qty = int((hedge_ratio * beta * cap) // etfv[ea])
+            if qty > 0:
+                pnl += -qty * (etfv[eb] - etfv[ea]) - qty * etfv[ea] * (COST_PCT / 100) * 2
         cap += pnl
         peak = max(peak, cap)
         dd = max(dd, (peak - cap) / peak)
@@ -540,6 +620,500 @@ def hold_test(M, years, seeds, stress=False):
                   f"random(same hold) {cagr(finals.mean(), years):.2f}%/yr, p={p:.4f}")
 
 
+def atr_stop_test(M, years, seeds, top_k=5):
+    """IBS(5) rotation, lag 1, with an ATR-based stop-loss/take-profit checked
+    day-by-day during each month's hold instead of exiting only at the
+    scheduled month-end close. Pre-registered grid: stop_mult in {1.0, 1.5,
+    2.0} x target_mult in {2.0, 3.0, 4.0} (the same R-multiple range this
+    project's other ATR-stopped strategies use — e.g. ThreeBarBreakoutStrategy's
+    default target_r_multiple=2.5, RSI-2's stop_atr_multiple=3.0). Baseline
+    (no stop/target) is the family's own established lag-1 number, ~20%/yr
+    (Fifty-ninth entry)."""
+    S = scores(M, "ibs", 5)
+    atr = compute_atr(M)
+    base = simulate(M, S, top_k, 1)
+    print(f"IBS(5) top_k={top_k} lag=1, NO stop/target (baseline): {cagr(base['final'], years):.2f}%/yr, maxDD {base['max_dd']:.1%}")
+    for stop_mult in (1.0, 1.5, 2.0):
+        for target_mult in (2.0, 3.0, 4.0):
+            r = simulate(M, S, top_k, 1, atr=atr, stop_mult=stop_mult, target_mult=target_mult)
+            rng = np.random.default_rng(0)
+            finals = np.array([simulate(M, S, top_k, 1, rng=rng, atr=atr, stop_mult=stop_mult,
+                                         target_mult=target_mult)["final"] for _ in range(seeds)])
+            p = ((finals >= r["final"]).sum() + 1) / (seeds + 1)
+            mo = r["months"]
+            half = len(mo) // 2
+            qs = [np.prod(1 + q) - 1 for q in np.array_split(mo, 4)]
+            print(f"  stop={stop_mult:.1f}xATR target={target_mult:.1f}xATR: {cagr(r['final'], years):6.2f}%/yr, "
+                  f"maxDD {r['max_dd']:.1%}, halves {np.prod(1 + mo[:half]) - 1:+.0%}/{np.prod(1 + mo[half:]) - 1:+.0%}, "
+                  f"quarters {[f'{q:+.0%}' for q in qs]}, random mean {cagr(finals.mean(), years):.2f}%/yr, p={p:.4f}")
+
+
+def atr_stop_cell_detail(M, years, seeds, stop_mult, target_mult, top_k=5):
+    """Annualized quarter-split (with its own random-control p per quarter) for one
+    stop_mult/target_mult cell, since atr_stop_test's own quarters print total return
+    per chunk only."""
+    S = scores(M, "ibs", 5)
+    atr = compute_atr(M)
+    r = simulate(M, S, top_k, 1, atr=atr, stop_mult=stop_mult, target_mult=target_mult)
+    mo = r["months"]
+    n = len(mo)
+    cuts = [0, n // 4, n // 2, 3 * n // 4, n]
+    print(f"IBS(5) top_k={top_k} lag=1, stop={stop_mult:.2f}xATR target={target_mult:.2f}xATR — quarter-split detail:")
+    rng = np.random.default_rng(1)
+    random_mo = [simulate(M, S, top_k, 1, rng=rng, atr=atr, stop_mult=stop_mult,
+                           target_mult=target_mult)["months"] for _ in range(min(seeds, 300))]
+    for i in range(4):
+        lo, hi = cuts[i], cuts[i + 1]
+        ch = mo[lo:hi]
+        yrs_q = len(ch) / 12
+        total = np.prod(1 + ch) - 1
+        ann = ((1 + total) ** (1 / yrs_q) - 1) * 100 if yrs_q > 0 and total > -1 else float("nan")
+        rand_totals = np.array([np.prod(1 + rm[lo:hi]) - 1 for rm in random_mo if len(rm) >= hi])
+        p_q = ((rand_totals >= total).sum() + 1) / (len(rand_totals) + 1) if len(rand_totals) else float("nan")
+        print(f"  Q{i + 1} ({len(ch)} months, ~{yrs_q:.1f}y): total {total:+.1%}, annualized {ann:+.2f}%/yr, "
+              f"random-control mean {rand_totals.mean():+.1%}, p={p_q:.4f}")
+
+
+def atr_stop_perturb(M, years, seeds, top_k=5):
+    """Perturbation sweep around the one cell (stop=1.0xATR, target=4.0xATR) that
+    beat the no-stop baseline's Calmar in atr_stop_test — a neighborhood grid, the
+    same Davey-style robustness check used throughout this file (smooth / no-cliff
+    across nearby values = real; a peak only at the exact chosen point = a
+    single-point-fit artifact, e.g. the Squeeze/regime-gate entries' own warnings)."""
+    S = scores(M, "ibs", 5)
+    atr = compute_atr(M)
+    base = simulate(M, S, top_k, 1)
+    print(f"baseline (no stop/target): {cagr(base['final'], years):.2f}%/yr, maxDD {base['max_dd']:.1%}, "
+          f"Calmar {cagr(base['final'], years) / (100 * base['max_dd']):.2f}")
+    print("perturbation grid around stop=1.0xATR, target=4.0xATR:")
+    for stop_mult in (0.75, 1.0, 1.25, 1.5):
+        row = []
+        for target_mult in (3.0, 3.5, 4.0, 4.5, 5.0):
+            r = simulate(M, S, top_k, 1, atr=atr, stop_mult=stop_mult, target_mult=target_mult)
+            ann = cagr(r["final"], years)
+            calmar = ann / (100 * r["max_dd"]) if r["max_dd"] else float("nan")
+            mo = r["months"]
+            half = len(mo) // 2
+            h1, h2 = np.prod(1 + mo[:half]) - 1, np.prod(1 + mo[half:]) - 1
+            consistent = (h1 > 0) == (h2 > 0)
+            row.append(f"t={target_mult:.1f}: {ann:6.2f}%/yr DD{r['max_dd']:.0%} Calmar{calmar:.2f}"
+                       f"{'' if consistent else ' INCONSISTENT'}")
+        print(f"  stop={stop_mult:.2f}xATR: " + " | ".join(row))
+
+
+def atr_target_widen(M, years, top_k=5):
+    """Does the target_mult axis ever turn over, or does it just keep climbing toward
+    the no-stop baseline as the target widens (i.e. the target stops doing any real
+    work)? Widens target_mult from 4.0 out to 1000 (effectively "stop only, target
+    never triggers") at three stop levels, holding everything else fixed."""
+    S = scores(M, "ibs", 5)
+    atr = compute_atr(M)
+    base = simulate(M, S, top_k, 1)
+    print(f"baseline (no stop/target): {cagr(base['final'], years):.2f}%/yr, maxDD {base['max_dd']:.1%}, "
+          f"Calmar {cagr(base['final'], years) / (100 * base['max_dd']):.2f}")
+    for stop_mult in (0.75, 1.0, 1.25):
+        row = []
+        prev_ann = None
+        for target_mult in (4.0, 5.0, 6.0, 8.0, 10.0, 15.0, 20.0, 30.0, 1000.0):
+            r = simulate(M, S, top_k, 1, atr=atr, stop_mult=stop_mult, target_mult=target_mult)
+            ann = cagr(r["final"], years)
+            calmar = ann / (100 * r["max_dd"]) if r["max_dd"] else float("nan")
+            mo = r["months"]
+            half = len(mo) // 2
+            h1, h2 = np.prod(1 + mo[:half]) - 1, np.prod(1 + mo[half:]) - 1
+            consistent = (h1 > 0) == (h2 > 0)
+            delta = f"({ann - prev_ann:+.2f})" if prev_ann is not None else ""
+            prev_ann = ann
+            label = "stop-only" if target_mult >= 1000 else f"t={target_mult:.0f}"
+            row.append(f"{label}: {ann:6.2f}%/yr{delta} DD{r['max_dd']:.0%} Calmar{calmar:.2f}"
+                       f"{'' if consistent else ' INCONSISTENT'}")
+        print(f"  stop={stop_mult:.2f}xATR: " + " | ".join(row))
+
+
+STOP_ONLY_TARGET = 1_000.0  # effectively disables the target leg (never triggers within a month)
+
+
+def _cell_stats(M, S, atr, top_k, stop_mult, years, seeds, rng_seed=0):
+    r = simulate(M, S, top_k, 1, atr=atr, stop_mult=stop_mult, target_mult=STOP_ONLY_TARGET)
+    ann = cagr(r["final"], years)
+    calmar = ann / (100 * r["max_dd"]) if r["max_dd"] else float("nan")
+    mo = r["months"]
+    half = len(mo) // 2
+    h1, h2 = np.prod(1 + mo[:half]) - 1, np.prod(1 + mo[half:]) - 1
+    consistent = (h1 > 0) == (h2 > 0)
+    qs = [np.prod(1 + q) - 1 for q in np.array_split(mo, 4)]
+    rng = np.random.default_rng(rng_seed)
+    finals = np.array([simulate(M, S, top_k, 1, rng=rng, atr=atr, stop_mult=stop_mult,
+                                 target_mult=STOP_ONLY_TARGET)["final"] for _ in range(seeds)])
+    p = ((finals >= r["final"]).sum() + 1) / (seeds + 1)
+    return dict(r=r, ann=ann, calmar=calmar, h1=h1, h2=h2, consistent=consistent, qs=qs,
+                p=p, random_mean=cagr(finals.mean(), years))
+
+
+def stop_only_full_rigor(top_k=5, seeds=1500):
+    """Full-rigor pass on the ATR-STOP-ONLY variant (target effectively disabled —
+    the Hundred-and-third follow-up found almost all of the Calmar gain over the
+    no-stop baseline comes from the stop, not the target). Pre-registered grid:
+    stop_mult in {0.5, 0.75, 1.0, 1.25, 1.5, 2.0}, top_k=5, IBS(5), lag=1, the
+    family's own 52-stock WIDE_UNIVERSE. Checks applied, in this project's own
+    established order: (1) walk-forward + 1,500-seed significance per cell on the
+    base universe (screening); (2) quarter-split detail on the two best-by-Calmar
+    cells; (3) survivorship stress (the Fortieth entry's 4 real blowups, 56 stocks)
+    on those same two cells; (4) cross-universe replication (UNIVERSE_B, 54
+    different NSE names) on those same two cells. A cell only counts as a real
+    survivor if it clears ALL of these, not just the first screen."""
+    global SYMBOLS
+    print("=== (1) screening: stop_mult grid on the base 52-stock universe ===")
+    M = load_matrices()
+    years = (M["close"].index[M["me"][-1]] - M["close"].index[M["me"][0]]).days / 365.25
+    S = scores(M, "ibs", 5)
+    atr = compute_atr(M)
+    base = simulate(M, S, top_k, 1)
+    print(f"baseline (no stop): {cagr(base['final'], years):6.2f}%/yr, maxDD {base['max_dd']:.1%}, "
+          f"Calmar {cagr(base['final'], years) / (100 * base['max_dd']):.2f}")
+    grid = (0.5, 0.75, 1.0, 1.25, 1.5, 2.0)
+    cells = {}
+    for stop_mult in grid:
+        s = _cell_stats(M, S, atr, top_k, stop_mult, years, seeds)
+        cells[stop_mult] = s
+        print(f"  stop={stop_mult:.2f}xATR: {s['ann']:6.2f}%/yr, maxDD {s['r']['max_dd']:.1%}, Calmar {s['calmar']:.2f}, "
+              f"halves {s['h1']:+.0%}/{s['h2']:+.0%} {'CONSISTENT' if s['consistent'] else 'INCONSISTENT'}, "
+              f"quarters {[f'{q:+.0%}' for q in s['qs']]}, random mean {s['random_mean']:.2f}%/yr, p={s['p']:.4f}")
+
+    best_two = sorted(grid, key=lambda sm: -cells[sm]["calmar"])[:2]
+    print(f"\ntop 2 by Calmar: stop={best_two[0]:.2f}xATR (Calmar {cells[best_two[0]]['calmar']:.2f}), "
+          f"stop={best_two[1]:.2f}xATR (Calmar {cells[best_two[1]]['calmar']:.2f})")
+
+    print("\n=== (2) quarter-split detail (annualized, own random control per quarter) on the top 2 ===")
+    for stop_mult in best_two:
+        atr_stop_cell_detail(M, years, seeds, stop_mult, STOP_ONLY_TARGET, top_k)
+
+    print("\n=== (3) survivorship stress (4 real blowups added, 56 stocks) on the top 2 ===")
+    Ms = load_matrices(stress=True)
+    years_s = (Ms["close"].index[Ms["me"][-1]] - Ms["close"].index[Ms["me"][0]]).days / 365.25
+    Ss = scores(Ms, "ibs", 5)
+    atrs = compute_atr(Ms)
+    base_s = simulate(Ms, Ss, top_k, 1)
+    print(f"stress-universe baseline (no stop): {cagr(base_s['final'], years_s):6.2f}%/yr, maxDD {base_s['max_dd']:.1%}")
+    for stop_mult in best_two:
+        s = _cell_stats(Ms, Ss, atrs, top_k, stop_mult, years_s, seeds)
+        print(f"  stop={stop_mult:.2f}xATR (stress): {s['ann']:6.2f}%/yr, maxDD {s['r']['max_dd']:.1%}, Calmar {s['calmar']:.2f}, "
+              f"halves {s['h1']:+.0%}/{s['h2']:+.0%} {'CONSISTENT' if s['consistent'] else 'INCONSISTENT'}, "
+              f"quarters {[f'{q:+.0%}' for q in s['qs']]}, p={s['p']:.4f}")
+
+    print("\n=== (4) cross-universe replication (UNIVERSE_B, 54 different NSE names) on the top 2 ===")
+    SYMBOLS = UNIVERSE_B
+    Mb = load_matrices()
+    SYMBOLS = None
+    years_b = (Mb["close"].index[Mb["me"][-1]] - Mb["close"].index[Mb["me"][0]]).days / 365.25
+    Sb = scores(Mb, "ibs", 5)
+    atrb = compute_atr(Mb)
+    base_b = simulate(Mb, Sb, top_k, 1)
+    print(f"Universe-B baseline (no stop): {cagr(base_b['final'], years_b):6.2f}%/yr, maxDD {base_b['max_dd']:.1%}")
+    for stop_mult in best_two:
+        s = _cell_stats(Mb, Sb, atrb, top_k, stop_mult, years_b, seeds)
+        print(f"  stop={stop_mult:.2f}xATR (univ B): {s['ann']:6.2f}%/yr, maxDD {s['r']['max_dd']:.1%}, Calmar {s['calmar']:.2f}, "
+              f"halves {s['h1']:+.0%}/{s['h2']:+.0%} {'CONSISTENT' if s['consistent'] else 'INCONSISTENT'}, "
+              f"quarters {[f'{q:+.0%}' for q in s['qs']]}, p={s['p']:.4f}")
+
+
+def align_to(M, x):
+    """Reindex a pandas Series with its OWN date index onto M's close index
+    (ffilled), so a non-stock series (NIFTY, an ETF) lines up position-for-
+    position with the integer indices (a, ea, eb, ...) every other function
+    in this file already uses. Shared by build_gate and the ETF-hedge helpers
+    below so the alignment logic can't drift between call sites."""
+    return x.reindex(M["close"].index.union(x.index)).ffill().reindex(M["close"].index)
+
+
+def build_gate(M, nifty_full, L):
+    """Boolean risk-on array aligned to M's own calendar: NIFTY close > its own
+    L-day SMA (full, pre-backtest history, so no SMA warm-up falls inside the
+    window), known at the ranking close before the lag-1 fill. Shared by
+    gate_test and gate_full_rigor so the gate definition can't drift between
+    the two call sites."""
+    nifty = align_to(M, nifty_full)
+    sma = align_to(M, nifty_full.rolling(L, min_periods=L).mean())
+    return np.where(sma.isna(), True, nifty > sma)  # (nifty > NaN) is False, so fillna would never fire
+
+
+def fetch_etf_series(period="10y", symbol="NIFTYBEES.NS"):
+    """NIFTYBEES.NS close as a plain pandas Series with its OWN date index —
+    the ETF half-hedge leg (Forty-sixth/Forty-seventh entries)."""
+    from data_yfinance import fetch_candles
+    candles = fetch_candles(symbol, "1d", period)
+    idx = pd.DatetimeIndex([c["date"].date() for c in candles])
+    return pd.Series([c["close"] for c in candles], index=idx)
+
+
+def compute_beta_lag1(M, S, top_k=5):
+    """Beta of the lag-1 long-only IBS(5) rotation's own monthly returns
+    against NIFTY's own monthly returns over the same window — the same
+    regression (statistics.linear_regression) the Forty-fifth/Forty-sixth
+    entries used, computed here from this file's already-lag-corrected
+    monthly return series instead of the older un-lagged
+    probe_ibs_rotation_hedged.py pipeline."""
+    import statistics
+    import probe_macro_analog as pm
+    nifty = align_to(M, pm.load()["nifty"].dropna()).to_numpy()
+    r = simulate(M, S, top_k, 1)
+    me = M["me"]
+    lo_idx = {a: i for i, a in enumerate(r["at"])}
+    pairs = []
+    for a, b in zip(me[:-1], me[1:]):
+        if a not in lo_idx or b + 1 >= len(nifty):
+            continue
+        if np.isnan(nifty[a + 1]) or np.isnan(nifty[b + 1]):
+            continue
+        pairs.append((nifty[b + 1] / nifty[a + 1] - 1, r["months"][lo_idx[a]]))
+    nifty_rets, lo_rets = zip(*pairs)
+    slope, _ = statistics.linear_regression(nifty_rets, lo_rets)
+    return slope
+
+
+def _gate_cell_stats(M, S, gate, top_k, years, seeds, rng_seed=0):
+    r = simulate(M, S, top_k, 1, gate=gate)
+    off = [a for a in M["me"][:-1] if not gate[a]]
+    ann = cagr(r["final"], years)
+    calmar = ann / (100 * r["max_dd"]) if r["max_dd"] else float("nan")
+    mo = r["months"]
+    half = len(mo) // 2
+    h1, h2 = np.prod(1 + mo[:half]) - 1, np.prod(1 + mo[half:]) - 1
+    consistent = (h1 > 0) == (h2 > 0)
+    qs = [np.prod(1 + q) - 1 for q in np.array_split(mo, 4)]
+    rng = np.random.default_rng(rng_seed)
+    finals, dds = [], []
+    for _ in range(seeds):
+        idx = set(rng.choice(M["me"][:-1], size=len(off), replace=False)) if off else set()
+        g = np.ones(len(gate), bool)
+        for i in idx:
+            g[i] = False
+        rr = simulate(M, S, top_k, 1, gate=g)
+        finals.append(rr["final"])
+        dds.append(rr["max_dd"])
+    finals, dds = np.array(finals), np.array(dds)
+    p = ((finals >= r["final"]).sum() + 1) / (seeds + 1)
+    pdd = ((dds <= r["max_dd"]).sum() + 1) / (seeds + 1)
+    return dict(r=r, off=off, ann=ann, calmar=calmar, h1=h1, h2=h2, consistent=consistent, qs=qs,
+                p=p, pdd=pdd, random_mean=cagr(finals.mean(), years), random_dd=dds.mean())
+
+
+def gate_cell_detail(M, nifty_full, years, seeds, L, top_k=5):
+    """Annualized quarter-split (with its own random-off-months control per quarter)
+    for one SMA-length cell — gate_test's own quarters print total return per chunk
+    only, same gap atr_stop_cell_detail closed for the ATR-stop line."""
+    S = scores(M, "ibs", 5)
+    gate = build_gate(M, nifty_full, L)
+    r = simulate(M, S, top_k, 1, gate=gate)
+    off = [a for a in M["me"][:-1] if not gate[a]]
+    mo = r["months"]
+    n = len(mo)
+    cuts = [0, n // 4, n // 2, 3 * n // 4, n]
+    print(f"IBS(5) top_k={top_k} lag=1, SMA{L} gate — quarter-split detail:")
+    rng = np.random.default_rng(1)
+    random_mo = []
+    for _ in range(min(seeds, 300)):
+        idx = set(rng.choice(M["me"][:-1], size=len(off), replace=False)) if off else set()
+        g = np.ones(len(gate), bool)
+        for i in idx:
+            g[i] = False
+        random_mo.append(simulate(M, S, top_k, 1, gate=g)["months"])
+    for i in range(4):
+        lo, hi = cuts[i], cuts[i + 1]
+        ch = mo[lo:hi]
+        yrs_q = len(ch) / 12
+        total = np.prod(1 + ch) - 1
+        ann = ((1 + total) ** (1 / yrs_q) - 1) * 100 if yrs_q > 0 and total > -1 else float("nan")
+        rand_totals = np.array([np.prod(1 + rm[lo:hi]) - 1 for rm in random_mo if len(rm) >= hi])
+        p_q = ((rand_totals >= total).sum() + 1) / (len(rand_totals) + 1) if len(rand_totals) else float("nan")
+        print(f"  Q{i + 1} ({len(ch)} months, ~{yrs_q:.1f}y): total {total:+.1%}, annualized {ann:+.2f}%/yr, "
+              f"random-control mean {rand_totals.mean():+.1%}, p={p_q:.4f}")
+
+
+def gate_full_rigor(top_k=5, seeds=1500):
+    """Full-rigor pass on the NIFTY SMA trend gate (Sixty-first/Seventy-sixth entries),
+    the same four-check battery just applied to the ATR-stop-only variant: (1) screening
+    on the base 52-stock universe (SMA in {100,150,200}), (2) quarter-split detail on the
+    two best-by-Calmar cells, (3) survivorship stress (4 real blowups, 56 stocks),
+    (4) cross-universe replication (UNIVERSE_B, 54 different NSE names) — the one check
+    this overlay had NOT yet been put through, unlike (1)-(3) which earlier entries
+    already covered. A cell only counts as a real survivor if it clears ALL four."""
+    global SYMBOLS
+    import probe_macro_analog as pm
+    nifty_full = pm.load()["nifty"].dropna()
+
+    print("=== (1) screening: SMA length grid on the base 52-stock universe ===")
+    M = load_matrices()
+    years = (M["close"].index[M["me"][-1]] - M["close"].index[M["me"][0]]).days / 365.25
+    S = scores(M, "ibs", 5)
+    base = simulate(M, S, top_k, 1)
+    print(f"baseline (ungated): {cagr(base['final'], years):6.2f}%/yr, maxDD {base['max_dd']:.1%}, "
+          f"Calmar {cagr(base['final'], years) / (100 * base['max_dd']):.2f}")
+    grid = (100, 150, 200)
+    cells = {}
+    for L in grid:
+        gate = build_gate(M, nifty_full, L)
+        s = _gate_cell_stats(M, S, gate, top_k, years, seeds)
+        cells[L] = s
+        print(f"  SMA{L}: {len(s['off'])}/{len(M['me']) - 1} months in cash -> {s['ann']:6.2f}%/yr, "
+              f"maxDD {s['r']['max_dd']:.1%}, Calmar {s['calmar']:.2f}, halves {s['h1']:+.0%}/{s['h2']:+.0%} "
+              f"{'CONSISTENT' if s['consistent'] else 'INCONSISTENT'}, quarters {[f'{q:+.0%}' for q in s['qs']]}")
+        print(f"    vs random same-count off-months: return {s['random_mean']:.2f}%/yr (p={s['p']:.3f}), "
+              f"DD {s['random_dd']:.1%} (p={s['pdd']:.4f})")
+
+    best_two = sorted(grid, key=lambda L: -cells[L]["calmar"])[:2]
+    print(f"\ntop 2 by Calmar: SMA{best_two[0]} (Calmar {cells[best_two[0]]['calmar']:.2f}), "
+          f"SMA{best_two[1]} (Calmar {cells[best_two[1]]['calmar']:.2f})")
+
+    print("\n=== (2) quarter-split detail (annualized, own random control per quarter) on the top 2 ===")
+    for L in best_two:
+        gate_cell_detail(M, nifty_full, years, seeds, L, top_k)
+
+    print("\n=== (3) survivorship stress (4 real blowups added, 56 stocks) on the top 2 ===")
+    Ms = load_matrices(stress=True)
+    years_s = (Ms["close"].index[Ms["me"][-1]] - Ms["close"].index[Ms["me"][0]]).days / 365.25
+    Ss = scores(Ms, "ibs", 5)
+    base_s = simulate(Ms, Ss, top_k, 1)
+    print(f"stress-universe baseline (ungated): {cagr(base_s['final'], years_s):6.2f}%/yr, maxDD {base_s['max_dd']:.1%}")
+    for L in best_two:
+        gate = build_gate(Ms, nifty_full, L)
+        s = _gate_cell_stats(Ms, Ss, gate, top_k, years_s, seeds)
+        print(f"  SMA{L} (stress): {s['ann']:6.2f}%/yr, maxDD {s['r']['max_dd']:.1%}, Calmar {s['calmar']:.2f}, "
+              f"halves {s['h1']:+.0%}/{s['h2']:+.0%} {'CONSISTENT' if s['consistent'] else 'INCONSISTENT'}, "
+              f"quarters {[f'{q:+.0%}' for q in s['qs']]}, p(return)={s['p']:.4f}, p(DD)={s['pdd']:.4f}")
+
+    print("\n=== (4) cross-universe replication (UNIVERSE_B, 54 different NSE names) on the top 2 ===")
+    SYMBOLS = UNIVERSE_B
+    Mb = load_matrices()
+    SYMBOLS = None
+    years_b = (Mb["close"].index[Mb["me"][-1]] - Mb["close"].index[Mb["me"][0]]).days / 365.25
+    Sb = scores(Mb, "ibs", 5)
+    base_b = simulate(Mb, Sb, top_k, 1)
+    print(f"Universe-B baseline (ungated): {cagr(base_b['final'], years_b):6.2f}%/yr, maxDD {base_b['max_dd']:.1%}")
+    for L in best_two:
+        gate = build_gate(Mb, nifty_full, L)
+        s = _gate_cell_stats(Mb, Sb, gate, top_k, years_b, seeds)
+        print(f"  SMA{L} (univ B): {s['ann']:6.2f}%/yr, maxDD {s['r']['max_dd']:.1%}, Calmar {s['calmar']:.2f}, "
+              f"halves {s['h1']:+.0%}/{s['h2']:+.0%} {'CONSISTENT' if s['consistent'] else 'INCONSISTENT'}, "
+              f"quarters {[f'{q:+.0%}' for q in s['qs']]}, p(return)={s['p']:.4f}, p(DD)={s['pdd']:.4f}")
+
+
+def _hedge_cell_stats(M, S, etf, beta, top_k, hedge_ratio, years, seeds, rng_seed=0):
+    """Same shape as _cell_stats/_gate_cell_stats: the significance question here
+    is whether IBS's stock-picking still beats RANDOM stock-picking once both are
+    run through the identical hedge overlay (the hedge itself is a deterministic
+    position size, not a stochastic choice, so there's no separate null for it)."""
+    r = simulate(M, S, top_k, 1, etf=etf, hedge_ratio=hedge_ratio, beta=beta)
+    ann = cagr(r["final"], years)
+    calmar = ann / (100 * r["max_dd"]) if r["max_dd"] else float("nan")
+    mo = r["months"]
+    half = len(mo) // 2
+    h1, h2 = np.prod(1 + mo[:half]) - 1, np.prod(1 + mo[half:]) - 1
+    consistent = (h1 > 0) == (h2 > 0)
+    qs = [np.prod(1 + q) - 1 for q in np.array_split(mo, 4)]
+    rng = np.random.default_rng(rng_seed)
+    finals = np.array([simulate(M, S, top_k, 1, rng=rng, etf=etf, hedge_ratio=hedge_ratio,
+                                 beta=beta)["final"] for _ in range(seeds)])
+    p = ((finals >= r["final"]).sum() + 1) / (seeds + 1)
+    return dict(r=r, ann=ann, calmar=calmar, h1=h1, h2=h2, consistent=consistent, qs=qs,
+                p=p, random_mean=cagr(finals.mean(), years))
+
+
+def hedge_cell_detail(M, etf, beta, years, seeds, hedge_ratio, top_k=5):
+    """Annualized quarter-split (with its own random-stock-pick-same-hedge control
+    per quarter) for one hedge_ratio cell — mirrors atr_stop_cell_detail/
+    gate_cell_detail for the same reason (those functions' own quarters print
+    total return per chunk only)."""
+    S = scores(M, "ibs", 5)
+    r = simulate(M, S, top_k, 1, etf=etf, hedge_ratio=hedge_ratio, beta=beta)
+    mo = r["months"]
+    n = len(mo)
+    cuts = [0, n // 4, n // 2, 3 * n // 4, n]
+    print(f"IBS(5) top_k={top_k} lag=1, hedge_ratio={hedge_ratio:.3f} (beta={beta:.3f}) — quarter-split detail:")
+    rng = np.random.default_rng(1)
+    random_mo = [simulate(M, S, top_k, 1, rng=rng, etf=etf, hedge_ratio=hedge_ratio,
+                           beta=beta)["months"] for _ in range(min(seeds, 300))]
+    for i in range(4):
+        lo, hi = cuts[i], cuts[i + 1]
+        ch = mo[lo:hi]
+        yrs_q = len(ch) / 12
+        total = np.prod(1 + ch) - 1
+        ann = ((1 + total) ** (1 / yrs_q) - 1) * 100 if yrs_q > 0 and total > -1 else float("nan")
+        rand_totals = np.array([np.prod(1 + rm[lo:hi]) - 1 for rm in random_mo if len(rm) >= hi])
+        p_q = ((rand_totals >= total).sum() + 1) / (len(rand_totals) + 1) if len(rand_totals) else float("nan")
+        print(f"  Q{i + 1} ({len(ch)} months, ~{yrs_q:.1f}y): total {total:+.1%}, annualized {ann:+.2f}%/yr, "
+              f"random-control mean {rand_totals.mean():+.1%}, p={p_q:.4f}")
+
+
+def hedge_full_rigor(top_k=5, seeds=1500):
+    """Full-rigor pass on the NIFTYBEES half-hedge (Forty-sixth/Forty-seventh
+    entries), the third drawdown overlay put through the same four-check battery
+    as the ATR-stop and NIFTY-gate lines: (1) screening on the base 52-stock
+    universe (hedge_ratio in {0.25, 0.375, 0.5, 0.625, 0.75}, the Forty-seventh
+    entry's own grid), (2) quarter-split detail on the two best-by-Calmar
+    ratios, (3) survivorship stress (4 real blowups, 56 stocks, own beta
+    recomputed on that universe), (4) cross-universe replication (UNIVERSE_B,
+    54 different NSE names, own beta recomputed there too) — the one check
+    none of the three overlays had been put through until this session."""
+    global SYMBOLS
+    print("=== (1) screening: hedge_ratio grid on the base 52-stock universe ===")
+    M = load_matrices()
+    years = (M["close"].index[M["me"][-1]] - M["close"].index[M["me"][0]]).days / 365.25
+    S = scores(M, "ibs", 5)
+    etf = fetch_etf_series()
+    beta = compute_beta_lag1(M, S, top_k)
+    base = simulate(M, S, top_k, 1)
+    print(f"beta={beta:.3f}")
+    print(f"baseline (unhedged): {cagr(base['final'], years):6.2f}%/yr, maxDD {base['max_dd']:.1%}, "
+          f"Calmar {cagr(base['final'], years) / (100 * base['max_dd']):.2f}")
+    grid = (0.25, 0.375, 0.5, 0.625, 0.75)
+    cells = {}
+    for ratio in grid:
+        s = _hedge_cell_stats(M, S, etf, beta, top_k, ratio, years, seeds)
+        cells[ratio] = s
+        print(f"  ratio={ratio:.3f}: {s['ann']:6.2f}%/yr, maxDD {s['r']['max_dd']:.1%}, Calmar {s['calmar']:.2f}, "
+              f"halves {s['h1']:+.0%}/{s['h2']:+.0%} {'CONSISTENT' if s['consistent'] else 'INCONSISTENT'}, "
+              f"quarters {[f'{q:+.0%}' for q in s['qs']]}, random mean {s['random_mean']:.2f}%/yr, p={s['p']:.4f}")
+
+    best_two = sorted(grid, key=lambda rt: -cells[rt]["calmar"])[:2]
+    print(f"\ntop 2 by Calmar: ratio={best_two[0]:.3f} (Calmar {cells[best_two[0]]['calmar']:.2f}), "
+          f"ratio={best_two[1]:.3f} (Calmar {cells[best_two[1]]['calmar']:.2f})")
+
+    print("\n=== (2) quarter-split detail (annualized, own random control per quarter) on the top 2 ===")
+    for ratio in best_two:
+        hedge_cell_detail(M, etf, beta, years, seeds, ratio, top_k)
+
+    print("\n=== (3) survivorship stress (4 real blowups added, 56 stocks) on the top 2 ===")
+    Ms = load_matrices(stress=True)
+    years_s = (Ms["close"].index[Ms["me"][-1]] - Ms["close"].index[Ms["me"][0]]).days / 365.25
+    Ss = scores(Ms, "ibs", 5)
+    beta_s = compute_beta_lag1(Ms, Ss, top_k)
+    base_s = simulate(Ms, Ss, top_k, 1)
+    print(f"stress-universe beta={beta_s:.3f}")
+    print(f"stress-universe baseline (unhedged): {cagr(base_s['final'], years_s):6.2f}%/yr, maxDD {base_s['max_dd']:.1%}")
+    for ratio in best_two:
+        s = _hedge_cell_stats(Ms, Ss, etf, beta_s, top_k, ratio, years_s, seeds)
+        print(f"  ratio={ratio:.3f} (stress): {s['ann']:6.2f}%/yr, maxDD {s['r']['max_dd']:.1%}, Calmar {s['calmar']:.2f}, "
+              f"halves {s['h1']:+.0%}/{s['h2']:+.0%} {'CONSISTENT' if s['consistent'] else 'INCONSISTENT'}, "
+              f"quarters {[f'{q:+.0%}' for q in s['qs']]}, p={s['p']:.4f}")
+
+    print("\n=== (4) cross-universe replication (UNIVERSE_B, 54 different NSE names) on the top 2 ===")
+    SYMBOLS = UNIVERSE_B
+    Mb = load_matrices()
+    SYMBOLS = None
+    years_b = (Mb["close"].index[Mb["me"][-1]] - Mb["close"].index[Mb["me"][0]]).days / 365.25
+    Sb = scores(Mb, "ibs", 5)
+    beta_b = compute_beta_lag1(Mb, Sb, top_k)
+    base_b = simulate(Mb, Sb, top_k, 1)
+    print(f"Universe-B beta={beta_b:.3f}")
+    print(f"Universe-B baseline (unhedged): {cagr(base_b['final'], years_b):6.2f}%/yr, maxDD {base_b['max_dd']:.1%}")
+    for ratio in best_two:
+        s = _hedge_cell_stats(Mb, Sb, etf, beta_b, top_k, ratio, years_b, seeds)
+        print(f"  ratio={ratio:.3f} (univ B): {s['ann']:6.2f}%/yr, maxDD {s['r']['max_dd']:.1%}, Calmar {s['calmar']:.2f}, "
+              f"halves {s['h1']:+.0%}/{s['h2']:+.0%} {'CONSISTENT' if s['consistent'] else 'INCONSISTENT'}, "
+              f"quarters {[f'{q:+.0%}' for q in s['qs']]}, p={s['p']:.4f}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=1500)
@@ -551,12 +1125,21 @@ def main():
     ap.add_argument("--index-gate", action="store_true", help="trend gate on NIFTY 2008+ and S&P 1950+")
     ap.add_argument("--momentum", action="store_true", help="12-1 momentum and 52-week-high rotation")
     ap.add_argument("--skew", action="store_true", help="realized-skewness rotation (Eighty-seventh entry)")
+    ap.add_argument("--frog", action="store_true", help="frog-in-the-pan / momentum-quality rotation (Da-Gao-Jagadeesh 2014)")
+    ap.add_argument("--ichimoku", action="store_true", help="Ichimoku cloud-distance rotation (Hosoda)")
     ap.add_argument("--freq", action="store_true", help="IBS rebalance frequency 5/10/21 days")
     ap.add_argument("--phase", action="store_true", help="IBS 21d-step phase offsets vs calendar month-end")
     ap.add_argument("--anchor", action="store_true", help="IBS/rev rebalance j days before month-end, j=0..20")
     ap.add_argument("--oos", action="store_true", help="month-end window on the pre-2016 decade")
     ap.add_argument("--horizon", action="store_true", help="IBS excess-return curve by holding horizon")
     ap.add_argument("--hold", action="store_true", help="post-hoc: hold h days from month-end entry then cash")
+    ap.add_argument("--atr-stop", action="store_true", help="IBS rotation with an ATR-based stop/target during the hold")
+    ap.add_argument("--atr-stop-detail", action="store_true", help="quarter-split detail for stop=1.0xATR target=4.0xATR")
+    ap.add_argument("--atr-stop-perturb", action="store_true", help="perturbation sweep around stop=1.0xATR target=4.0xATR")
+    ap.add_argument("--atr-target-widen", action="store_true", help="widen target_mult to find where the curve turns over")
+    ap.add_argument("--stop-only-rigor", action="store_true", help="full-rigor pass on the ATR-stop-only variant")
+    ap.add_argument("--gate-rigor", action="store_true", help="full-rigor pass on the NIFTY SMA trend gate")
+    ap.add_argument("--hedge-rigor", action="store_true", help="full-rigor pass on the NIFTYBEES half-hedge")
     ap.add_argument("--oos-horizon", action="store_true", help="horizon curve on 2007-2016 vs 2016-2026")
     ap.add_argument("--universe-b", action="store_true", help="52 different NSE names (Sixty-eighth entry)")
     ap.add_argument("--cost", type=float, help="per-leg cost %% override (default 0.2; ~0.125 is nearer real NSE delivery costs)")
@@ -576,6 +1159,12 @@ def main():
         return oos_anchor_test()
     if a.oos_horizon:
         return oos_horizon()
+    if a.stop_only_rigor:
+        return stop_only_full_rigor(seeds=a.seeds)
+    if a.gate_rigor:
+        return gate_full_rigor(seeds=a.seeds)
+    if a.hedge_rigor:
+        return hedge_full_rigor(seeds=a.seeds)
     M = load_matrices(stress=a.stress)
     years = (M["close"].index[M["me"][-1]] - M["close"].index[M["me"][0]]).days / 365.25
     print(f"universe {M['close'].shape[1]} stocks, {len(M['me'])} month-ends, {years:.1f}y")
@@ -587,6 +1176,14 @@ def main():
         return overlap(M, years)
     if a.hold:
         return hold_test(M, years, a.seeds)
+    if a.atr_stop:
+        return atr_stop_test(M, years, a.seeds)
+    if a.atr_stop_detail:
+        return atr_stop_cell_detail(M, years, a.seeds, 1.0, 4.0)
+    if a.atr_stop_perturb:
+        return atr_stop_perturb(M, years, a.seeds)
+    if a.atr_target_widen:
+        return atr_target_widen(M, years)
     if a.horizon:
         return horizon_curve(M)
     if a.anchor:
@@ -610,6 +1207,16 @@ def main():
         for window in (21, 63):
             for top_k in (3, 5, 8):
                 print(report(M, "skew", window, top_k, 1, a.seeds, years)[0])
+        return
+    if a.frog:
+        print(f"=== frog-in-the-pan / momentum-quality rotation, lag 1, {a.seeds}-seed control (pre-registered top_k 3/5/8) ===")
+        for top_k in (3, 5, 8):
+            print(report(M, "frog", 0, top_k, 1, a.seeds, years)[0])
+        return
+    if a.ichimoku:
+        print(f"=== Ichimoku cloud-distance rotation, lag 1, {a.seeds}-seed control (pre-registered top_k 3/5/8) ===")
+        for top_k in (3, 5, 8):
+            print(report(M, "ichimoku", 0, top_k, 1, a.seeds, years)[0])
         return
     if a.spread:
         return spread_test(M, years, a.seeds)

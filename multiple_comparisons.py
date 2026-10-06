@@ -106,7 +106,7 @@ IBS_ROTATION_PVALUES = [
 # Cells that were run and reported but never registered row-by-row: the Sixty-fourth entry's 84 phase/anchor scan
 # cells (21 fixed-step phases + 21 calendar anchors, x IBS(5) and rev(21)), plus the Eighty-first entry's 288-cell
 # industry scan, 12 monthly-average bond/gold robustness cells, and 30 Entry 82-84 robustness cells.
-UNREGISTERED_SCAN_CELLS = 84 + 288 + 12 + 30 + 64 + 6  # + Eighty-first: industry scan (288) + leaky bond/gold rows (12); + 82-84: spanning (8), reversal positive control (16), IBS-vs-I5 (6); + Eighty-fifth: OI1E/OI2E/PC2E/OI2X unregistered robustness variants (64); + Eighty-seventh: survivorship-stress rerun of the same 6 skew cells
+UNREGISTERED_SCAN_CELLS = 84 + 288 + 12 + 30 + 64 + 6 + 8 + 8 + 8  # + Eighty-first: industry scan (288) + leaky bond/gold rows (12); + 82-84: spanning (8), reversal positive control (16), IBS-vs-I5 (6); + Eighty-fifth: OI1E/OI2E/PC2E/OI2X unregistered robustness variants (64); + Eighty-seventh: survivorship-stress rerun of the same 6 skew cells; + Hundred-and-fourth: quarter-level p's (4 quarters x 2 cells) for the ATR-stop-only variant; + Hundred-and-fifth: quarter-level p's (4 quarters x 2 SMA cells) for the NIFTY trend gate; + Hundred-and-sixth: quarter-level p's (4 quarters x 2 ratios) for the NIFTYBEES half-hedge
 
 ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("RSI-2 rotation top_k=3 (Forty-second)", 0.1987),
@@ -706,6 +706,145 @@ ALL_SIGNIFICANCE_TESTS_PVALUES = IBS_ROTATION_PVALUES + [
     ("Insider officer SELL h=5 (103rd)", 0.6538),
     ("Insider officer SELL h=10 (103rd)", 0.7617),
     ("Insider officer SELL h=21 (103rd)", 0.9170),
+    # Hundred-and-fourth entry: full-rigor pass on the ATR-STOP-ONLY variant of IBS rotation
+    # (target effectively disabled, stop_mult grid, top_k=5, lag=1). 6 screening cells on the
+    # base 52-stock WIDE_UNIVERSE, then survivorship-stress and cross-universe (UNIVERSE_B)
+    # reruns of the 2 best-by-Calmar cells (stop=0.75x, stop=0.50x). Quarter-level p's (8 cells,
+    # 4 quarters x 2 cells) are NOT individually registered here, same convention as the
+    # Sixty-fourth entry's phase/anchor scan — counted in UNREGISTERED_SCAN_CELLS instead.
+    ("IBS stop-only stop=0.50xATR screening (104th)", 0.0053),
+    ("IBS stop-only stop=0.75xATR screening (104th)", 0.0220),
+    ("IBS stop-only stop=1.00xATR screening (104th)", 0.0213),
+    ("IBS stop-only stop=1.25xATR screening (104th)", 0.0180),
+    ("IBS stop-only stop=1.50xATR screening (104th)", 0.0346),
+    ("IBS stop-only stop=2.00xATR screening (104th)", 0.0440),
+    ("IBS stop-only stop=0.75xATR survivorship-stress (104th)", 0.0187),
+    ("IBS stop-only stop=0.50xATR survivorship-stress (104th)", 0.0053),
+    ("IBS stop-only stop=0.75xATR UNIVERSE_B (104th)", 0.3591),
+    ("IBS stop-only stop=0.50xATR UNIVERSE_B (104th)", 0.3531),
+    # Hundred-and-fifth entry: full-rigor pass on the NIFTY SMA trend gate (Sixty-first/
+    # Seventy-sixth entries), the one check it had not yet been put through (cross-universe
+    # replication, UNIVERSE_B). Screening + survivorship stress rerun fresh alongside it for a
+    # single consistent writeup. Quarter-level p's (4 quarters x 2 SMA cells = 8) are NOT
+    # individually registered, same convention as the Hundred-and-fourth entry's ATR-stop
+    # quarter cells — counted in UNREGISTERED_SCAN_CELLS instead.
+    ("NIFTY gate SMA100 return, base universe (105th)", 0.268),
+    ("NIFTY gate SMA100 drawdown, base universe (105th)", 0.0426),
+    ("NIFTY gate SMA150 return, base universe (105th)", 0.317),
+    ("NIFTY gate SMA150 drawdown, base universe (105th)", 0.0420),
+    ("NIFTY gate SMA200 return, base universe (105th)", 0.371),
+    ("NIFTY gate SMA200 drawdown, base universe (105th)", 0.0806),
+    ("NIFTY gate SMA100 return, survivorship-stress (105th)", 0.1785),
+    ("NIFTY gate SMA100 drawdown, survivorship-stress (105th)", 0.1339),
+    ("NIFTY gate SMA150 return, survivorship-stress (105th)", 0.1772),
+    ("NIFTY gate SMA150 drawdown, survivorship-stress (105th)", 0.0173),
+    ("NIFTY gate SMA100 return, UNIVERSE_B (105th)", 0.5137),
+    ("NIFTY gate SMA100 drawdown, UNIVERSE_B (105th)", 0.3757),
+    ("NIFTY gate SMA150 return, UNIVERSE_B (105th)", 0.4097),
+    ("NIFTY gate SMA150 drawdown, UNIVERSE_B (105th)", 0.3691),
+    # Hundred-and-sixth entry: full-rigor pass on the NIFTYBEES half-hedge (Forty-sixth/
+    # Forty-seventh entries), the third drawdown overlay through the same battery. Unlike
+    # the ATR-stop/gate lines, the significance test here asks whether IBS's stock-picking
+    # still beats random stock-picking under the SAME hedge (the hedge itself is a
+    # deterministic position size, not a stochastic choice). Quarter-level p's (4 quarters
+    # x 2 ratios = 8) are NOT individually registered, same convention as the Hundred-and-
+    # fourth/fifth entries' quarter cells — counted in UNREGISTERED_SCAN_CELLS instead.
+    ("NIFTYBEES hedge ratio=0.25 screening (106th)", 0.0306),
+    ("NIFTYBEES hedge ratio=0.375 screening (106th)", 0.0313),
+    ("NIFTYBEES hedge ratio=0.50 screening (106th)", 0.0313),
+    ("NIFTYBEES hedge ratio=0.625 screening (106th)", 0.0306),
+    ("NIFTYBEES hedge ratio=0.75 screening (106th)", 0.0306),
+    ("NIFTYBEES hedge ratio=0.25 survivorship-stress (106th)", 0.0127),
+    ("NIFTYBEES hedge ratio=0.375 survivorship-stress (106th)", 0.0127),
+    ("NIFTYBEES hedge ratio=0.25 UNIVERSE_B (106th)", 0.1213),
+    ("NIFTYBEES hedge ratio=0.375 UNIVERSE_B (106th)", 0.1233),
+    # Hundred-and-seventh entry: loss attribution for IBS rotation. Not an overlay test — asks
+    # whether the strategy's own 119 real monthly outcomes, bucketed by 4 regime variables (NIFTY
+    # trend, realized vol tercile, India VIX tercile, this universe's own breadth tercile) at the
+    # ranking date, differ from what random stock-picking in the SAME months/buckets would have
+    # earned. Run on both universes before anything here was trusted; only the vol21 tercile result
+    # replicates (high-vol: no edge over random on either universe, p=0.5503/0.5583; mid-vol: a real
+    # edge on both, p=0.0133/0.0153). ivix/breadth/trend do NOT replicate (ivix mid flips from
+    # p=0.0087 WIDE_UNIVERSE to p=0.6722 UNIVERSE_B) and are registered for honesty, not credited.
+    ("Loss attribution: trend=down, WIDE_UNIVERSE (107th)", 0.1219),
+    ("Loss attribution: trend=up, WIDE_UNIVERSE (107th)", 0.0533),
+    ("Loss attribution: vol21=high, WIDE_UNIVERSE (107th)", 0.5503),
+    ("Loss attribution: vol21=low, WIDE_UNIVERSE (107th)", 0.0713),
+    ("Loss attribution: vol21=mid, WIDE_UNIVERSE (107th)", 0.0133),
+    ("Loss attribution: ivix=high, WIDE_UNIVERSE (107th)", 0.5123),
+    ("Loss attribution: ivix=low, WIDE_UNIVERSE (107th)", 0.0839),
+    ("Loss attribution: ivix=mid, WIDE_UNIVERSE (107th)", 0.0087),
+    ("Loss attribution: breadth=high, WIDE_UNIVERSE (107th)", 0.4390),
+    ("Loss attribution: breadth=low, WIDE_UNIVERSE (107th)", 0.0693),
+    ("Loss attribution: breadth=mid, WIDE_UNIVERSE (107th)", 0.0253),
+    ("Loss attribution: trend=down, UNIVERSE_B (107th)", 0.2851),
+    ("Loss attribution: trend=up, UNIVERSE_B (107th)", 0.1566),
+    ("Loss attribution: vol21=high, UNIVERSE_B (107th)", 0.5583),
+    ("Loss attribution: vol21=low, UNIVERSE_B (107th)", 0.4277),
+    ("Loss attribution: vol21=mid, UNIVERSE_B (107th)", 0.0153),
+    ("Loss attribution: ivix=high, UNIVERSE_B (107th)", 0.0773),
+    ("Loss attribution: ivix=low, UNIVERSE_B (107th)", 0.2105),
+    ("Loss attribution: ivix=mid, UNIVERSE_B (107th)", 0.6722),
+    ("Loss attribution: breadth=high, UNIVERSE_B (107th)", 0.3291),
+    ("Loss attribution: breadth=low, UNIVERSE_B (107th)", 0.2905),
+    ("Loss attribution: breadth=mid, UNIVERSE_B (107th)", 0.1306),
+    # Hundred-and-eighth entry: two book-sourced signals never tested here (frog-in-the-pan /
+    # momentum quality, Da-Gao-Jagadeesh 2014 via "Quantitative Momentum"; Ichimoku cloud distance,
+    # Hosoda), lag-1 fill, pre-registered top_k=3/5/8, both universes. Frog is a clean null on both.
+    # Ichimoku is the mirage this entry exists to report: it clears an uncorrected p<0.05 on
+    # UNIVERSE_B at top_k=3/5 while being a clean null (p=0.47-0.78) on WIDE_UNIVERSE -- the
+    # discovery universe and the cross-check universe disagree, same shape as the Hundred-and-
+    # seventh entry's own ivix/breadth mirages.
+    ("Frog-in-the-pan top_k=3, WIDE_UNIVERSE (108th)", 0.9234),
+    ("Frog-in-the-pan top_k=5, WIDE_UNIVERSE (108th)", 0.8608),
+    ("Frog-in-the-pan top_k=8, WIDE_UNIVERSE (108th)", 0.9074),
+    ("Frog-in-the-pan top_k=3, UNIVERSE_B (108th)", 0.1432),
+    ("Frog-in-the-pan top_k=5, UNIVERSE_B (108th)", 0.0966),
+    ("Frog-in-the-pan top_k=8, UNIVERSE_B (108th)", 0.3711),
+    ("Ichimoku top_k=3, WIDE_UNIVERSE (108th)", 0.5210),
+    ("Ichimoku top_k=5, WIDE_UNIVERSE (108th)", 0.4704),
+    ("Ichimoku top_k=8, WIDE_UNIVERSE (108th)", 0.7828),
+    ("Ichimoku top_k=3, UNIVERSE_B (108th)", 0.0360),
+    ("Ichimoku top_k=5, UNIVERSE_B (108th)", 0.0286),
+    ("Ichimoku top_k=8, UNIVERSE_B (108th)", 0.0706),
+    # Hundred-and-ninth entry: Alexander's (1961) Filter Rule, plus a block-bootstrap Reality-
+    # Check-style correction (Aronson's own "Evidence-Based Technical Analysis" methodology) for
+    # the bias of picking the best of a 10-cell grid. Both the naive (best cell alone) and
+    # corrected (best-of-grid null) p-values are registered, on both markets.
+    ("Filter rule x=5% naive, NIFTY (109th)", 0.2598),
+    ("Filter rule x=5% Reality-Check-corrected, NIFTY (109th)", 0.5503),
+    ("Filter rule x=25% naive, S&P 500 (109th)", 0.2072),
+    ("Filter rule x=25% Reality-Check-corrected, S&P 500 (109th)", 0.3185),
+    # Hundred-and-tenth entry: Arms Index / TRIN, tested on both universes before trusting it.
+    # The high-TRIN tercile looked like a strong, monotonic, textbook-direction contrarian signal
+    # on WIDE_UNIVERSE (h=21 p=0.0005) and REVERSES SIGN on UNIVERSE_B (there it's the LOW-TRIN
+    # tercile that's significant at h=21, p=0.0005, while high-TRIN is the worst bucket, p=1.0) --
+    # not just a non-replication, an outright sign flip. All 24 cells (4 horizons x 3 buckets x
+    # 2 universes) registered for honesty.
+    ("TRIN h=1 low, WIDE_UNIVERSE (110th)", 0.7891),
+    ("TRIN h=1 mid, WIDE_UNIVERSE (110th)", 0.7386),
+    ("TRIN h=1 high, WIDE_UNIVERSE (110th)", 0.2154),
+    ("TRIN h=5 low, WIDE_UNIVERSE (110th)", 0.9815),
+    ("TRIN h=5 mid, WIDE_UNIVERSE (110th)", 0.7451),
+    ("TRIN h=5 high, WIDE_UNIVERSE (110th)", 0.0380),
+    ("TRIN h=10 low, WIDE_UNIVERSE (110th)", 0.9650),
+    ("TRIN h=10 mid, WIDE_UNIVERSE (110th)", 0.7601),
+    ("TRIN h=10 high, WIDE_UNIVERSE (110th)", 0.0875),
+    ("TRIN h=21 low, WIDE_UNIVERSE (110th)", 1.0000),
+    ("TRIN h=21 mid, WIDE_UNIVERSE (110th)", 0.9495),
+    ("TRIN h=21 high, WIDE_UNIVERSE (110th)", 0.0005),
+    ("TRIN h=1 low, UNIVERSE_B (110th)", 0.5497),
+    ("TRIN h=1 mid, UNIVERSE_B (110th)", 0.6912),
+    ("TRIN h=1 high, UNIVERSE_B (110th)", 0.8201),
+    ("TRIN h=5 low, UNIVERSE_B (110th)", 0.8991),
+    ("TRIN h=5 mid, UNIVERSE_B (110th)", 0.3848),
+    ("TRIN h=5 high, UNIVERSE_B (110th)", 0.8636),
+    ("TRIN h=10 low, UNIVERSE_B (110th)", 0.0410),
+    ("TRIN h=10 mid, UNIVERSE_B (110th)", 0.8861),
+    ("TRIN h=10 high, UNIVERSE_B (110th)", 0.9990),
+    ("TRIN h=21 low, UNIVERSE_B (110th)", 0.0005),
+    ("TRIN h=21 mid, UNIVERSE_B (110th)", 0.8896),
+    ("TRIN h=21 high, UNIVERSE_B (110th)", 1.0000),
 ]
 
 # The Fifty-first entry's OWN internal-search family, not a new number
